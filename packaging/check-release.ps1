@@ -10,7 +10,7 @@ foreach($name in $archives){
     try{
         $entries=@($archive.Entries | ForEach-Object {$_.FullName.Replace('\','/')})
         foreach($entry in $entries){
-            if($entry -match '(^|/)(\.desktop-profile|__pycache__|\.git|\.build)/' -or $entry -match '^DeckEdge/data/' -or $entry -match '(^|/)(discord_config\.json|app-settings\.json|config_safe_backup\.json|config\.json(\.bak|\.tmp)?|\.phone-key|.*\.log|.*\.lnk)$'){
+            if($entry -match '(^|/)(\.desktop-profile|__pycache__|\.git|\.build)/' -or $entry -match '^DeckEdge/data/' -or $entry -match '(^|/)(discord_config\.json|app-settings\.json|config_safe_backup\.json|config\.json(\.bak|\.tmp)?|\.phone-key|\.device-id|.*\.log|.*\.lnk)$'){
                 throw "Fichier privé ou temporaire dans $name : $entry"
             }
         }
@@ -20,7 +20,7 @@ foreach($name in $archives){
             }
             if($entries | Where-Object {$_ -match '\.(exe|dll|pdb|zip|png)$'}){throw 'Binaire ou capture présent dans les sources publiques.'}
         }else{
-            foreach($required in @('DeckEdge/DeckEdge.exe','DeckEdge/portable.flag','DeckEdge/runtime/python.exe','DeckEdge/LibreHardwareMonitorLib.dll','DeckEdge/prerequisites/PawnIO_setup.exe','DeckEdge/PYTHON-PACKAGES.json','DeckEdge/licenses/sources/SOURCES.json')){
+            foreach($required in @('DeckEdge/DeckEdge.exe','DeckEdge/portable.flag','DeckEdge/runtime/python.exe','DeckEdge/LibreHardwareMonitorLib.dll','DeckEdge/QRCoder.dll','DeckEdge/QRCoder-LICENSE.txt','DeckEdge/local_discovery.py','DeckEdge/prerequisites/PawnIO_setup.exe','DeckEdge/PYTHON-PACKAGES.json','DeckEdge/licenses/sources/SOURCES.json')){
                 if($required -notin $entries){throw "Portable incomplet : $required"}
             }
         }

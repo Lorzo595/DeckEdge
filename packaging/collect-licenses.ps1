@@ -17,6 +17,14 @@ foreach($source in $sourceRepos) {
     Copy-Item -LiteralPath $path -Destination $sources
     $sourceManifest+=@{name=$source.Name;commit=$source.Commit;url=$url;sha256=(Get-FileHash $path).Hash.ToLowerInvariant()}
 }
+$zeroconf=Invoke-RestMethod 'https://pypi.org/pypi/zeroconf/0.154.0/json'
+$sdist=$zeroconf.urls | Where-Object {$_.packagetype -eq 'sdist'} | Select-Object -First 1
+if(-not $sdist){throw 'Sources zeroconf introuvables.'}
+$zeroconfArchive=Join-Path $cache $sdist.filename
+if(-not(Test-Path $zeroconfArchive)){Invoke-WebRequest -Uri $sdist.url -OutFile $zeroconfArchive -UseBasicParsing}
+if((Get-FileHash $zeroconfArchive).Hash.ToLowerInvariant() -ne $sdist.digests.sha256){throw 'SHA256 des sources zeroconf incorrect.'}
+Copy-Item -LiteralPath $zeroconfArchive -Destination $sources
+$sourceManifest+=@{name='zeroconf';version='0.154.0';url=$sdist.url;sha256=$sdist.digests.sha256}
 $sourceManifest | ConvertTo-Json -Depth 4 | Set-Content -Encoding utf8 (Join-Path $sources 'SOURCES.json')
 @'
 Sources originales, non modifiées. Décompressez chaque archive pour consulter
@@ -24,6 +32,8 @@ les licences et les instructions de reconstruction de son projet.
 LibreHardwareMonitor 0.9.6 : dotnet build LibreHardwareMonitorLib -c Release -f net472.
 PawnIO.Modules 0.1.6 : instructions et compilateur Pawn dans le README du projet.
 PawnIO 2.1.0 : instructions de construction du pilote dans le README du projet.
+zeroconf 0.154.0 : sources Python/Cython, licence et instructions du projet dans
+le paquet source PyPI fourni ; reconstruction avec les outils déclarés dans pyproject.toml.
 Les bibliothèques .NET et modules Python restent remplaçables par des versions
 compatibles ; DeckEdge ne restreint pas leur modification.
 SOURCES.json donne les commits et les empreintes des archives fournies.

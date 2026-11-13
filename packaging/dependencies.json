@@ -1,4 +1,5 @@
 {
+  "qrcoder": {"url":"https://api.nuget.org/v3-flatcontainer/qrcoder/1.6.0/qrcoder.1.6.0.nupkg","sha256":"d84bffe9decf1fa2b8755610407959f998209029c3b6b95a1b282ceb9983a36f"},
   "python": {"url":"https://www.python.org/ftp/python/3.14.9/python-3.14.9-embed-amd64.zip","sha256":"3c01d7cfc666f746a6f064f60fb2156ab0ec464d3d738ab796371a46a9bb24a2"},
   "lhm": {"url":"https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/releases/download/v0.9.6/LibreHardwareMonitor.zip","sha256":"086d9f1b5a99e643edc2cfaaac16051685b551e4c5ac0b32a57c58c0e529c001"},
   "webview2": {"url":"https://api.nuget.org/v3-flatcontainer/microsoft.web.webview2/1.0.4314.35/microsoft.web.webview2.1.0.4314.35.nupkg","sha256":"90778deb1b77e36292828b4b5833c9255c27533f40e0ddd55891ae718944edc4"},

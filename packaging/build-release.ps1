@@ -30,7 +30,7 @@ $stage=Join-Path $root ('.build/package-'+$stamp+'/DeckEdge')
 New-Item -ItemType Directory -Path $stage -Force | Out-Null
 & "$root/desktop/build.ps1" -OutputDirectory (Join-Path $root '.build/native') -HardwareDirectory (Join-Path $root '.build/lhm') -NoShortcut
 Copy-Item -Path '.build/native/*' -Destination $stage -Recurse
-$resources=@('admin.html','index.html','app_paths.py','network_access.py','audio_sessions.py','desktop_backend.py','discord_rpc.py','monitoring.py','server.py','deck-layout.css','deck-layout.js','studio.js','studio-colors.js','studio-shell.js','studio-shell.css','requirements.txt','LICENSE','VERSION','SECURITY.md')
+$resources=@('admin.html','index.html','app_paths.py','network_access.py','local_discovery.py','audio_sessions.py','desktop_backend.py','discord_rpc.py','monitoring.py','server.py','deck-layout.css','deck-layout.js','studio.js','studio-colors.js','studio-shell.js','studio-shell.css','requirements.txt','LICENSE','VERSION','SECURITY.md')
 foreach($file in $resources){Copy-Item -LiteralPath (Join-Path $root $file) -Destination $stage}
 Copy-Item -LiteralPath 'docs/QUICKSTART.md' -Destination (Join-Path $stage 'LIRE-MOI.md')
 Copy-Item -LiteralPath 'docs/QUICKSTART.md' -Destination (Join-Path $stage 'README.md')
