@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Deck Edge</title>
+  <style>
+    :root {
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left: env(safe-area-inset-left, 0px);
+      --safe-right: env(safe-area-inset-right, 0px);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+    }
+    
+    body {
+      background: #0b0d13;
+      color: #fff;
+      height: 100vh;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      touch-action: manipulation;
+    }
+
+    /* ========================================================================== */
+    /* BANDEAU MONITORING                                                         */
+    /* ========================================================================== */
+    .monitoring-bar {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      background: #141824;
+      border: 2px solid #ef4444;
+      border-radius: 14px;
+      transition: border-color 0.3s ease;
+      flex-shrink: 0;
+    }
+    .gauge { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .gauge-title { text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; font-weight: 700; }
+    .gauge-val { font-weight: 800; color: #38bdf8; font-variant-numeric: tabular-nums; }
+    .gauge-sub { color: #94a3b8; }
+
+    /* ========================================================================== */
+    /* BARRE D'ONGLETS                                                            */
+    /* ========================================================================== */
+    .pages-bar {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      flex-shrink: 0;
+    }
+    .pages-bar::-webkit-scrollbar { display: none; }
+
+    .page-tab {
+      background: #141824;
+      border: 1px solid #1f263b;
+      color: #94a3b8;
+      border-radius: 20px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+      touch-action: manipulation;
+    }
+    .page-tab:active { transform: scale(0.96); }
+    .page-tab.active {
+      background: #1e293b;
+      border-color: #38bdf8;
+      color: #38bdf8;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.25);
+    }
+
+    /* ========================================================================== */
+    /* GRILLE STREAM DECK                                                         */
+    /* ========================================================================== */
+    .deck-grid {
+      display: grid;
+      gap: 10px;
+      flex: 1;
+      overflow-y: auto;
+      scrollbar-width: none;
+    }
+    .deck-grid::-webkit-scrollbar { display: none; }
+
+    /* BOUTON STANDARD */
+    .deck-btn {
+      background: #161c2e;
+      border: 1px solid #232d4a;
+      border-radius: 16px;
+      color: #f8fafc;
+      font-weight: 600;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      transition: transform 0.08s ease, filter 0.08s ease, background-color 0.15s ease;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      padding: 8px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .deck-btn:active, .deck-btn.pressed {
+      transform: scale(0.92);
+      filter: brightness(1.25);
+    }
+    .deck-btn.is-active {
+      box-shadow: 0 0 16px rgba(244, 63, 94, 0.4) !important;
+    }
+    .badge-toggle {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      font-size: 8px;
+      font-weight: 800;
+      padding: 2px 5px;
+      border-radius: 5px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      pointer-events: none;
+    }
+    .badge-toggle.on {
+      background: rgba(244, 63, 94, 0.25);
+      color: #f43f5e;
+      border: 1px solid rgba(244, 63, 94, 0.5);
+    }
+    .badge-toggle.off {
+      background: rgba(255, 255, 255, 0.05);
+      color: #64748b;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .icon { font-size: 26px; line-height: 1; }
+    .label {
+      font-size: 13px;
+      font-weight: 600;
+      max-width: 90%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* ========================================================================== */
+    /* SLIDER TACTILE (FADER AUDIO PRO)                                           */
+    /* ========================================================================== */
+    .deck-slider {
+      background: #0d1322 !important;
+      border: 1px solid #1e293b;
+      touch-action: pan-y !important;
+      position: relative;
+      overflow: hidden;
+      padding: 0;
+      cursor: pointer;
+    }
+    .deck-slider:active {
+      transform: none !important;
+      filter: none !important;
+    }
+    .slider-fill {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 0%;
+      pointer-events: none;
+      transition: width 0.12s ease-out;
+      border-right: 3px solid #38bdf8;
+    }
+    /* Pendant le glissement du doigt : aucune transition CSS pour une fluidité 120 FPS immédiate */
+    .deck-slider.is-dragging .slider-fill {
+      transition: none !important;
+    }
+    .slider-content {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      pointer-events: none;
+    }
+    .slider-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      pointer-events: none;
+    }
+    .slider-mute-btn {
+      pointer-events: auto;
+      cursor: pointer;
+      font-size: 24px;
+      padding: 6px;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .slider-mute-btn:active {
+      transform: scale(0.85);
+      background: rgba(244, 63, 94, 0.5);
+    }
+    .slider-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .slider-name {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      color: #f8fafc;
+    }
+    .slider-type-badge {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #64748b;
+      letter-spacing: 0.5px;
+    }
+    .slider-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 2px;
+      pointer-events: none;
+    }
+    .slider-val {
+      font-size: 24px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+    }
+    .slider-muted-tag {
+      font-size: 10px;
+      font-weight: 800;
+      color: #f43f5e;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: none;
+    }
+    .deck-slider.is-muted .slider-muted-tag { display: block; }
+    .deck-slider.is-muted .slider-fill {
+      background: rgba(244, 63, 94, 0.25) !important;
+      border-right-color: #f43f5e !important;
+    }
+
+    /* ========================================================================== */
+    /* RESPONSIVE : MODE PORTRAIT (iPhone Vertical)                               */
+    /* ========================================================================== */
+    @media (orientation: portrait) {
+      body {
+        padding: calc(10px + var(--safe-top)) calc(12px + var(--safe-right)) calc(12px + var(--safe-bottom)) calc(12px + var(--safe-left));
+        gap: 12px;
+      }
+      .monitoring-bar {
+        padding: 10px 12px;
+        gap: 8px;
+      }
+      .gauge-title { font-size: 10px; }
+      .gauge-val { font-size: 20px; margin: 2px 0; }
+      .gauge-sub { font-size: 10px; }
+
+      .pages-bar { padding: 2px 0; }
+      .page-tab { padding: 8px 16px; font-size: 13px; }
+
+      /* En portrait : Grille à 2 colonnes généreuses */
+      .deck-grid {
+        grid-template-columns: repeat(2, 1fr);
+        grid-auto-rows: 100px;
+        gap: 12px;
+      }
+
+      /* En portrait : Le slider prend toute la largeur (span 2) */
+      /* Il offre une zone de glisse immense de ~350px avec le pouce ! */
+      .deck-slider {
+        border-radius: 18px;
+      }
+    }
+
+    /* ========================================================================== */
+    /* RESPONSIVE : MODE PAYSAGE (iPhone Horizontal façon Stream Deck)           */
+    /* ========================================================================== */
+    @media (orientation: landscape) {
+      body {
+        padding: calc(6px + var(--safe-top)) calc(14px + var(--safe-right)) calc(6px + var(--safe-bottom)) calc(14px + var(--safe-left));
+        gap: 8px;
+      }
+      /* Bandeau ultra compact en hauteur */
+      .monitoring-bar {
+        padding: 6px 14px;
+        border-radius: 10px;
+        gap: 6px;
+      }
+      .gauge-title { font-size: 9px; }
+      .gauge-val { font-size: 16px; margin: 0; }
+      .gauge-sub { font-size: 9px; }
+
+      .pages-bar { padding: 0; }
+      .page-tab { padding: 5px 12px; font-size: 11px; }
+
+      /* En paysage : Grille à 3 colonnes optimisée pour la hauteur */
+      .deck-grid {
+        grid-template-columns: repeat(3, 1fr);
+        grid-auto-rows: 1fr;
+        gap: 8px;
+      }
+
+      .deck-btn {
+        padding: 6px;
+        border-radius: 12px;
+      }
+      .deck-btn .icon { font-size: 22px; }
+      .deck-btn .label { font-size: 11px; }
+
+      .deck-slider {
+        border-radius: 12px;
+      }
+      .slider-content {
+        padding: 0 12px;
+      }
+      .slider-name { font-size: 12px; }
+      .slider-val { font-size: 18px; }
+      .slider-mute-btn { font-size: 18px; padding: 4px; }
+    }
+
+    /* Deck Edge — console graphite / ambre. Aucune ressource externe. */
+    :root { color-scheme: dark; --bg: #171817; --surface: #20221f;
+      --surface-hover: #2a2d28; --border: #383c34; --primary: #dfb979;
+      --primary-hover: #edcb94; --danger: #e28c80; --text: #eeeee7; --text-muted: #a3a79c; }
+    * { font-family: "Segoe UI", system-ui, sans-serif; }
+    body { background: var(--bg); color: var(--text); }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible, select:focus-visible,
+    [tabindex]:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+    .page-tab { border-radius: 5px; background: transparent; border-color: transparent;
+      color: var(--text-muted); font-weight: 500; box-shadow: none; }
+    .page-tab.active { background: #303027; border-color: #61523a;
+      color: #edcb94; box-shadow: none; }
+    .page-tab:hover { background: var(--surface-hover); color: var(--text); }
+    .pages-bar { border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+    .label { font-weight: 500; letter-spacing: .1px; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { transition: none !important; animation: none !important; }
+    }
+
+    .monitoring-bar { background: #20221f; border-width: 1px; border-radius: 6px; }
+    .gauge + .gauge { border-left: 1px solid #383c34; }
+    .gauge-title { color: #a3a79c; font-weight: 500; letter-spacing: 1.6px; }
+    .gauge-val { color: #edcb94; font-family: Consolas, monospace; font-weight: 500; }
+    .gauge-sub { color: #a3a79c; }
+    .pages-bar { gap: 5px; padding-bottom: 6px; }
+    .deck-grid { min-height: 0; }
+    .deck-btn { border-radius: 7px; box-shadow: inset 0 1px 0 #ffffff12, 0 3px 0 #0005; }
+    .deck-btn:active, .deck-btn.pressed { transform: scale(.97); filter: brightness(1.15); }
+    .deck-btn.is-active { box-shadow: inset 0 0 0 1px #e28c80 !important; }
+    .deck-slider { background: #1b1f19 !important; border-radius: 7px; }
+    .slider-fill { opacity: .65; }
+    .slider-val { font-family: Consolas, monospace; font-weight: 500; text-shadow: none; }
+    .slider-name { font-weight: 500; }
+    .badge-toggle { border-radius: 3px; font-weight: 600; }
+    .badge-toggle.on { background: #e28c8020; color: #ffb2a6; border-color: #e28c8080; }
+    .badge-toggle.off { color: #b0b4a7; }
+    @media (orientation: portrait) { .deck-slider { border-radius: 7px; } }
+    @media (orientation: landscape) { .monitoring-bar, .deck-btn, .deck-slider { border-radius: 6px; } }
+
+    .gauge { min-width: 0; padding: 3px; }
+    .gauge-title { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .gauge-val, .gauge-sub { white-space: nowrap; }
+    @media (orientation: portrait) { .gauge-val { font-size: clamp(13px, 3.8vw, 20px); } }
+    html { height: 100%; overflow: hidden; background: var(--bg); }
+    body { width: 100%; height: var(--app-height, 100dvh); min-height: 0; padding-bottom: 0; }
+    .deck-grid { min-height: 0; min-width: 0; touch-action: pan-y; overscroll-behavior-y: contain;
+      -webkit-overflow-scrolling: touch; padding: 2px 1px max(18px, var(--safe-bottom));
+      scroll-padding-bottom: max(18px, var(--safe-bottom)); }
+    .deck-btn, .slider-mute-btn { touch-action: pan-y; }
+    .slider-mute-btn { color: inherit; font-family: inherit; }
+    @media (orientation: landscape) { .deck-grid { grid-auto-rows: minmax(88px, 1fr); } }
+  </style>
+  <link rel="stylesheet" href="/deck-layout.css">
+</head>
+<body>
+
+  <!-- BANDEAU MONITORING -->
+  <div class="monitoring-bar" id="monitoring-bar" aria-label="Mesures du PC"></div>
+
+  <!-- SÉLECTEUR DE PAGES / PROFILS -->
+  <div class="pages-bar" id="pages-bar"></div>
+
+  <!-- GRILLE STREAM DECK RESPONSIVE -->
+  <div class="deck-grid deck-layout-grid" id="deck-grid"></div>
+
+  <script src="/deck-layout.js"></script>
+  <script>
+    const wsUri = `ws://${window.location.hostname || 'localhost'}:5000/ws`;
+    let ws = null;
+    let configData = null;
+    let currentActivePageId = null;
+    let reconnectTimeout = null;
+    let lastMonitoringReadings = [];
+    
+    // Niveaux de volume réels synchronisés
+    let audioLevels = { "master": 100 };
+    let audioMutes = { "master": false };
+
+    // ANTI-SACCADE : Suivi du slider en cours de manipulation par l'utilisateur
+    let activeDraggingBtnId = null;
+    let activeDraggingTarget = null;
+    let unlockDragTimeout = null;
+    const sliderEventCleanups = [];
+
+    // 1. Chargement de la configuration
+    async function loadConfig() {
+      try {
+        const res = await fetch('/api/config');
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        configData = await res.json();
+        renderMonitoring((configData.monitoring || [
+          {label: 'CPU'}, {label: 'GPU'}, {label: 'RAM'}
+        ]).map(w => ({...w, value: '--', unit: '', secondary_value: ''})));
+        
+        if (!configData.pages || configData.pages.length === 0) return;
+        
+        if (!currentActivePageId || !configData.pages.some(p => p.id === currentActivePageId)) {
+          currentActivePageId = configData.pages.find(page => page.id === 'page_main')?.id || configData.active_page_id || configData.pages[0].id;
+        }
+
+        renderTabs();
+        renderActivePage();
+      } catch (err) {
+        console.error("Erreur chargement config:", err);
+      }
+    }
+
+    function renderMonitoring(readings) {
+      lastMonitoringReadings = readings;
+      const bar = document.getElementById('monitoring-bar');
+      const columns = Math.min(readings.length, window.matchMedia('(orientation: portrait)').matches ? 3 : 6);
+      bar.style.gridTemplateColumns = `repeat(${Math.max(1, columns)}, minmax(0, 1fr))`;
+      if (bar.children.length !== readings.length) {
+        bar.replaceChildren(...readings.map(() => {
+          const gauge = document.createElement('div'); gauge.className = 'gauge';
+          ['gauge-title', 'gauge-val', 'gauge-sub'].forEach(className => {
+            const line = document.createElement('div'); line.className = className; gauge.append(line);
+          });
+          return gauge;
+        }));
+      }
+      readings.forEach((reading, index) => {
+        const gauge = bar.children[index];
+        gauge.children[0].textContent = reading.label;
+        gauge.children[1].textContent = `${reading.value ?? '--'}${reading.unit ? ' ' + reading.unit : ''}`;
+        gauge.children[2].textContent = reading.secondary_value ? `${reading.secondary_value}${reading.secondary_unit ? ' ' + reading.secondary_unit : ''}` : '\u00a0';
+      });
+    }
+
+    function deckText(value) {
+      return String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+    }
+
+    // 2. Rendu des onglets
+    function renderTabs() {
+      const bar = document.getElementById('pages-bar');
+      bar.innerHTML = '';
+
+      if (!configData || !configData.pages) return;
+
+      configData.pages.forEach(p => {
+        const tab = document.createElement('div');
+        tab.className = `page-tab ${p.id === currentActivePageId ? 'active' : ''}`;
+        tab.innerHTML = `<span>${deckText(p.icon || '📄')}</span><span>${deckText(p.name)}</span>`;
+        tab.onclick = () => switchPage(p.id);
+        bar.appendChild(tab);
+      });
+    }
+
+    function switchPage(pageId) {
+      currentActivePageId = pageId;
+      if (navigator.vibrate) navigator.vibrate(20);
+      renderTabs();
+      renderActivePage();
+    }
+
+    function getVolumeForTarget(target) {
+      if (!target) return 50;
+      const t = target.toLowerCase();
+      if (audioLevels[t] !== undefined) return audioLevels[t];
+      for (const k in audioLevels) {
+        if (k.toLowerCase().includes(t) || t.includes(k.toLowerCase())) {
+          return audioLevels[k];
+        }
+      }
+      return 70;
+    }
+
+    function isMutedForTarget(target) {
+      if (!target) return false;
+      const t = target.toLowerCase();
+      if (audioMutes[t] !== undefined) return audioMutes[t];
+      for (const k in audioMutes) {
+        if (k.toLowerCase().includes(t) || t.includes(k.toLowerCase())) {
+          return audioMutes[k];
+        }
+      }
+      return false;
+    }
+
+    function getSmartActiveIcon(btn) {
+      if (btn.active_icon) return btn.active_icon;
+      const ic = btn.icon || '';
+      if (ic === '🎙️' || ic === '🔊' || ic === '🎧') return '🔇';
+      if (ic === '⏯️') return '⏸️';
+      if (ic === '🔴') return '⏹️';
+      return '⚡';
+    }
+
+    function getSmartActiveLabel(btn) {
+      if (btn.active_label) return btn.active_label;
+      const lb = (btn.label || '').toLowerCase();
+      if (lb.includes('sourdine') || lb.includes('deaf')) return 'SOURDINE';
+      if (lb.includes('discord')) return 'DISCORD MUTÉ';
+      if (lb.includes('micro') || lb.includes('mute')) return 'MUTÉ';
+      if (lb.includes('rec') || lb.includes('obs')) return 'REC EN COURS';
+      if (lb.includes('pause') || lb.includes('play')) return 'EN PAUSE';
+      return btn.label || '';
+    }
+
+    // 3. Rendu de la grille
+    function renderActivePage() {
+      sliderEventCleanups.splice(0).forEach(cleanup => cleanup());
+      const grid = document.getElementById('deck-grid');
+      DeckLayout.orient(grid);
+      grid.innerHTML = '';
+
+      if (!configData || !configData.pages) return;
+      const page = configData.pages.find(p => p.id === currentActivePageId) || configData.pages[0];
+      if (!page || !page.buttons) return;
+
+      page.buttons.forEach(btn => {
+        // A. CURSEUR SLIDER TACTILE (FADER)
+        if (btn.type === 'slider') {
+          const slider = document.createElement('div');
+          slider.className = 'deck-btn deck-slider';
+          slider.id = `btn-dom-${btn.id}`;
+          slider.dataset.target = btn.target || 'master';
+          DeckLayout.apply(slider, btn);
+
+          const currentVol = getVolumeForTarget(btn.target);
+          const isMuted = isMutedForTarget(btn.target);
+          if (isMuted) slider.classList.add('is-muted');
+
+          const accentColor = btn.color || '#38bdf8';
+          slider.style.borderColor = accentColor;
+
+          const isDev = (btn.target || '').startsWith('device:');
+          const typeBadge = isDev ? 'SORTIE' : ((btn.target === 'master') ? 'MASTER' : 'APP');
+
+          slider.innerHTML = `
+            <div class="slider-fill" id="fill-${btn.id}" style="width: ${currentVol}%; background: ${accentColor}40; border-right-color: ${accentColor};"></div>
+            <div class="slider-content">
+              <div class="slider-left">
+                <button type="button" class="slider-mute-btn" id="mute-btn-${btn.id}" aria-label="Activer ou couper le son">${deckText(isMuted ? '🔇' : (btn.icon || '🔊'))}</button>
+                <div class="slider-info">
+                  <span class="slider-name">${deckText(btn.label || 'Volume')}</span>
+                  <span class="slider-type-badge">${typeBadge}</span>
+                </div>
+              </div>
+              <div class="slider-right">
+                <span class="slider-muted-tag" id="muted-ind-${btn.id}">MUTÉ</span>
+                <span class="slider-val" id="val-${btn.id}" style="color: ${accentColor};">${currentVol}%</span>
+              </div>
+            </div>
+          `;
+
+          attachSliderEvents(slider, btn);
+          grid.appendChild(slider);
+        }
+        
+        // B. BOUTON CLASSIQUE / TOGGLE
+        else {
+          const button = document.createElement('button');
+          button.className = 'deck-btn';
+          button.id = `btn-dom-${btn.id}`;
+          DeckLayout.apply(button, btn);
+
+          const isAct = btn.is_toggle && btn.state;
+          const btnBg = isAct ? (btn.active_color || '#991b1b') : (btn.color || '#161c2e');
+          const icon = isAct ? (btn.active_icon || getSmartActiveIcon(btn)) : (btn.icon || '⚡');
+          const label = isAct ? (btn.active_label || getSmartActiveLabel(btn)) : (btn.label || '');
+
+          button.style.backgroundColor = btnBg.toLowerCase() === '#161c2e' ? '#2b2e27' : btnBg;
+          button.style.borderColor = isAct ? '#e28c80' : (btnBg.toLowerCase() === '#161c2e' ? '#454a3d' : btnBg);
+          if (isAct) button.classList.add('is-active');
+
+          button.innerHTML = `
+            ${btn.is_toggle ? `<span class="badge-toggle ${isAct ? 'on' : 'off'}">${isAct ? 'ON' : 'OFF'}</span>` : ''}
+            <span class="icon">${deckText(icon)}</span>
+            <span class="label">${deckText(label)}</span>
+          `;
+          
+          attachButtonEvents(button, btn.id);
+          grid.appendChild(button);
+        }
+      });
+    }
+
+    // =========================================================================
+    // Un appui se valide au relâchement ; un glissement reste un défilement.
+    // =========================================================================
+    let lastButtonTriggerTime = 0;
+    let lastButtonTriggerId = null;
+
+    function triggerButton(btnId) {
+      const now = Date.now();
+      if (lastButtonTriggerId === btnId && (now - lastButtonTriggerTime) < 160) {
+        return; // Anti-rebond double tap accidentel
+      }
+      lastButtonTriggerTime = now;
+      lastButtonTriggerId = btnId;
+      sendAction(btnId);
+    }
+
+    function attachButtonEvents(btnEl, btnId) {
+      attachTapEvents(btnEl, () => triggerButton(btnId));
+    }
+
+    function attachTapEvents(element, activate) {
+      let pointerId = null, startX = 0, startY = 0, cancelled = false;
+      element.addEventListener('pointerdown', event => {
+        if (!event.isPrimary || event.button !== 0) return;
+        pointerId = event.pointerId; startX = event.clientX; startY = event.clientY;
+        cancelled = false; element.classList.add('pressed');
+      }, {passive:true});
+      element.addEventListener('pointermove', event => {
+        if (event.pointerId !== pointerId) return;
+        if (Math.hypot(event.clientX - startX, event.clientY - startY) > 10) {
+          cancelled = true; element.classList.remove('pressed');
+        }
+      }, {passive:true});
+      element.addEventListener('pointerup', event => {
+        if (event.pointerId !== pointerId) return;
+        if (Math.hypot(event.clientX - startX, event.clientY - startY) > 10) cancelled = true;
+        pointerId = null; element.classList.remove('pressed');
+      }, {passive:true});
+      element.addEventListener('pointercancel', () => {
+        cancelled = true; pointerId = null; element.classList.remove('pressed');
+      }, {passive:true});
+      element.addEventListener('pointerleave', () => element.classList.remove('pressed'), {passive:true});
+      element.addEventListener('click', event => {
+        if (cancelled && event.detail !== 0) { event.preventDefault(); return; }
+        activate();
+      });
+    }
+
+    // =========================================================================
+    // CONTRÔLE TACTILE ULTRA-FLUIDE DU SLIDER (ZÉRO SACCADE)
+    // =========================================================================
+    function attachSliderEvents(sliderEl, btn) {
+      let isDragging = false;
+      let lastSentVal = -1;
+      let currentDragPct = 50;
+      let sendInterval = null;
+
+      function calculatePercent(clientX) {
+        const rect = sliderEl.getBoundingClientRect();
+        if (rect.width <= 0) return 0;
+        let pct = Math.round(((clientX - rect.left) / rect.width) * 100);
+        return Math.max(0, Math.min(100, pct));
+      }
+
+      function updateVisuals(pct) {
+        const fillEl = document.getElementById(`fill-${btn.id}`);
+        const valEl = document.getElementById(`val-${btn.id}`);
+        if (fillEl) fillEl.style.width = pct + '%';
+        if (valEl) valEl.innerText = pct + '%';
+      }
+
+      function pushVolumeUpdate(pct) {
+        if (pct === lastSentVal) return;
+        lastSentVal = pct;
+        audioLevels[btn.target.toLowerCase()] = pct;
+
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            action: "set_volume",
+            target: btn.target,
+            value: pct
+          }));
+        }
+      }
+
+      function startDrag(clientX) {
+        if (unlockDragTimeout) clearTimeout(unlockDragTimeout);
+        activeDraggingBtnId = btn.id;
+        activeDraggingTarget = btn.target.toLowerCase();
+        isDragging = true;
+        lastSentVal = -1;
+        sliderEl.classList.add('is-dragging');
+
+        currentDragPct = calculatePercent(clientX);
+        updateVisuals(currentDragPct);
+        pushVolumeUpdate(currentDragPct);
+
+        if (sendInterval) clearInterval(sendInterval);
+        sendInterval = setInterval(() => {
+          if (isDragging) {
+            pushVolumeUpdate(currentDragPct);
+          }
+        }, 35);
+
+        if (navigator.vibrate) navigator.vibrate(20);
+      }
+
+      function moveDrag(clientX) {
+        if (!isDragging) return;
+        currentDragPct = calculatePercent(clientX);
+        updateVisuals(currentDragPct);
+
+        if ((currentDragPct === 0 || currentDragPct === 100) && navigator.vibrate) {
+          navigator.vibrate(10);
+        }
+      }
+
+      function endDrag(clientX) {
+        if (!isDragging) return;
+        isDragging = false;
+        sliderEl.classList.remove('is-dragging');
+
+        if (sendInterval) {
+          clearInterval(sendInterval);
+          sendInterval = null;
+        }
+
+        if (clientX !== null && clientX !== undefined) {
+          currentDragPct = calculatePercent(clientX);
+        }
+        updateVisuals(currentDragPct);
+        pushVolumeUpdate(currentDragPct);
+
+        unlockDragTimeout = setTimeout(() => {
+          activeDraggingBtnId = null;
+          activeDraggingTarget = null;
+        }, 350);
+      }
+
+      let gesture = null;
+      sliderEl.addEventListener('pointerdown', event => {
+        if (!event.isPrimary || event.button !== 0 || event.target.closest('.slider-mute-btn')) return;
+        gesture = {id:event.pointerId, x:event.clientX, y:event.clientY, scrolling:false};
+        if (event.pointerType !== 'touch') {
+          sliderEl.setPointerCapture(event.pointerId);
+          startDrag(event.clientX);
+        }
+      }, {passive:true});
+      sliderEl.addEventListener('pointermove', event => {
+        if (!gesture || event.pointerId !== gesture.id || gesture.scrolling) return;
+        if (!isDragging) {
+          const dx = Math.abs(event.clientX - gesture.x), dy = Math.abs(event.clientY - gesture.y);
+          if (dy > 8 && dy >= dx) { gesture.scrolling = true; return; }
+          if (dx <= 8 || dx <= dy * 1.2) return;
+          sliderEl.setPointerCapture(event.pointerId);
+          startDrag(event.clientX);
+        }
+        moveDrag(event.clientX);
+      }, {passive:true});
+      sliderEl.addEventListener('pointerup', event => {
+        if (!gesture || event.pointerId !== gesture.id) return;
+        if (!isDragging && !gesture.scrolling && Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) <= 10)
+          startDrag(event.clientX);
+        endDrag(event.clientX);
+        gesture = null;
+        if (sliderEl.hasPointerCapture(event.pointerId)) sliderEl.releasePointerCapture(event.pointerId);
+      }, {passive:true});
+      const cancelDrag = () => { gesture = null; endDrag(null); };
+      sliderEventCleanups.push(() => {
+        gesture = null; isDragging = false;
+        if (sendInterval) clearInterval(sendInterval);
+        sendInterval = null;
+        if (activeDraggingBtnId === btn.id) { activeDraggingBtnId = null; activeDraggingTarget = null; }
+      });
+      sliderEl.addEventListener('pointercancel', cancelDrag, {passive:true});
+      sliderEl.addEventListener('lostpointercapture', cancelDrag, {passive:true});
+
+      // Le bouton de sourdine respecte lui aussi le défilement vertical.
+      const muteBtnEl = sliderEl.querySelector('.slider-mute-btn');
+      if (muteBtnEl) {
+        attachTapEvents(muteBtnEl, () => toggleMute(btn.target));
+      }
+    }
+
+    function toggleMute(target) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          action: "toggle_mute",
+          target: target
+        }));
+        if (navigator.vibrate) navigator.vibrate(30);
+      }
+    }
+
+    // 4. WebSocket & Événements
+    function connectWS() {
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+        reconnectTimeout = null;
+      }
+
+      if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+        return;
+      }
+
+      const monBar = document.getElementById("monitoring-bar");
+      try {
+        ws = new WebSocket(wsUri);
+      } catch (e) {
+        monBar.style.borderColor = "#ef4444";
+        scheduleReconnect();
+        return;
+      }
+
+      ws.onopen = () => {
+        monBar.style.borderColor = "#22c55e";
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          
+          if (msg.type === "stats" && msg.data) {
+            if (msg.monitoring) renderMonitoring(msg.monitoring);
+            monBar.style.borderColor = msg.lhm_connected ? '#71825e' : '#8a6650';
+            monBar.title = msg.lhm_connected ? 'Capteurs intégrés connectés' : 'Mesures indisponibles';
+          }
+          
+          else if (msg.type === "audio_targets" && msg.data) {
+            const data = msg.data;
+            (data.devices || []).forEach(d => {
+              audioLevels[d.target.toLowerCase()] = d.volume;
+              audioMutes[d.target.toLowerCase()] = d.muted;
+            });
+            (data.apps || []).forEach(a => {
+              audioLevels[a.target.toLowerCase()] = a.volume;
+              audioMutes[a.target.toLowerCase()] = a.muted;
+            });
+            syncSlidersUI();
+          }
+
+          // Mise à jour de volume en direct depuis un autre client ou le PC
+          else if (msg.type === "volume_update") {
+            const t = msg.target.toLowerCase();
+            audioLevels[t] = msg.value;
+            // SI L'UTILISATEUR EST EN TRAIN DE TOUCHER CE SLIDER, NE PAS LE SACCADER !
+            if (activeDraggingTarget && t === activeDraggingTarget) {
+              return;
+            }
+            syncSlidersUI();
+          }
+
+          else if (msg.type === "mute_update") {
+            const t = msg.target.toLowerCase();
+            audioMutes[t] = msg.muted;
+            syncSlidersUI();
+          }
+
+          else if (msg.type === "all_button_states" && msg.data) {
+            for (const [id, state] of Object.entries(msg.data)) {
+              updateButtonDOM({ btn_id: id, state: state });
+            }
+          }
+
+          else if (msg.type === "button_state") {
+            updateButtonDOM(msg);
+          }
+          
+          else if (msg.type === "reload_config") {
+            loadConfig();
+          }
+        } catch (e) {
+          console.error("Erreur message WS:", e);
+        }
+      };
+
+      ws.onclose = () => {
+        monBar.style.borderColor = "#ef4444";
+        scheduleReconnect();
+      };
+
+      ws.onerror = () => {
+        monBar.style.borderColor = "#ef4444";
+        if (ws) ws.close();
+      };
+    }
+
+    function syncSlidersUI() {
+      document.querySelectorAll('.deck-slider').forEach(slider => {
+        const btnId = slider.id.replace('btn-dom-', '');
+        // Ne jamais toucher au slider actuellement manipulé par l'utilisateur (zéro saccade)
+        if (activeDraggingBtnId && activeDraggingBtnId === btnId) return;
+
+        const target = (slider.dataset.target || '').toLowerCase();
+        if (activeDraggingTarget && target === activeDraggingTarget) return;
+
+        const vol = getVolumeForTarget(target);
+        const muted = isMutedForTarget(target);
+
+        const fillEl = document.getElementById(`fill-${btnId}`);
+        const valEl = document.getElementById(`val-${btnId}`);
+        const muteBtn = document.getElementById(`mute-btn-${btnId}`);
+
+        if (fillEl) fillEl.style.width = vol + '%';
+        if (valEl) valEl.innerText = vol + '%';
+        if (muted) {
+          slider.classList.add('is-muted');
+          if (muteBtn) muteBtn.innerText = '🔇';
+        } else {
+          slider.classList.remove('is-muted');
+          if (muteBtn) {
+            const btnObj = findBtnInConfig(btnId);
+            muteBtn.innerText = (btnObj && btnObj.icon) ? btnObj.icon : '🔊';
+          }
+        }
+      });
+    }
+
+    function findBtnInConfig(btnId) {
+      if (!configData || !configData.pages) return null;
+      for (const p of configData.pages) {
+        const b = p.buttons.find(item => item.id === btnId);
+        if (b) return b;
+      }
+      return null;
+    }
+
+    function scheduleReconnect() {
+      if (!reconnectTimeout) {
+        reconnectTimeout = setTimeout(() => {
+          reconnectTimeout = null;
+          connectWS();
+        }, 1500);
+      }
+    }
+
+    function updateButtonDOM(msg) {
+      let btnObj = null;
+      if (configData && configData.pages) {
+        configData.pages.forEach(p => {
+          const b = p.buttons.find(btn => btn.id === msg.btn_id);
+          if (b) {
+            b.state = msg.state;
+            btnObj = b;
+          }
+        });
+      }
+
+      const el = document.getElementById(`btn-dom-${msg.btn_id}`);
+      if (!el || el.classList.contains('deck-slider')) return;
+
+      const isAct = !!msg.state;
+      const bg = isAct 
+        ? (msg.active_color || (btnObj && btnObj.active_color) || '#991b1b') 
+        : (msg.color || (btnObj && btnObj.color) || '#161c2e');
+      const icon = isAct 
+        ? (msg.active_icon || (btnObj && (btnObj.active_icon || getSmartActiveIcon(btnObj))) || msg.icon || '⚡') 
+        : (msg.icon || (btnObj && btnObj.icon) || '⚡');
+      const label = isAct 
+        ? (msg.active_label || (btnObj && (btnObj.active_label || getSmartActiveLabel(btnObj))) || msg.label || '') 
+        : (msg.label || (btnObj && btnObj.label) || '');
+
+      const isToggle = (btnObj && btnObj.is_toggle) || ('active_icon' in msg) || ('active_label' in msg);
+
+      el.style.backgroundColor = bg.toLowerCase() === '#161c2e' ? '#2b2e27' : bg;
+      el.style.borderColor = isAct ? '#e28c80' : (bg.toLowerCase() === '#161c2e' ? '#454a3d' : bg);
+      if (isAct) {
+        el.classList.add('is-active');
+      } else {
+        el.classList.remove('is-active');
+      }
+
+      el.innerHTML = `
+        ${isToggle ? `<span class="badge-toggle ${isAct ? 'on' : 'off'}">${isAct ? 'ON' : 'OFF'}</span>` : ''}
+        <span class="icon">${deckText(icon)}</span>
+        <span class="label">${deckText(label)}</span>
+      `;
+    }
+
+    function sendAction(btnId) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(btnId);
+        if (navigator.vibrate) navigator.vibrate(35);
+      } else {
+        connectWS();
+      }
+    }
+
+    // 5. Reprise d'activité iOS Safari & Changement d'orientation
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+          connectWS();
+          loadConfig();
+        }
+      }
+    });
+
+    window.addEventListener("pageshow", () => {
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        connectWS();
+      }
+    });
+
+    window.addEventListener("focus", () => {
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        connectWS();
+      }
+    });
+
+    window.addEventListener("orientationchange", () => {
+      setTimeout(() => {
+        updateViewportHeight();
+        renderMonitoring(lastMonitoringReadings);
+        syncSlidersUI();
+      }, 100);
+    });
+
+    function updateViewportHeight() {
+      DeckLayout.orient(document.getElementById('deck-grid'));
+      const height = Math.round(window.visualViewport?.height || window.innerHeight);
+      if (height > 0) document.documentElement.style.setProperty('--app-height', height + 'px');
+    }
+    window.addEventListener('resize', updateViewportHeight, {passive:true});
+    window.visualViewport?.addEventListener('resize', updateViewportHeight, {passive:true});
+    window.addEventListener('pageshow', updateViewportHeight, {passive:true});
+    updateViewportHeight();
+
+    loadConfig();
+    connectWS();
+  </script>
+</body>
+</html>

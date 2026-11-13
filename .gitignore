@@ -1,0 +1,26 @@
+# Runtime state / personal information ? never commit
+config.json
+config.json.*
+config_safe_backup.json
+discord_config.json
+discord_config.*
+app-settings.json
+app-settings.json.*
+.phone-key
+.integrated-monitoring
+.desktop-profile/
+data/
+*.log
+*.lnk
+__pycache__/
+*.py[cod]
+.venv/
+# Downloaded dependencies, builds and private screenshots
+.build/
+dist/
+release/
+desktop/bin/
+desktop/vendor/
+desktop/DeckEdge.ico
+previews/
+node_modules/

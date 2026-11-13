@@ -1,0 +1,1796 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deck Edge - Studio</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --surface: #131b2e;
+      --surface-hover: #1c2742;
+      --border: #233152;
+      --primary: #38bdf8;
+      --primary-hover: #0ea5e9;
+      --danger: #f43f5e;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+    
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-icon { width: 14px; height: 14px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 10px #22c55e; }
+    .brand h1 { font-size: 18px; font-weight: 700; }
+
+    .main-layout { display: grid; grid-template-columns: 1fr 420px; gap: 24px; padding: 24px 28px; flex: 1; max-width: 1460px; margin: 0 auto; width: 100%; }
+
+    /* Zone Grille Visuelle & Pages */
+    .deck-section { display: flex; flex-direction: column; gap: 16px; }
+
+    .pages-bar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+    .page-tab {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 8px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+    .page-tab:hover { background: var(--surface-hover); color: var(--text); }
+    .page-tab.active { background: #162445; border-color: var(--primary); color: var(--primary); box-shadow: 0 0 12px rgba(56, 189, 248, 0.2); }
+    .page-tab-add {
+      background: transparent;
+      border: 1px dashed var(--border);
+      color: var(--text-muted);
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .page-tab-add:hover { border-color: var(--primary); color: var(--primary); }
+
+    .page-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(19, 27, 46, 0.5);
+      padding: 10px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+    .page-info { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; }
+    .page-actions { display: flex; gap: 8px; }
+
+    .deck-grid-preview {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      background: #070a12;
+      border: 2px dashed var(--border);
+      border-radius: 20px;
+      padding: 24px;
+      min-height: 400px;
+    }
+    .preview-btn {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: 16px;
+      padding: 16px 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      min-height: 120px;
+      position: relative;
+      overflow: hidden;
+    }
+    .preview-btn:hover { border-color: var(--primary); transform: translateY(-2px); }
+    .preview-btn.selected { border-color: var(--primary) !important; box-shadow: 0 0 16px rgba(56, 189, 248, 0.35); }
+    .preview-btn .icon { font-size: 28px; z-index: 2; }
+    .preview-btn .label { font-size: 13px; font-weight: 600; text-align: center; z-index: 2; }
+    .btn-index-badge { position: absolute; top: 8px; left: 10px; font-size: 10px; color: var(--text-muted); font-weight: bold; z-index: 2; }
+    .btn-toggle-badge { position: absolute; top: 8px; right: 10px; font-size: 9px; padding: 2px 6px; border-radius: 4px; background: rgba(56, 189, 248, 0.2); color: var(--primary); font-weight: 700; text-transform: uppercase; z-index: 2; }
+
+    /* Rendu Preview Spécifique pour les Sliders */
+    .preview-btn.is-slider {
+      background: #111827;
+      border-color: #1f2937;
+    }
+    .preview-slider-fill {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 70%;
+      background: linear-gradient(90deg, rgba(56, 189, 248, 0.15), rgba(56, 189, 248, 0.4));
+      border-right: 2px solid var(--primary);
+      z-index: 1;
+      pointer-events: none;
+    }
+    .preview-slider-val {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--primary);
+      z-index: 2;
+    }
+
+    /* Panneau d'édition */
+    .editor-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      height: fit-content;
+    }
+    .section-title { font-size: 14px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; }
+    .field-group { display: flex; flex-direction: column; gap: 6px; }
+    label { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; }
+    input, select {
+      background: #0b0f19;
+      border: 1px solid var(--border);
+      color: white;
+      padding: 9px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      outline: none;
+    }
+    input:focus, select:focus { border-color: var(--primary); }
+
+    .emoji-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+    .emoji-chip {
+      background: #0b0f19;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 8px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .emoji-chip:hover { border-color: var(--primary); }
+
+    .quick-presets { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+    .preset-pill {
+      background: #1c2742;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: #cbd5e1;
+      font-size: 11px;
+      padding: 4px 8px;
+      cursor: pointer;
+    }
+    .preset-pill:hover { background: var(--primary); color: #0b0f19; font-weight: 600; }
+
+    /* Box Slider / Audio Setup */
+    .slider-box {
+      background: #0b0f19;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* Box Toggle State */
+    .toggle-box {
+      background: #0b0f19;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .toggle-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+    .switch-label { font-size: 13px; font-weight: 600; color: #fff; }
+
+    /* Boutons globaux */
+    .btn {
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn-save { background: var(--primary); color: #070a12; }
+    .btn-save:hover { background: var(--primary-hover); }
+    .btn-delete { background: rgba(244, 63, 94, 0.15); color: var(--danger); border: 1px solid var(--danger); }
+    .btn-delete:hover { background: var(--danger); color: white; }
+    .btn-secondary { background: var(--surface-hover); color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { border-color: var(--text-muted); }
+
+    /* Drag & Drop */
+    .preview-btn[draggable="true"] { cursor: grab; }
+    .preview-btn.dragging { opacity: 0.35; border-style: dashed; cursor: grabbing; }
+    .preview-btn.drag-over { border-color: var(--primary) !important; background: #1e3a5f !important; transform: scale(1.03); }
+
+    /* Modal Sélecteur d'Apps & Jeux */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal-content {
+      background: #111827;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      width: 90%;
+      max-width: 650px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+    }
+    .cat-pill {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+    .cat-pill:hover, .cat-pill.active {
+      background: var(--surface-hover);
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+    .app-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #162035;
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .app-card:hover {
+      background: #1e2c4a;
+      border-color: var(--primary);
+      transform: translateX(4px);
+    }
+    .app-card-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .app-card-icon {
+      font-size: 22px;
+      width: 32px;
+      text-align: center;
+    }
+    .app-card-name {
+      font-weight: 600;
+      font-size: 14px;
+      color: #fff;
+    }
+    .app-card-badge {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: rgba(255,255,255,0.08);
+      color: #94a3b8;
+    }
+    .app-card-badge.game {
+      background: rgba(56, 189, 248, 0.15);
+      color: #38bdf8;
+    }
+    .app-card-badge.app {
+      background: rgba(168, 85, 247, 0.15);
+      color: #a855f7;
+    }
+
+    /* Deck Edge — console graphite / ambre. Aucune ressource externe. */
+    :root { color-scheme: dark; --bg: #171817; --surface: #20221f;
+      --surface-hover: #2a2d28; --border: #383c34; --primary: #dfb979;
+      --primary-hover: #edcb94; --danger: #e28c80; --text: #eeeee7; --text-muted: #a3a79c; }
+    * { font-family: "Segoe UI", system-ui, sans-serif; }
+    body { background: var(--bg); color: var(--text); }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible, select:focus-visible,
+    [tabindex]:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+    .page-tab { border-radius: 5px; background: transparent; border-color: transparent;
+      color: var(--text-muted); font-weight: 500; box-shadow: none; }
+    .page-tab.active { background: #303027; border-color: #61523a;
+      color: #edcb94; box-shadow: none; }
+    .page-tab:hover { background: var(--surface-hover); color: var(--text); }
+    .pages-bar { border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+    .label { font-weight: 500; letter-spacing: .1px; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { transition: none !important; animation: none !important; }
+    }
+
+    header { background: #1b1d1a; padding: 18px 32px; gap: 20px; }
+    .brand { gap: 13px; flex-shrink: 0; }
+    .brand-icon { width: 28px; height: 28px; border-radius: 4px; background: transparent;
+      border: 1px solid #b79a65; box-shadow: inset 7px 0 #b79a65; position: relative; }
+    .brand-icon::after { content: ''; position: absolute; left: 12px; top: 6px;
+      width: 7px; height: 14px; border-top: 2px solid #b79a65; border-bottom: 2px solid #b79a65; }
+    .brand h1 { font-size: 17px; letter-spacing: -.4px; font-weight: 600; }
+    .brand h1 small { display: block; margin-top: 3px; font-size: 10px; letter-spacing: 2px;
+      color: var(--text-muted); font-weight: 500; text-transform: uppercase; }
+    header > div:last-child { flex-wrap: wrap; justify-content: flex-end; }
+    .main-layout { grid-template-columns: minmax(0, 1fr) 360px; gap: 32px;
+      padding: 32px; max-width: 1440px; align-items: start; }
+    .deck-section { min-width: 0; gap: 20px; }
+    .workspace-heading { display: flex; justify-content: space-between; gap: 16px; align-items: end; }
+    .workspace-heading h2 { font-size: 25px; font-weight: 500; letter-spacing: -.7px; }
+    .workspace-heading p { color: var(--text-muted); font-size: 12px; margin-top: 7px; line-height: 1.6; }
+    .workspace-heading > span { color: #bda276; font: 11px Consolas, monospace; letter-spacing: 1px; white-space: nowrap; }
+    .page-tab-add { border-radius: 5px; }
+    .page-header-row { background: transparent; border: 0; border-radius: 0; padding: 0;
+      flex-wrap: wrap; gap: 12px; }
+    .page-info { color: var(--text-muted); font-size: 12px; flex-wrap: wrap; }
+    .deck-grid-preview { background: #111310; border: 1px solid #3a3d34; border-radius: 10px;
+      padding: 20px; gap: 12px; box-shadow: inset 0 2px 8px #0005, 0 1px 0 #ffffff08; }
+    .preview-btn { border-radius: 7px; border-width: 1px; min-height: 126px;
+      box-shadow: inset 0 1px 0 #ffffff10, 0 3px 0 #0005; transition: border-color .15s, box-shadow .15s; }
+    .preview-btn:hover { transform: none; box-shadow: inset 0 1px 0 #ffffff18, 0 3px 0 #0005; }
+    .preview-btn.selected { outline: 2px solid var(--primary); outline-offset: 3px;
+      border-color: #b79a65 !important; box-shadow: none; }
+    .preview-btn.is-slider { background: #1c201b !important; }
+    .preview-slider-fill { opacity: .65; }
+    .preview-slider-val { font: 500 18px Consolas, monospace; }
+    .btn-index-badge { font: 10px Consolas, monospace; color: #c0c3b6; }
+    .btn-toggle-badge { background: #ffffff10 !important; color: #d4d6cc !important;
+      border-radius: 3px; font-size: 9px; letter-spacing: 1px; }
+    .editor-panel { background: #20221f; border-radius: 7px; padding: 22px; gap: 18px; }
+    .section-title { font-size: 11px; letter-spacing: 1.5px; font-weight: 500; }
+    #editor-title { padding-bottom: 16px; border-bottom: 1px solid var(--border); color: var(--primary); }
+    label { text-transform: none; font-size: 12px; font-weight: 500; letter-spacing: 0; }
+    input, select { background: #171916; color: var(--text); border-radius: 4px; padding: 10px 11px; font-size: 13px; min-width: 0; }
+    input[type=color] { min-height: 36px; padding: 3px; }
+    .slider-box, .toggle-box { background: #191b18; border-radius: 5px; }
+    .emoji-chip { background: #191b18; border-radius: 4px; }
+    .preset-pill { background: #292c26; color: #c6c9bd; border-radius: 4px; }
+    .btn { border-radius: 5px; font-size: 12px; font-weight: 500; padding: 10px 13px; }
+    .btn-save { background: var(--primary); color: #201c14; font-weight: 600; }
+    .btn-delete { background: transparent; border-color: #70443e; color: var(--danger); }
+    .btn-primary { background: #34392e !important; border: 1px solid #555f46 !important; color: #e1e7d5; }
+    .modal-content { background: #20221f; border-radius: 8px; max-height: 90dvh; overflow-y: auto; }
+    .app-card { background: #262923; border-radius: 5px; }
+    .app-card:hover { background: #30352b; transform: none; }
+    .cat-pill { border-radius: 4px; }
+    .app-card-badge.game, .app-card-badge.app { background: #ffffff0c; color: #bfc6b2; }
+    .deck-note { color: #92988a; font-size: 11px; line-height: 1.6; }
+    @media (min-width: 1101px) { .editor-panel { position: sticky; top: 106px; } }
+    @media (max-width: 1100px) {
+      header { padding: 16px 20px; flex-wrap: wrap; }
+      header > div:last-child { justify-content: flex-start; }
+      .main-layout { grid-template-columns: minmax(0, 1fr) 320px; padding: 24px 20px; gap: 20px; }
+      .page-info input { max-width: 120px; }
+    }
+    @media (max-width: 760px) {
+      .main-layout { grid-template-columns: minmax(0, 1fr); padding: 24px 16px; }
+      header { position: static; padding: 16px; }
+      .deck-grid-preview { padding: 14px; gap: 10px; }
+      .preview-btn { min-height: 100px; padding: 12px 6px; }
+      .workspace-heading > span { display: none; }
+      .editor-panel { min-width: 0; }
+    }
+
+    .monitoring-editor { border: 1px solid var(--border); border-radius: 6px; background: #1d201b; padding: 14px 16px; }
+    .monitoring-editor summary { cursor: pointer; font-size: 13px; color: var(--text); list-style-position: inside; }
+    #sensor-connection { float: right; font-size: 11px; color: var(--text-muted); }
+    .monitoring-editor p { font-size: 12px; color: var(--text-muted); margin: 15px 0; line-height: 1.6; }
+    .monitoring-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; padding: 12px 0; border-top: 1px solid var(--border); }
+    .monitoring-row select { width: 100%; grid-column: 1 / -1; }
+    .monitoring-row-actions, .monitoring-actions { display: flex; gap: 6px; align-items: center; }
+    .monitoring-row-actions .btn { padding: 6px 10px; }
+    .monitoring-actions { flex-wrap: wrap; margin-top: 12px; }
+    .monitoring-actions span { color: var(--text-muted); font-size: 11px; }
+    button:disabled { opacity: .4; cursor: default; }
+    @media (max-width: 760px) { #sensor-connection { float: none; display: block; margin-top: 8px; } }
+    [hidden] { display: none !important; }
+    #save-status { font-size: 11px; color: var(--text-muted); }
+    #save-status[data-dirty="true"] { color: var(--primary); }
+    #studio-menu { position: fixed; z-index: 2000; min-width: 245px; max-width: min(340px, calc(100vw - 16px));
+      max-height: calc(100dvh - 16px); overflow-y: auto; padding: 6px; background: #252822;
+      border: 1px solid #4a5040; border-radius: 7px; box-shadow: 0 12px 32px #0008; }
+    .studio-menu-title { color: var(--text-muted); font-size: 11px; padding: 8px 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #studio-menu button { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 20px;
+      border: 0; background: transparent; color: var(--text); padding: 10px; border-radius: 4px; text-align: left; font-size: 12px; }
+    #studio-menu button:hover, #studio-menu button:focus-visible { background: #363d2f; }
+    #studio-menu button.danger { color: var(--danger); }
+    #studio-menu kbd { color: var(--text-muted); font: 10px Consolas, monospace; white-space: nowrap; }
+    #studio-menu hr { border: 0; border-top: 1px solid var(--border); margin: 5px; }
+    .tile-more { position: absolute; bottom: 6px; right: 7px; z-index: 3; border: 1px solid #ffffff25;
+      background: #171817a6; color: #eeeee7; border-radius: 4px; width: 30px; height: 25px; font-size: 20px; line-height: 12px; }
+    .tile-more:hover, .tile-more:focus-visible { background: #3c4432; }
+    .studio-empty-state { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+      padding: 45px 16px; color: var(--text-muted); font-size: 13px; }
+    .editor-empty > :not(.section-title) { display: none !important; }
+    .editor-empty::after { content: 'Le clic droit et le bouton + permettent de composer ce profil.'; color: var(--text-muted); font-size: 12px; line-height: 1.7; }
+    #studio-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 18px;
+      z-index: 2200; max-width: calc(100vw - 32px); padding: 14px 18px; border: 1px solid #596448; background: #292e23;
+      color: var(--text); border-radius: 6px; box-shadow: 0 6px 22px #0006; font-size: 12px; }
+    #studio-toast button { border: 0; background: transparent; color: var(--primary); font-size: 12px; white-space: nowrap; }
+    @media (max-width: 760px) { #save-status { flex-basis: 100%; order: 10; } }
+    .mobile-preview { min-width: 0; }
+    .preview-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .preview-toolbar label, #preview-dimensions { font-size: 11px; color: var(--text-muted); }
+    .preview-toolbar select { padding: 7px 9px; font-size: 12px; }
+    .preview-toolbar .btn { padding: 8px 10px; }
+    #preview-dimensions { margin-left: auto; font-family: Consolas, monospace; }
+    .preview-stage { width: 100%; display: flex; justify-content: center; align-items: flex-start;
+      padding: 12px; position: relative; background: #111310; border: 1px solid var(--border); border-radius: 8px; }
+    .phone-wrapper { position: relative; flex-shrink: 0; }
+    .phone-device { position: absolute; top: 0; left: 0; transform-origin: top left; padding: 9px;
+      background: #090b08; border: 1px solid #5b6152; border-radius: 23px; box-shadow: 0 8px 25px #0005; }
+    .phone-screen { width: 100%; height: 100%; background: var(--bg); border-radius: 14px;
+      padding: 10px 12px 0; display: flex; flex-direction: column; gap: 12px; overflow: hidden; user-select: none; }
+    .preview-monitoring { display: grid; flex-shrink: 0; background: #20221f; border: 1px solid #71825e;
+      border-radius: 6px; padding: 10px 12px; gap: 8px; }
+    .preview-gauge { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 0; padding: 3px; }
+    .preview-gauge + .preview-gauge { border-left: 1px solid var(--border); }
+    .preview-gauge-title { font-size: 10px; text-transform: uppercase; letter-spacing: 1.6px; color: var(--text-muted);
+      max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .preview-gauge-val { font: 500 15px Consolas, monospace; color: #edcb94; margin: 2px 0; }
+    .preview-gauge-sub { color: var(--text-muted); font-size: 10px; min-height: 13px; }
+    .preview-phone-pages { flex-shrink: 0; display: flex; gap: 5px; overflow-x: auto; scrollbar-width: none;
+      border-bottom: 1px solid var(--border); padding: 2px 0 6px; }
+    .phone-tab { flex-shrink: 0; border: 1px solid transparent; background: transparent; border-radius: 5px;
+      padding: 8px 16px; font-size: 13px; font-weight: 500; color: var(--text-muted); white-space: nowrap; }
+    .phone-tab.active { background: #303027; border-color: #61523a; color: #edcb94; }
+    .phone-screen .deck-grid-preview { flex: 1; min-height: 0; min-width: 0; overflow-y: auto;
+      background: transparent; border: 0; box-shadow: none; border-radius: 0; padding: 2px 1px 18px; scrollbar-width: thin; }
+    .phone-screen .preview-btn.selected { outline: 2px solid var(--primary); outline-offset: -2px; box-shadow: none; }
+    .phone-screen .btn-index-badge { opacity: 0; font-size: 9px; top: 5px; left: 6px; pointer-events: none; }
+    .phone-screen .preview-btn:hover .btn-index-badge, .phone-screen .preview-btn.selected .btn-index-badge { opacity: 1; }
+    .phone-screen .tile-more { bottom: 3px; right: 3px; width: 24px; height: 20px; font-size: 16px; opacity: .75; }
+    .phone-screen[data-orientation="landscape"] { padding: 6px 14px 0; gap: 8px; }
+    .phone-screen[data-orientation="landscape"] .preview-monitoring { padding: 6px 14px; gap: 6px; }
+    .phone-screen[data-orientation="landscape"] .preview-gauge-title { font-size: 9px; }
+    .phone-screen[data-orientation="landscape"] .preview-gauge-val { font-size: 16px; margin: 0; }
+    .phone-screen[data-orientation="landscape"] .preview-gauge-sub { font-size: 9px; }
+    .phone-screen[data-orientation="landscape"] .phone-tab { padding: 5px 12px; font-size: 11px; }
+    .preview-caption { color: var(--text-muted); text-align: center; font-size: 11px; line-height: 1.6; margin-top: 9px; }
+    .widget-size-fields { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 10px; }
+    .widget-size-fields select { width: 100%; font-size: 12px; }
+    @media (max-width: 760px) { #preview-dimensions { margin-left: 0; } }
+    .studio-color-tools { display: flex; align-items: center; gap: 8px; }
+    .studio-color-tools input { width: 110px; font-family: Consolas, monospace; }
+  </style>
+  <link rel="stylesheet" href="/deck-layout.css">
+  <link rel="stylesheet" href="/studio-shell.css">
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <div class="brand-icon"></div>
+      <h1>Deck Edge<small>Studio de contrôle</small></h1>
+    </div>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <button class="btn btn-secondary" id="btn-discord-status" onclick="openDiscordModal()" style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600;">
+        <span id="discord-indicator-dot" style="width: 9px; height: 9px; border-radius: 50%; background: #94a3b8; display: inline-block;"></span>
+        <span id="discord-status-text">Discord</span>
+      </button>
+      <button class="btn btn-secondary" onclick="loadData()" title="Recharge la configuration enregistrée" style="font-size: 13px;">Recharger</button>
+      <button class="btn btn-secondary" id="studio-undo" onclick="undoStudio()" title="Annuler (Ctrl+Z)" aria-label="Annuler la modification" disabled>↶</button>
+      <button class="btn btn-secondary" id="studio-redo" onclick="redoStudio()" title="Rétablir (Ctrl+Y)" aria-label="Rétablir la modification" disabled>↷</button>
+      <button class="btn btn-secondary" onclick="openAddMenu(event)">+ Ajouter une touche</button>
+      <button class="btn btn-secondary" id="app-settings-button" onclick="window.chrome.webview.postMessage({type:'openSettings'})" hidden>Paramètres</button>
+      <span id="save-status" role="status">Chargement…</span>
+      <button class="btn btn-save" id="studio-save" onclick="saveData()" title="Enregistrer (Ctrl+S)" disabled>Enregistrer</button>
+    </div>
+  </header>
+
+  <div class="main-layout">
+    
+    <!-- Colonne Gauche : Aperçu & Gestion des Pages -->
+    <div class="deck-section">
+      <div class="workspace-heading">
+        <div><h2>Votre pupitre.</h2><p>Composez vos profils. Gardez vos commandes à portée de main.</p></div>
+        <span>DECK / ÉDITION</span>
+      </div>
+      <details class="monitoring-editor" id="monitoring-settings">
+        <summary><span>Monitoring du pupitre</span><span id="sensor-connection">Détection des capteurs…</span></summary>
+        <p>Choisissez de 1 à 6 indicateurs. Chaque indicateur peut afficher une deuxième mesure en dessous.</p>
+        <div id="monitoring-rows"></div>
+        <div class="monitoring-actions">
+          <button type="button" class="btn btn-secondary" id="add-monitoring" onclick="addMonitoringWidget()">+ Ajouter un indicateur</button>
+          <button type="button" class="btn btn-secondary" onclick="fetchMonitoringSensors()">Actualiser les capteurs</button>
+          <span>Appliquer avec « Enregistrer ».</span>
+        </div>
+      </details>
+      <!-- Barre d'onglets de profils -->
+      <div class="pages-bar" id="pages-bar"></div>
+
+      <!-- Contrôles de la page active -->
+      <div class="page-header-row">
+        <div class="page-info" id="current-page-info">
+          <span>Page active :</span>
+          <input type="text" id="inp-page-name" style="width: 150px; padding: 4px 8px; font-size: 13px;" onchange="updateCurrentPageMeta()">
+          <input type="text" id="inp-page-icon" style="width: 50px; padding: 4px 8px; font-size: 16px; text-align: center;" onchange="updateCurrentPageMeta()">
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-delete" style="padding: 6px 12px; font-size: 12px;" onclick="deleteCurrentPage()">Supprimer la page</button>
+        </div>
+      </div>
+
+      <section class="mobile-preview" id="mobile-preview" aria-label="Aperçu mobile du pupitre">
+        <div class="preview-toolbar">
+          <label for="preview-size">Téléphone</label>
+          <select id="preview-size" onchange="updatePhonePreview()">
+            <option value="390x844">Standard · 390 × 844</option>
+            <option value="320x568">Compact · 320 × 568</option>
+            <option value="430x932">Grand · 430 × 932</option>
+          </select>
+          <button type="button" class="btn btn-secondary" id="preview-rotate" onclick="rotatePhonePreview()">↻ Portrait</button>
+          <select id="preview-zoom" aria-label="Zoom de l’aperçu" onchange="updatePhonePreview()">
+            <option value="fit">Ajuster</option><option value="actual">100 %</option>
+          </select>
+          <span id="preview-dimensions"></span>
+        </div>
+        <div class="preview-stage" id="preview-stage">
+          <div class="phone-wrapper" id="phone-wrapper">
+            <div class="phone-device" id="phone-device">
+              <div class="phone-screen" id="phone-screen" data-orientation="portrait">
+                <div class="preview-monitoring" id="preview-monitoring"></div>
+                <div class="preview-phone-pages" id="preview-phone-pages"></div>
+                <div class="deck-grid-preview deck-layout-grid" id="grid-preview" data-orientation="portrait"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="preview-caption">Aperçu d’édition · aucune commande n’est exécutée. Les tailles et l’ordre sont ceux du mobile.</p>
+      </section>
+      <p class="deck-note">Clic droit ou ⋯ pour les actions rapides · Glissez pour réorganiser · Ctrl+S pour enregistrer.</p>
+    </div>
+
+    <!-- Colonne Droite : Formulaire d'édition de bouton -->
+    <div class="editor-panel" id="editor-panel">
+      <div class="section-title" id="editor-title">Édition de l'élément</div>
+
+      <div class="field-group">
+        <label>Type d'élément</label>
+        <select id="inp-type" onchange="onTypeChange(this.value)">
+          <option value="slider">🎚️ Curseur Tactile (Slider de Volume)</option>
+          <option value="key">Touche simple ou multimédia (ex: playpause, volumeup)</option>
+          <option value="hotkey">Raccourci combiné (ex: ctrl,shift,m ou win,d)</option>
+          <option value="launch">Lancer une application / Fichier</option>
+          <option value="volume_app">Incrément Volume App / Pas à pas (ex: spotify:+10)</option>
+        </select>
+      </div>
+
+      <div class="widget-size-fields">
+        <div class="field-group">
+          <label for="inp-width">Largeur du widget</label>
+          <select id="inp-width" onchange="liveUpdate('width', this.value)">
+            <option value="auto">Automatique</option><option value="quarter">¼ de ligne · 4 par ligne</option>
+            <option value="third">⅓ de ligne · 3 par ligne</option><option value="half">½ ligne · 2 par ligne</option>
+            <option value="full">Toute la largeur</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label for="inp-height">Hauteur du widget</label>
+          <select id="inp-height" onchange="liveUpdate('height', this.value)">
+            <option value="compact">Compacte</option><option value="normal">Normale</option><option value="tall">Grande · double hauteur</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Configuration spécifique pour le SLIDER DE VOLUME -->
+      <div class="slider-box" id="box-slider-setup">
+        <div class="section-title" style="color: var(--primary);">Réglages du Curseur de Volume</div>
+        
+        <div class="field-group">
+          <label>Sortie Son ou Application à piloter</label>
+          <select id="sel-audio-target" onchange="onAudioTargetSelect(this.value)">
+            <option value="master">🔊 Général (Master Windows)</option>
+          </select>
+          <p style="font-size: 11px; color: var(--text-muted); line-height: 1.6;">Recherche sur toutes les sorties audio. Une application doit avoir créé une session audio pour apparaître ; lancez un son puis actualisez si elle manque.</p>
+          <div style="display: flex; justify-content: flex-end;">
+            <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px; margin-top: 4px;" onclick="fetchAudioTargets(true)">🔄 Actualiser les sorties & apps</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label>Texte affiché</label>
+        <input type="text" id="inp-label" oninput="liveUpdate('label', this.value)">
+      </div>
+
+      <div class="field-group">
+        <label>Icône</label>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <input type="text" id="inp-icon" style="font-size: 20px; width: 60px; text-align: center;" oninput="liveUpdate('icon', this.value)">
+          <div class="emoji-row" style="margin-top: 0;">
+            <span class="emoji-chip" onclick="setEmoji('🔊')">🔊</span>
+            <span class="emoji-chip" onclick="setEmoji('🎧')">🎧</span>
+            <span class="emoji-chip" onclick="setEmoji('🎙️')">🎙️</span>
+            <span class="emoji-chip" onclick="setEmoji('🎵')">🎵</span>
+            <span class="emoji-chip" onclick="setEmoji('🎮')">🎮</span>
+            <span class="emoji-chip" onclick="setEmoji('🔴')">🔴</span>
+            <span class="emoji-chip" onclick="setEmoji('⏯️')">⏯️</span>
+            <span class="emoji-chip" onclick="setEmoji('🖥️')">🖥️</span>
+            <span class="emoji-chip" onclick="setEmoji('📸')">📸</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label>Couleur du bouton / jauge</label>
+        <div class="studio-color-tools">
+          <input type="text" id="hex-color" maxlength="7" aria-label="Code couleur du widget" spellcheck="false" onchange="setStudioHexColor('color',this.value,this)">
+          <button type="button" class="btn btn-secondary" id="pick-color" onclick="chooseStudioColor('color')" title="Prélever une couleur à l’écran">Pipette</button>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <input type="color" id="inp-color" oninput="liveUpdate('color', this.value)" style="width: 44px; height: 34px; padding: 2px; cursor: pointer;">
+          <div class="color-palette" style="display: flex; gap: 6px;">
+            <span class="color-dot" onclick="setColor('#38bdf8')" style="background: #38bdf8; width: 22px; height: 22px; border-radius: 50%; cursor: pointer;" title="Bleu Cyan"></span>
+            <span class="color-dot" onclick="setColor('#22c55e')" style="background: #22c55e; width: 22px; height: 22px; border-radius: 50%; cursor: pointer;" title="Vert Spotify"></span>
+            <span class="color-dot" onclick="setColor('#a855f7')" style="background: #a855f7; width: 22px; height: 22px; border-radius: 50%; cursor: pointer;" title="Violet Discord"></span>
+            <span class="color-dot" onclick="setColor('#f97316')" style="background: #f97316; width: 22px; height: 22px; border-radius: 50%; cursor: pointer;" title="Orange"></span>
+            <span class="color-dot" onclick="setColor('#161c2e')" style="background: #161c2e; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--border); cursor: pointer;" title="Sombre Défaut"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Champ Commande / Cible (masqué ou assisté pour les sliders) -->
+      <div class="field-group" id="grp-target">
+        <label>Commande / Cible brute</label>
+        
+        <button type="button" class="btn btn-primary" onclick="openAppPickerModal()" style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 8px; font-size: 13px; padding: 9px 12px; background: linear-gradient(135deg, #1d4ed8, #0284c7); border: 1px solid #38bdf8; font-weight: 700; width: 100%;">
+          <span>🔍 Choisir une Application, un Jeu ou un Outil...</span>
+        </button>
+
+        <input type="text" id="inp-target" oninput="liveUpdate('target', this.value)" placeholder="ex: start discord:, master, app:spotify, ctrl,shift,m">
+        
+        <div class="quick-presets" id="presets-container"></div>
+      </div>
+
+      <!-- Mode Bascule (Toggle State) - Masqué pour les sliders -->
+      <div class="toggle-box" id="box-toggle">
+        <div class="toggle-header" onclick="toggleSwitchMode()">
+          <span class="switch-label">🔄 Mode Bascule (Toggle ON/OFF)</span>
+          <input type="checkbox" id="chk-toggle" onchange="liveUpdate('is_toggle', this.checked)">
+        </div>
+
+        <div id="toggle-fields" style="display: none; flex-direction: column; gap: 10px; margin-top: 4px;">
+          <div style="display: flex; justify-content: flex-end;">
+            <button type="button" class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px;" onclick="testTogglePreview()">👁️ Tester état ON / OFF dans la grille</button>
+          </div>
+          <div class="field-group">
+            <label>Libellé si Actif</label>
+            <input type="text" id="inp-active-label" oninput="liveUpdate('active_label', this.value)" placeholder="ex: MUTE ACTIF">
+          </div>
+          <div class="field-group">
+            <label>Icône si Actif</label>
+            <input type="text" id="inp-active-icon" style="width: 60px; font-size: 18px; text-align: center;" oninput="liveUpdate('active_icon', this.value)" placeholder="🔇">
+          </div>
+          <div class="field-group">
+            <label>Couleur si Actif</label>
+            <div class="studio-color-tools">
+              <input type="text" id="hex-active-color" maxlength="7" aria-label="Code couleur de l’état actif" spellcheck="false" onchange="setStudioHexColor('active_color',this.value,this)">
+              <button type="button" class="btn btn-secondary" id="pick-active-color" onclick="chooseStudioColor('active_color')">Pipette</button>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <input type="color" id="inp-active-color" oninput="liveUpdate('active_color', this.value)" style="width: 44px; height: 34px; padding: 2px;">
+              <span class="color-dot" onclick="setActiveColor('#991b1b')" style="background: #991b1b; width: 22px; height: 22px; border-radius: 50%; cursor: pointer;" title="Rouge actif"></span>
+              <span class="color-dot" onclick="setActiveColor('#15803d')" style="background: #15803d; width: 22px; height: 22px; border-radius: 50%; cursor: pointer;" title="Vert actif"></span>
+              <span class="color-dot" onclick="setActiveColor('#eab308')" style="background: #eab308; width: 22px; height: 22px; border-radius: 50%; cursor: pointer;" title="Jaune actif"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 10px; margin-top: auto;">
+        <button class="btn btn-delete" style="flex: 1;" onclick="deleteCurrentButton()">Supprimer l'élément</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="studio-menu" role="menu" aria-label="Actions rapides" hidden></div>
+  <div id="studio-toast" role="status" aria-live="polite" hidden></div>
+  <script src="/studio.js"></script>
+  <script src="/deck-layout.js"></script>
+  <script src="/studio-colors.js"></script>
+  <script src="/studio-shell.js"></script>
+  <script>
+    let config = { active_page_id: "page_main", pages: [] };
+    let currentActivePageId = "page_main";
+    let selectedIndex = 0;
+    let draggedIndex = null;
+    let audioTargets = { devices: [], apps: [] };
+    let sensorCatalog = { aliases: [], sensors: [] };
+    let sensorRetryTimer;
+    const defaultMonitoring = () => [
+      {label: 'CPU', sensor_id: 'cpu_load', secondary_sensor_id: 'cpu_temp'},
+      {label: 'GPU', sensor_id: 'gpu_load', secondary_sensor_id: 'gpu_temp'},
+      {label: 'RAM', sensor_id: 'ram_used', secondary_sensor_id: ''}
+    ];
+
+    async function fetchMonitoringSensors() {
+      clearTimeout(sensorRetryTimer);
+      const status = document.getElementById('sensor-connection');
+      try {
+        const response = await fetch('/api/monitoring/sensors');
+        if (!response.ok) throw Error('Capteurs indisponibles');
+        sensorCatalog = await response.json();
+        status.textContent = sensorCatalog.connected
+          ? `${sensorCatalog.sensors.length} capteurs · ${sensorCatalog.elevated ? 'Accès complet' : 'Accès limité'}`
+          : 'Moteur de capteurs en attente';
+        renderMonitoringEditor();
+        if (!sensorCatalog.connected) sensorRetryTimer = setTimeout(fetchMonitoringSensors, 3000);
+      } catch (error) { status.textContent = 'Capteurs indisponibles · Réessayer avec Actualiser'; }
+    }
+
+    function sensorSelect(selected, optional, update, accessibleLabel) {
+      const select = document.createElement('select');
+      select.setAttribute('aria-label', accessibleLabel);
+      const appendOption = (parent, value, text) => {
+        const option = document.createElement('option'); option.value = value; option.textContent = text; parent.append(option);
+      };
+      if (optional) appendOption(select, '', 'Aucune deuxième mesure');
+      const aliases = sensorCatalog.aliases.length ? sensorCatalog.aliases : [
+        {id:'cpu_load',name:'Charge CPU'}, {id:'cpu_temp',name:'Température CPU'},
+        {id:'gpu_load',name:'Charge GPU'}, {id:'gpu_temp',name:'Température GPU'}, {id:'ram_used',name:'RAM utilisée'}
+      ];
+      const automatic = document.createElement('optgroup'); automatic.label = 'Sélection automatique';
+      aliases.forEach(sensor => appendOption(automatic, sensor.id, sensor.name)); select.append(automatic);
+      const groups = new Map();
+      (sensorCatalog.sensors || []).forEach(sensor => {
+        if (!groups.has(sensor.hardware)) {
+          const group = document.createElement('optgroup'); group.label = sensor.hardware; groups.set(sensor.hardware, group); select.append(group);
+        }
+        appendOption(groups.get(sensor.hardware), sensor.id, `${sensor.name}${sensor.unit ? ' · ' + sensor.unit : ''}${sensor.value == null ? ' (indisponible)' : ''}`);
+      });
+      if (selected && !Array.from(select.options).some(option => option.value === selected)) appendOption(select, selected, 'Capteur enregistré · actuellement absent');
+      select.value = selected;
+      select.onchange = () => update(select.value);
+      return select;
+    }
+
+    function renderMonitoringEditor() {
+      config.monitoring ||= defaultMonitoring();
+      const rows = document.getElementById('monitoring-rows'); rows.replaceChildren();
+      config.monitoring.forEach((widget, index) => {
+        const row = document.createElement('div'); row.className = 'monitoring-row';
+        const label = document.createElement('input'); label.type = 'text'; label.maxLength = 24;
+        label.value = widget.label; label.setAttribute('aria-label', `Nom de l’indicateur ${index + 1}`);
+        label.oninput = () => { widget.label = label.value; };
+        const controls = document.createElement('div'); controls.className = 'monitoring-row-actions';
+        const action = (text, title, disabled, handler) => {
+          const button = document.createElement('button'); button.type = 'button'; button.className = 'btn btn-secondary';
+          button.textContent = text; button.title = title; button.setAttribute('aria-label', `${title} ${index + 1}`);
+          button.disabled = disabled; button.onclick = handler; controls.append(button);
+        };
+        const move = offset => {
+          [config.monitoring[index], config.monitoring[index + offset]] = [config.monitoring[index + offset], config.monitoring[index]];
+          renderMonitoringEditor();
+        };
+        action('↑', 'Monter l’indicateur', index === 0, () => move(-1));
+        action('↓', 'Descendre l’indicateur', index === config.monitoring.length - 1, () => move(1));
+        action('×', 'Retirer l’indicateur', config.monitoring.length === 1, () => { config.monitoring.splice(index, 1); renderMonitoringEditor(); });
+        row.append(label, controls,
+          sensorSelect(widget.sensor_id, false, value => { widget.sensor_id = value; }, `Mesure principale ${index + 1}`),
+          sensorSelect(widget.secondary_sensor_id || '', true, value => { widget.secondary_sensor_id = value; }, `Mesure secondaire ${index + 1}`));
+        rows.append(row);
+      });
+      document.getElementById('add-monitoring').disabled = config.monitoring.length >= 6;
+    }
+
+    function addMonitoringWidget() {
+      if (config.monitoring.length >= 6) return;
+      config.monitoring.push({label:'Indicateur', sensor_id:'cpu_temp', secondary_sensor_id:''}); renderMonitoringEditor();
+    }
+
+    async function loadData() {
+      if (studioDirty() && !confirm('Recharger la configuration enregistrée et abandonner les modifications en cours ?')) return;
+      try {
+        const res = await fetch('/api/config');
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        config = await res.json();
+        config.monitoring ||= defaultMonitoring();
+        renderMonitoringEditor();
+        fetchMonitoringSensors();
+        
+        if (!config.pages || config.pages.length === 0) {
+          config.pages = [{ id: "page_main", name: "Principal", icon: "🏠", buttons: [] }];
+        }
+        currentActivePageId = config.pages.find(page => page.id === 'page_main')?.id || config.active_page_id || config.pages[0].id;
+        
+        renderPagesBar();
+        renderGrid();
+        selectButton(0);
+        studioResetHistory();
+        await fetchAudioTargets(false);
+      } catch (err) {
+        console.error("Erreur chargement config :", err);
+        studioNotify('Impossible de charger la configuration. Vérifiez que le serveur est actif.');
+      }
+    }
+
+    async function fetchAudioTargets(showAlert = false) {
+      try {
+        const res = await fetch('/api/audio/targets');
+        if (res.ok) {
+          audioTargets = await res.json();
+          populateAudioTargetsSelect();
+          if (showAlert) alert("Périphériques de sortie et applications audio détectés !");
+        }
+      } catch (e) {
+        console.error("Erreur détection cibles audio:", e);
+      }
+    }
+
+    function populateAudioTargetsSelect() {
+      const sel = document.getElementById('sel-audio-target');
+      sel.innerHTML = '';
+
+      // Groupe Périphériques de sortie
+      const grpDev = document.createElement('optgroup');
+      grpDev.label = "🎧 Périphériques de sortie audio (Casque, Écrans...)";
+      (audioTargets.devices || []).forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d.target;
+        opt.innerText = `${d.name} (${d.volume}%)`;
+        grpDev.appendChild(opt);
+      });
+      sel.appendChild(grpDev);
+
+      // Groupe Applications
+      const grpApp = document.createElement('optgroup');
+      grpApp.label = "🎵 Applications avec une session audio";
+      (audioTargets.apps || []).forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a.target;
+        opt.innerText = `${a.name} (${a.volume}%)`;
+        opt.title = (a.outputs || []).join('\n');
+        grpApp.appendChild(opt);
+      });
+      sel.appendChild(grpApp);
+
+      // Sélectionner la cible actuelle du bouton si elle existe
+      const page = getCurrentPage();
+      if (page && page.buttons[selectedIndex]) {
+        const currTarget = page.buttons[selectedIndex].target;
+        if (currTarget && !Array.from(sel.options).some(option => option.value === currTarget)) {
+          const option = document.createElement('option'); option.value = currTarget;
+          option.textContent = `${currTarget.replace(/^app:|^device:/, '')} · actuellement indisponible`;
+          sel.append(option);
+        }
+        if (currTarget) sel.value = currTarget;
+      }
+    }
+
+    function onAudioTargetSelect(val) {
+      liveUpdate('target', val);
+      document.getElementById('inp-target').value = val;
+      
+      // Auto-remplissage intelligent du libellé et de l'icône si vides
+      const page = getCurrentPage();
+      const btn = page.buttons[selectedIndex];
+      if (btn) {
+        if (!btn.label || btn.label === "Nouveau" || btn.label.startsWith("Vol")) {
+          let cleanLabel = val.replace("device:", "").replace("app:", "");
+          if (cleanLabel.length > 15) cleanLabel = cleanLabel.substring(0, 15);
+          btn.label = cleanLabel;
+          document.getElementById('inp-label').value = cleanLabel;
+        }
+        if (val.toLowerCase().includes("casque") || val.toLowerCase().includes("headset") || val.toLowerCase().includes("hyperx")) {
+          setEmoji('🎧');
+        } else if (val.toLowerCase().includes("discord")) {
+          setEmoji('🎙️');
+        } else if (val.toLowerCase().includes("spotify") || val.toLowerCase().includes("music")) {
+          setEmoji('🎵');
+        } else {
+          setEmoji('🔊');
+        }
+        renderGrid();
+      }
+    }
+
+    function getCurrentPage() {
+      return config.pages.find(p => p.id === currentActivePageId) || config.pages[0];
+    }
+
+    function renderPagesBar() {
+      const bar = document.getElementById('pages-bar');
+      bar.innerHTML = '';
+
+      config.pages.forEach(p => {
+        const tab = document.createElement('div');
+        tab.className = `page-tab ${p.id === currentActivePageId ? 'active' : ''}`;
+        tab.innerHTML = `<span>${studioEscape(p.icon || '📄')}</span><span>${studioEscape(p.name)}</span>`;
+        tab.dataset.pageId = p.id;
+        tab.tabIndex = 0;
+        tab.setAttribute('role', 'button');
+        tab.onkeydown = event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); switchPage(p.id); } };
+        tab.onclick = () => switchPage(p.id);
+        bar.appendChild(tab);
+      });
+
+      const addBtn = document.createElement('button');
+      addBtn.className = 'page-tab-add';
+      addBtn.innerHTML = `+ Ajouter une Page`;
+      addBtn.onclick = addNewPage;
+      bar.appendChild(addBtn);
+
+      const page = getCurrentPage();
+      document.getElementById('inp-page-name').value = page.name;
+      document.getElementById('inp-page-icon').value = page.icon || '📄';
+    }
+
+    function switchPage(pageId) {
+      currentActivePageId = pageId;
+      selectedIndex = 0;
+      renderPagesBar();
+      renderGrid();
+      selectButton(0);
+    }
+
+    function addNewPage() {
+      const name = prompt("Nom du profil (ex: Stream, Gaming, Desktop) :", "Nouveau Profil");
+      if (!name?.trim()) return;
+      const newId = studioId('page');
+      config.pages.push({
+        id: newId,
+        name: name.trim().slice(0,50),
+        icon: "⚡",
+        buttons: [
+          { id: studioId('b'), label: "Master", icon: "🔊", type: "slider", target: "master", color: "#38bdf8" }
+        ]
+      });
+      switchPage(newId);
+    }
+
+    function updateCurrentPageMeta() {
+      const page = getCurrentPage();
+      page.name = document.getElementById('inp-page-name').value.trim() || "Page";
+      page.icon = document.getElementById('inp-page-icon').value.trim() || "📄";
+      renderPagesBar();
+    }
+
+    function deleteCurrentPage() {
+      if (config.pages.length <= 1) {
+        alert("Impossible de supprimer la seule page existante.");
+        return;
+      }
+      if (!confirm("Voulez-vous vraiment supprimer cette page et tous ses boutons ?")) return;
+      
+      const idx = config.pages.findIndex(p => p.id === currentActivePageId);
+      config.pages.splice(idx, 1);
+      currentActivePageId = config.pages[0].id;
+      if (!config.pages.some(page => page.id === config.active_page_id)) config.active_page_id = currentActivePageId;
+      switchPage(currentActivePageId);
+    }
+
+    function getSmartActiveIcon(btn) {
+      if (btn.active_icon) return btn.active_icon;
+      if (btn.icon === '🎙️' || btn.icon === '🔊') return '🔇';
+      if (btn.icon === '⏯️') return '⏸️';
+      if (btn.icon === '🔴') return '⏹️';
+      return btn.icon || '⚡';
+    }
+
+    function getSmartActiveLabel(btn) {
+      if (btn.active_label) return btn.active_label;
+      const lb = (btn.label || '').toLowerCase();
+      if (lb.includes('micro') || lb.includes('mute')) return 'MUTÉ';
+      if (lb.includes('rec') || lb.includes('obs')) return 'REC EN COURS';
+      if (lb.includes('pause') || lb.includes('play')) return 'EN PAUSE';
+      return btn.label || '';
+    }
+
+    function renderGrid() {
+      const grid = document.getElementById('grid-preview');
+      grid.innerHTML = '';
+      const page = getCurrentPage();
+
+      if (!page.buttons || page.buttons.length === 0) {
+        grid.innerHTML = '<div class="studio-empty-state"><span>Aucune touche dans ce profil.</span><button type="button" class="btn btn-secondary" onclick="openAddMenu(event)">+ Ajouter une touche</button></div>';
+        return;
+      }
+
+      page.buttons.forEach((btn, idx) => {
+        const el = document.createElement('div');
+        el.className = `preview-btn ${idx === selectedIndex ? 'selected' : ''} ${btn.type === 'slider' ? 'is-slider' : ''}`;
+        el.setAttribute('draggable', 'true');
+        el.dataset.index = idx;
+        DeckLayout.apply(el, btn);
+
+        const isAct = btn.is_toggle && btn.state;
+        const btnBg = isAct ? (btn.active_color || '#991b1b') : (btn.color || '#161c2e');
+        const icon = studioEscape(isAct ? (btn.active_icon || getSmartActiveIcon(btn)) : (btn.icon || '⚡'));
+        const label = studioEscape(isAct ? (btn.active_label || getSmartActiveLabel(btn)) : (btn.label || 'Sans nom'));
+
+        el.style.backgroundColor = btn.type === 'slider' ? '#1c201b' : (btnBg.toLowerCase() === '#161c2e' ? '#2b2e27' : btnBg);
+        el.style.borderColor = btnBg.toLowerCase() === '#161c2e' ? '#454a3d' : btnBg;
+
+        if (btn.type === 'slider') {
+          el.innerHTML = `
+            <div class="slider-fill" style="width:75%; background: ${btnBg}40; border-color: ${btnBg};"></div>
+            <span class="btn-index-badge">#${idx + 1}</span>
+            <div class="slider-content">
+              <div class="slider-left"><span class="slider-mute-btn">${icon}</span>
+                <div class="slider-info"><span class="slider-name">${label}</span>
+                  <span class="slider-type-badge">${(btn.target || '').startsWith('device:') ? 'SORTIE' : btn.target === 'master' ? 'MASTER' : 'APP'}</span>
+                </div>
+              </div>
+              <div class="slider-right"><span class="slider-val" style="color:${btnBg}">75%</span></div>
+            </div>
+          `;
+        } else {
+          el.innerHTML = `
+            <span class="btn-index-badge">#${idx + 1}</span>
+            ${btn.is_toggle ? `<span class="btn-toggle-badge">${btn.state ? 'ON' : 'OFF'}</span>` : ''}
+            <span class="icon">${icon}</span>
+            <span class="label">${label}</span>
+          `;
+        }
+
+        el.onclick = () => selectButton(idx);
+
+        el.addEventListener('dragstart', handleDragStart);
+        el.addEventListener('dragover', handleDragOver);
+        el.addEventListener('dragleave', handleDragLeave);
+        el.addEventListener('drop', handleDrop);
+        el.addEventListener('dragend', handleDragEnd);
+
+        grid.appendChild(el);
+      });
+    }
+
+    function handleDragStart(e) {
+      draggedIndex = parseInt(this.dataset.index);
+      this.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    }
+
+    function handleDragOver(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      this.classList.add('drag-over');
+    }
+
+    function handleDragLeave() {
+      this.classList.remove('drag-over');
+    }
+
+    function handleDrop(e) {
+      e.preventDefault();
+      this.classList.remove('drag-over');
+      const targetIndex = parseInt(this.dataset.index);
+      if (draggedIndex === null || draggedIndex === targetIndex) return;
+
+      const page = getCurrentPage();
+      const movedItem = page.buttons.splice(draggedIndex, 1)[0];
+      page.buttons.splice(targetIndex, 0, movedItem);
+
+      selectedIndex = targetIndex;
+      renderGrid();
+      selectButton(selectedIndex);
+    }
+
+    function handleDragEnd() {
+      this.classList.remove('dragging');
+      document.querySelectorAll('.preview-btn').forEach(btn => btn.classList.remove('drag-over'));
+      draggedIndex = null;
+    }
+
+    function selectButton(idx) {
+      const page = getCurrentPage();
+      if (!page.buttons || page.buttons.length === 0) { setEditorAvailability(false); return; }
+      setEditorAvailability(true);
+
+      if (idx < 0 || idx >= page.buttons.length) idx = 0;
+      selectedIndex = idx;
+      
+      const btn = page.buttons[idx];
+      document.getElementById('editor-title').innerText = `Édition #${idx + 1} (${btn.label || 'Sans nom'})`;
+      document.getElementById('inp-label').value = btn.label || '';
+      document.getElementById('inp-icon').value = btn.icon || '⚡';
+      document.getElementById('inp-type').value = btn.type || 'hotkey';
+      document.getElementById('inp-target').value = btn.target || '';
+      document.getElementById('inp-color').value = btn.color || '#161c2e';
+      document.getElementById('inp-width').value = btn.width || 'auto';
+      document.getElementById('inp-height').value = btn.height || 'normal';
+
+      onTypeChange(btn.type || 'hotkey', true);
+
+      // Toggle State
+      const isToggle = !!btn.is_toggle;
+      document.getElementById('chk-toggle').checked = isToggle;
+      document.getElementById('toggle-fields').style.display = isToggle ? 'flex' : 'none';
+      document.getElementById('inp-active-label').value = btn.active_label || '';
+      document.getElementById('inp-active-icon').value = btn.active_icon || '🔇';
+      document.getElementById('inp-active-color').value = btn.active_color || '#991b1b';
+
+      // Slider target sync
+      if (btn.type === 'slider' && btn.target) {
+        document.getElementById('sel-audio-target').value = btn.target;
+      }
+
+      document.querySelectorAll('.preview-btn').forEach((b, i) => {
+        b.classList.toggle('selected', i === idx);
+        b.tabIndex = i === idx ? 0 : -1;
+      });
+    }
+
+    function onTypeChange(type, selecting = false) {
+      if (!selecting) liveUpdate('type', type);
+      
+      const isSlider = type === 'slider';
+      document.getElementById('box-slider-setup').style.display = isSlider ? 'flex' : 'none';
+      document.getElementById('box-toggle').style.display = isSlider ? 'none' : 'flex';
+      
+      if (isSlider && !selecting) {
+        // Défaut couleur slider cyan si sombre
+        const btn = getCurrentPage().buttons[selectedIndex];
+        if (!btn.color || btn.color === '#161c2e') {
+          setColor('#38bdf8');
+        }
+        if (!btn.target) {
+          liveUpdate('target', 'master');
+        }
+      }
+
+      refreshPresets();
+      renderGrid();
+    }
+
+    function refreshPresets() {
+      const type = document.getElementById('inp-type').value;
+      const box = document.getElementById('presets-container');
+      box.innerHTML = '';
+
+      if (type === 'slider') {
+        const presets = [
+          { label: 'Master (Sortie)', t: 'master', icon: '🔊', col: '#38bdf8' },
+          { label: 'Spotify', t: 'app:spotify', icon: '🎵', col: '#22c55e' },
+          { label: 'Discord', t: 'app:discord', icon: '🎙️', col: '#a855f7' },
+          { label: 'Chrome', t: 'app:chrome', icon: '🌐', col: '#eab308' },
+          { label: 'Casque HyperX', t: 'device:HyperX', icon: '🎧', col: '#ef4444' },
+        ];
+        presets.forEach(p => {
+          const pill = document.createElement('span');
+          pill.className = 'preset-pill';
+          pill.innerText = p.label;
+          pill.onclick = () => {
+            document.getElementById('inp-target').value = p.t;
+            document.getElementById('sel-audio-target').value = p.t;
+            liveUpdate('target', p.t);
+            liveUpdate('label', p.label);
+            setEmoji(p.icon);
+            setColor(p.col);
+          };
+          box.appendChild(pill);
+        });
+      } else if (type === 'volume_app') {
+        const presets = [
+          { label: 'Discord Micro Mute (API)', t: 'discord:mute', icon: '🎙️', isToggle: true, activeIcon: '🔇', activeLabel: 'DISCORD MUTÉ', activeCol: '#991b1b', col: '#5865f2' },
+          { label: 'Discord Sourdine (API)', t: 'discord:deaf', icon: '🎧', isToggle: true, activeIcon: '🔇', activeLabel: 'SOURDINE', activeCol: '#991b1b', col: '#5865f2' },
+          { label: 'Micro Windows Mute', t: 'mic:mute', icon: '🎙️', isToggle: true, activeIcon: '🔇', activeLabel: 'MICRO MUTÉ', activeCol: '#991b1b' },
+          { label: 'Spotify Mute', t: 'spotify:mute', icon: '🔈', isToggle: true, activeIcon: '🔇', activeLabel: 'SPOTIFY MUTÉ', activeCol: '#991b1b' },
+          { label: 'Master Mute', t: 'master:mute', icon: '🔈' },
+          { label: 'Master +5%', t: 'master:+5' },
+          { label: 'Master -5%', t: 'master:-5' },
+          { label: 'Discord +10%', t: 'discord:+10' },
+          { label: 'Discord -10%', t: 'discord:-10' },
+          { label: 'Spotify +10%', t: 'spotify:+10' },
+          { label: 'Spotify -10%', t: 'spotify:-10' },
+        ];
+        presets.forEach(p => {
+          const pill = document.createElement('span');
+          pill.className = 'preset-pill';
+          pill.innerText = p.label;
+          pill.onclick = () => {
+            document.getElementById('inp-target').value = p.t;
+            liveUpdate('target', p.t);
+            liveUpdate('label', p.label);
+            if (p.icon) setEmoji(p.icon);
+            if (p.col) setColor(p.col);
+            if (p.isToggle) {
+              const chk = document.getElementById('chk-toggle');
+              chk.checked = true;
+              liveUpdate('is_toggle', true);
+              document.getElementById('toggle-fields').style.display = 'flex';
+              if (p.activeLabel) { document.getElementById('inp-active-label').value = p.activeLabel; liveUpdate('active_label', p.activeLabel); }
+              if (p.activeIcon) { document.getElementById('inp-active-icon').value = p.activeIcon; liveUpdate('active_icon', p.activeIcon); }
+              if (p.activeCol) { setActiveColor(p.activeCol); }
+            }
+          };
+          box.appendChild(pill);
+        });
+      } else if (type === 'key') {
+        const presets = [
+          { label: 'Vol + (OSD)', t: 'volumeup' },
+          { label: 'Vol - (OSD)', t: 'volumedown' },
+          { label: 'Play/Pause', t: 'playpause', icon: '⏯️' },
+          { label: 'Suivant', t: 'nexttrack', icon: '⏭️' },
+          { label: 'Précédent', t: 'prevtrack', icon: '⏮️' },
+          { label: 'Mute Son (OSD)', t: 'volumemute', icon: '🔇' },
+        ];
+        presets.forEach(p => {
+          const pill = document.createElement('span');
+          pill.className = 'preset-pill';
+          pill.innerText = p.label;
+          pill.onclick = () => {
+            document.getElementById('inp-target').value = p.t;
+            liveUpdate('target', p.t);
+            if (p.icon) setEmoji(p.icon);
+          };
+          box.appendChild(pill);
+        });
+      } else if (type === 'hotkey') {
+        const presets = [
+          { label: 'Discord Mute (Ctrl+Shift+M)', t: 'ctrl,shift,m', icon: '🎙️' },
+          { label: 'Discord Sourdine (Ctrl+Shift+D)', t: 'ctrl,shift,d', icon: '🎧' },
+          { label: 'Bureau (Win+D)', t: 'win,d', icon: '🖥️' },
+          { label: 'Capture Écran (Win+Shift+S)', t: 'win,shift,s', icon: '📸' },
+          { label: 'Game Bar Xbox (Win+G)', t: 'win,g', icon: '🎮' },
+          { label: 'Overlay Steam / Jeu (Shift+Tab)', t: 'shift,tab', icon: '🎯' },
+          { label: 'Fermer Fenêtre (Alt+F4)', t: 'alt,f4', icon: '❌' },
+          { label: 'Gestionnaire Tâches (Ctrl+Shift+Esc)', t: 'ctrl,shift,esc', icon: '📊' },
+          { label: 'OBS Rec (Ctrl+F9)', t: 'ctrl,f9', icon: '🔴' },
+        ];
+        presets.forEach(p => {
+          const pill = document.createElement('span');
+          pill.className = 'preset-pill';
+          pill.innerText = p.label;
+          pill.onclick = () => {
+            document.getElementById('inp-target').value = p.t;
+            liveUpdate('target', p.t);
+            if (p.icon) setEmoji(p.icon);
+          };
+          box.appendChild(pill);
+        });
+      } else if (type === 'launch') {
+        const presets = [
+          { label: 'YouTube Music', t: 'youtube music', icon: '🎧', col: '#ff0000' },
+          { label: 'Ouvrir Discord', t: 'start discord:', icon: '💬', col: '#5865f2' },
+          { label: 'Ouvrir Spotify', t: 'start spotify:', icon: '🎵', col: '#1db954' },
+          { label: 'Ouvrir Steam', t: 'start steam://', icon: '🎮', col: '#171a21' },
+          { label: 'Calculatrice', t: 'calc.exe', icon: '🧮', col: '#161c2e' },
+          { label: 'Task Manager', t: 'taskmgr.exe', icon: '📊', col: '#161c2e' },
+          { label: 'Explorateur Fichiers', t: 'explorer.exe', icon: '📁', col: '#161c2e' },
+          { label: 'Navigateur Chrome', t: 'start chrome', icon: '🌐', col: '#eab308' },
+          { label: 'Game Bar Xbox', t: 'start ms-gamebar:', icon: '🎯', col: '#107c10' },
+        ];
+        presets.forEach(p => {
+          const pill = document.createElement('span');
+          pill.className = 'preset-pill';
+          pill.innerText = p.label;
+          pill.onclick = () => {
+            document.getElementById('inp-target').value = p.t;
+            liveUpdate('target', p.t);
+            liveUpdate('label', p.label);
+            setEmoji(p.icon);
+            setColor(p.col);
+          };
+          box.appendChild(pill);
+        });
+      }
+    }
+
+    function toggleSwitchMode() {
+      const chk = document.getElementById('chk-toggle');
+      chk.checked = !chk.checked;
+      liveUpdate('is_toggle', chk.checked);
+      document.getElementById('toggle-fields').style.display = chk.checked ? 'flex' : 'none';
+    }
+
+    function setColor(hex) {
+      document.getElementById('inp-color').value = hex;
+      liveUpdate('color', hex);
+    }
+
+    function setActiveColor(hex) {
+      document.getElementById('inp-active-color').value = hex;
+      liveUpdate('active_color', hex);
+    }
+    
+    function liveUpdate(field, val) {
+      const page = getCurrentPage();
+      if (!page.buttons || !page.buttons[selectedIndex]) return;
+      page.buttons[selectedIndex][field] = val;
+      renderGrid();
+    }
+
+    function setEmoji(emoji) {
+      document.getElementById('inp-icon').value = emoji;
+      liveUpdate('icon', emoji);
+    }
+
+    function addNewButton() {
+      const page = getCurrentPage();
+      if (!page.buttons) page.buttons = [];
+      const newId = studioId('b');
+      page.buttons.push({
+        id: newId,
+        label: "Master",
+        icon: "🔊",
+        type: "slider",
+        target: "master",
+        color: "#38bdf8",
+        is_toggle: false
+      });
+      renderGrid();
+      selectButton(page.buttons.length - 1);
+    }
+
+    function deleteCurrentButton() {
+      const page = getCurrentPage();
+      if (!page?.buttons?.length) return;
+      page.buttons.splice(selectedIndex, 1);
+      selectedIndex = Math.max(0, selectedIndex - 1);
+      renderGrid();
+      selectButton(selectedIndex);
+      studioNotify('Touche supprimée.', 'Annuler', undoStudio);
+    }
+
+    async function saveData() {
+      if (studioSaving || !studioReady) return;
+      if (config.monitoring.some(widget => !widget.label.trim())) {
+        studioNotify('Donnez un nom à chaque indicateur de monitoring.'); return;
+      }
+      studioInputGroup = null; studioLastGroup = null;
+      studioCheckpoint();
+      const savedJSON = JSON.stringify(config);
+      studioSaving = true;
+      document.getElementById('studio-save').textContent = 'Enregistrement…';
+      studioUpdateStatus();
+      try {
+        const res = await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: savedJSON
+        });
+        if (res.ok) {
+          studioSavedJSON = savedJSON;
+          studioNotify('Configuration enregistrée et appliquée au pupitre.');
+          studioUpdateStatus();
+        } else {
+          const err = await res.json();
+          studioNotify('Enregistrement refusé : ' + JSON.stringify(err));
+        }
+      } catch (e) {
+        studioNotify('Enregistrement impossible : le serveur ne répond pas. Vos modifications sont conservées.');
+      } finally {
+        studioSaving = false;
+        document.getElementById('studio-save').textContent = 'Enregistrer';
+        studioUpdateStatus();
+      }
+    }
+
+    // =========================================================================
+    // SÉLECTEUR INTÉGRÉ D'APPLICATIONS ET JEUX STEAM
+    // =========================================================================
+    let installedAppsList = [];
+    let currentAppCategory = 'all';
+
+    async function openAppPickerModal() {
+      const modal = document.getElementById('app-modal');
+      modal.style.display = 'flex';
+      document.getElementById('app-search-input').value = '';
+      document.getElementById('app-search-input').focus();
+
+      if (installedAppsList.length === 0) {
+        await loadInstalledApps();
+      } else {
+        filterAppList();
+      }
+    }
+
+    function closeAppPickerModal() {
+      document.getElementById('app-modal').style.display = 'none';
+    }
+
+    function closeAppModalOnOverlay(e) {
+      if (e.target.id === 'app-modal') closeAppPickerModal();
+    }
+
+    async function loadInstalledApps() {
+      const container = document.getElementById('app-list-container');
+      container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px;">Chargement des applications et jeux installés...</div>';
+      try {
+        const res = await fetch('/api/apps');
+        if (res.ok) {
+          const data = await res.json();
+          installedAppsList = data.apps || [];
+          
+          // Mise à jour des compteurs
+          const gamesCount = installedAppsList.filter(a => a.category === 'Jeux').length;
+          const appsCount = installedAppsList.filter(a => a.category === 'Applications').length;
+          document.getElementById('count-all').innerText = installedAppsList.length;
+          document.getElementById('count-games').innerText = gamesCount;
+          document.getElementById('count-apps').innerText = appsCount;
+
+          filterAppList();
+        } else {
+          container.innerHTML = '<div style="color: var(--danger); padding: 20px; text-align: center;">Impossible de charger les applications.</div>';
+        }
+      } catch (e) {
+        container.innerHTML = '<div style="color: var(--danger); padding: 20px; text-align: center;">Erreur réseau lors de la détection.</div>';
+      }
+    }
+
+    function setAppCategory(cat, btnEl) {
+      currentAppCategory = cat;
+      document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
+      if (btnEl) btnEl.classList.add('active');
+      filterAppList();
+    }
+
+    function filterAppList() {
+      const q = (document.getElementById('app-search-input').value || '').toLowerCase().trim();
+      const container = document.getElementById('app-list-container');
+      container.innerHTML = '';
+
+      const filtered = installedAppsList.filter(item => {
+        const matchCat = (currentAppCategory === 'all') || (item.category === currentAppCategory);
+        const matchQuery = !q || item.name.toLowerCase().includes(q) || (item.target || '').toLowerCase().includes(q);
+        return matchCat && matchQuery;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 30px;">Aucune application ou jeu correspondant.</div>';
+        return;
+      }
+
+      filtered.forEach(app => {
+        const card = document.createElement('div');
+        card.className = 'app-card';
+        const badgeClass = app.category === 'Jeux' ? 'game' : (app.category === 'Applications' ? 'app' : '');
+        card.innerHTML = `
+          <div class="app-card-left">
+            <span class="app-card-icon">${app.icon || '⚡'}</span>
+            <div>
+              <div class="app-card-name">${app.name}</div>
+              <div style="font-size: 11px; color: var(--text-muted); max-width: 380px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${app.target}</div>
+            </div>
+          </div>
+          <span class="app-card-badge ${badgeClass}">${app.category || 'APP'}</span>
+        `;
+        card.onclick = () => selectAppItem(app);
+        container.appendChild(card);
+      });
+    }
+
+    function selectAppItem(app) {
+      document.getElementById('inp-label').value = app.name;
+      liveUpdate('label', app.name);
+
+      document.getElementById('inp-icon').value = app.icon || '⚡';
+      liveUpdate('icon', app.icon || '⚡');
+
+      if (app.color) {
+        setColor(app.color);
+      }
+
+      document.getElementById('inp-type').value = app.type || 'launch';
+      liveUpdate('type', app.type || 'launch');
+
+      document.getElementById('inp-target').value = app.target;
+      liveUpdate('target', app.target);
+
+      closeAppPickerModal();
+    }
+
+    function testTogglePreview() {
+      const page = getCurrentPage();
+      if (!page.buttons || !page.buttons[selectedIndex]) return;
+      const b = page.buttons[selectedIndex];
+      b.state = !b.state;
+      renderGrid();
+    }
+
+    // =========================================================================
+    // INTÉGRATION DISCORD API / RPC
+    // =========================================================================
+    let discordPollInterval = null;
+
+    async function checkDiscordStatus() {
+      try {
+        const res = await fetch('/api/discord/status');
+        const data = await res.json();
+        updateDiscordUI(data);
+      } catch (e) {
+        console.error("Erreur statut Discord:", e);
+      }
+    }
+
+    function updateDiscordUI(status) {
+      const dot = document.getElementById('discord-indicator-dot');
+      const text = document.getElementById('discord-status-text');
+
+      if (status.is_authenticated) {
+        if (dot) dot.style.background = '#22c55e';
+        const name = (status.user && (status.user.global_name || status.user.username)) || 'Connecté';
+        if (text) text.innerText = `🎧 ${name}`;
+      } else if (status.is_connected) {
+        if (dot) dot.style.background = '#eab308';
+        if (text) text.innerText = `🎧 Discord Détecté`;
+      } else {
+        if (dot) dot.style.background = '#94a3b8';
+        if (text) text.innerText = 'Discord';
+      }
+
+      // Vues du modal
+      const viewConnected = document.getElementById('discord-view-connected');
+      const viewDisconnected = document.getElementById('discord-view-disconnected');
+
+      if (status.is_authenticated) {
+        if (viewConnected) viewConnected.style.display = 'block';
+        if (viewDisconnected) viewDisconnected.style.display = 'none';
+
+        const uName = (status.user && (status.user.global_name || status.user.username)) || 'Inconnu';
+        document.getElementById('discord-user-display').innerText = `@${uName}`;
+        
+        const muteBadge = document.getElementById('discord-mute-badge');
+        if (muteBadge) {
+          muteBadge.className = `btn-toggle-badge ${status.mute ? 'on' : 'off'}`;
+          muteBadge.innerText = status.mute ? '🔇 MUTÉ' : '🎙️ ACTIF';
+        }
+
+        const deafBadge = document.getElementById('discord-deaf-badge');
+        if (deafBadge) {
+          deafBadge.className = `btn-toggle-badge ${status.deaf ? 'on' : 'off'}`;
+          deafBadge.innerText = status.deaf ? '🔇 SOURDINE' : '🔊 ACTIF';
+        }
+      } else {
+        if (viewConnected) viewConnected.style.display = 'none';
+        if (viewDisconnected) viewDisconnected.style.display = 'block';
+        if (status.client_id) {
+          document.getElementById('inp-discord-client-id').value = status.client_id;
+        }
+      }
+    }
+
+    function openDiscordModal() {
+      document.getElementById('discord-modal').style.display = 'flex';
+      checkDiscordStatus();
+      if (!discordPollInterval) {
+        discordPollInterval = setInterval(checkDiscordStatus, 3000);
+      }
+    }
+
+    function closeDiscordModal() {
+      document.getElementById('discord-modal').style.display = 'none';
+      if (discordPollInterval) {
+        clearInterval(discordPollInterval);
+        discordPollInterval = null;
+      }
+    }
+
+    function closeDiscordModalOnOverlay(e) {
+      if (e.target.id === 'discord-modal') closeDiscordModal();
+    }
+
+    async function connectDiscord() {
+      const clientId = document.getElementById('inp-discord-client-id').value.trim();
+      const clientSecret = document.getElementById('inp-discord-client-secret').value.trim();
+      const feedback = document.getElementById('discord-connect-feedback');
+
+      if (!clientId || !clientSecret) {
+        feedback.innerHTML = `<span style="color: #ef4444; font-weight: 600;">Veuillez remplir le Client ID et le Client Secret.</span>`;
+        return;
+      }
+
+      feedback.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 8px; color: #38bdf8; font-weight: 600;">
+          <span>⏳</span>
+          <span>Demande envoyée à Discord ! Regardez votre écran Windows : cliquez sur <b>"Autoriser"</b> dans Discord...</span>
+        </div>
+      `;
+
+      try {
+        const res = await fetch('/api/discord/connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ client_id: clientId, client_secret: clientSecret })
+        });
+        const data = await res.json();
+        if (data.success) {
+          feedback.innerHTML = `<span style="color: #22c55e; font-weight: 700;">✅ ${data.message}</span>`;
+          setTimeout(() => {
+            checkDiscordStatus();
+          }, 1000);
+        } else {
+          feedback.innerHTML = `<span style="color: #ef4444; font-weight: 600;">❌ ${data.error || 'Erreur lors de la liaison'}</span>`;
+        }
+      } catch (e) {
+        feedback.innerHTML = `<span style="color: #ef4444;">Erreur réseau: ${e.message}</span>`;
+      }
+    }
+
+    async function disconnectDiscord() {
+      if (!confirm("Voulez-vous vraiment déconnecter votre compte Discord de DeckEdge ?")) return;
+      try {
+        await fetch('/api/discord/disconnect', { method: 'POST' });
+        checkDiscordStatus();
+      } catch (e) {
+        alert("Erreur déconnexion: " + e.message);
+      }
+    }
+
+    async function testDiscordMute() {
+      try {
+        await fetch('/api/discord/toggle-mute', { method: 'POST' });
+        checkDiscordStatus();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function testDiscordDeaf() {
+      try {
+        await fetch('/api/discord/toggle-deaf', { method: 'POST' });
+        checkDiscordStatus();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    setupStudioErgonomics();
+    setupStudioShell();
+    loadData();
+    checkDiscordStatus();
+  </script>
+
+  <!-- MODAL INTÉGRATION DISCORD API -->
+  <div id="discord-modal" class="modal-overlay" style="display: none;" onclick="closeDiscordModalOnOverlay(event)">
+    <div class="modal-content" style="max-width: 580px; max-height: 90vh; display: flex; flex-direction: column;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 14px;">
+        <h3 style="font-size: 17px; font-weight: 700; color: #a855f7; display: flex; align-items: center; gap: 8px;">
+          <span>🎧 Liaison Native Discord API (RPC)</span>
+        </h3>
+        <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 14px;" onclick="closeDiscordModal()">✕</button>
+      </div>
+
+      <!-- VUE SI DÉJÀ CONNECTÉ -->
+      <div id="discord-view-connected" style="display: none;">
+        <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 10px; padding: 16px; margin-bottom: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 28px;">🟢</span>
+              <div>
+                <div style="font-size: 12px; text-transform: uppercase; color: #22c55e; font-weight: 700;">Discord Connecté & Synchronisé</div>
+                <div id="discord-user-display" style="font-size: 16px; font-weight: 700; color: #fff;">@Utilisateur</div>
+              </div>
+            </div>
+            <button class="btn btn-delete" style="font-size: 12px; padding: 6px 12px;" onclick="disconnectDiscord()">Déconnecter</button>
+          </div>
+          <div style="font-size: 12px; color: var(--text-muted); line-height: 1.5;">
+            Le contrôle du micro et de la sourdine fonctionne désormais en arrière-plan à 100%, même en plein jeu sans que Discord soit au premier plan.
+          </div>
+        </div>
+
+        <div style="background: #0b0f19; border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 16px;">
+          <div style="font-size: 13px; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase;">État en direct & Test immédiat :</div>
+          <div style="display: flex; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span>🎙️ Micro Discord :</span>
+              <span id="discord-mute-badge" class="btn-toggle-badge off">ACTIF</span>
+            </div>
+            <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px;" onclick="testDiscordMute()">Bascule Micro</button>
+          </div>
+          <div style="display: flex; gap: 12px; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span>🎧 Casque (Sourdine) :</span>
+              <span id="discord-deaf-badge" class="btn-toggle-badge off">ACTIF</span>
+            </div>
+            <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px;" onclick="testDiscordDeaf()">Bascule Sourdine</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- VUE SI NON CONNECTÉ (FORMULAIRE DE CONNEXION) -->
+      <div id="discord-view-disconnected">
+        <div style="background: rgba(168, 85, 247, 0.08); border: 1px solid rgba(168, 85, 247, 0.25); border-radius: 10px; padding: 14px; margin-bottom: 16px; font-size: 13px; line-height: 1.5;">
+          <b style="color: #c084fc;">Pourquoi lier Discord ?</b><br>
+          Sans l'API, couper le son ne coupe pas toujours le micro ou échoue si Discord n'est pas au premier plan. Avec la liaison API locale officielle, vous pouvez couper votre micro d'un clic depuis votre téléphone, même en plein écran de jeu !
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <div style="font-size: 12px; font-weight: 700; color: #38bdf8; text-transform: uppercase; margin-bottom: 8px;">Guide rapide en 3 étapes (1 minute) :</div>
+          <ol style="font-size: 13px; color: #cbd5e1; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; margin: 0;">
+            <li>Ouvrez le <a href="https://discord.com/developers/applications" target="_blank" style="color: #38bdf8; text-decoration: underline; font-weight: 600;">Portail Développeur Discord ↗</a> et cliquez sur <b>"New Application"</b> (nom : <i>DeckEdge</i>).</li>
+            <li>Dans le menu de gauche, allez dans <b>OAuth2</b> > <b>Redirects</b> et ajoutez : <code style="background: #020617; padding: 2px 6px; border-radius: 4px; color: #38bdf8;">https://localhost/</code> puis enregistrez.</li>
+            <li>Copiez le <b>Client ID</b> (dans <i>General Information</i>) et le <b>Client Secret</b> (dans <i>OAuth2</i>) et collez-les ci-dessous :</li>
+          </ol>
+        </div>
+
+        <div class="field-group" style="margin-bottom: 12px;">
+          <label style="font-size: 12px; font-weight: 700; color: #94a3b8;">Client ID (Application ID)</label>
+          <input type="text" id="inp-discord-client-id" placeholder="ex: 123456789012345678" style="width: 100%; font-size: 13px; padding: 9px 12px; background: #070a12; border: 1px solid var(--border); border-radius: 8px; color: #fff;">
+        </div>
+
+        <div class="field-group" style="margin-bottom: 14px;">
+          <label style="font-size: 12px; font-weight: 700; color: #94a3b8;">Client Secret</label>
+          <input type="password" id="inp-discord-client-secret" placeholder="ex: aBcDeFgHiJkLmNoPqRsTuVwXyZ..." style="width: 100%; font-size: 13px; padding: 9px 12px; background: #070a12; border: 1px solid var(--border); border-radius: 8px; color: #fff;">
+        </div>
+
+        <div id="discord-connect-feedback" style="margin-bottom: 12px; font-size: 13px;"></div>
+
+        <button type="button" class="btn btn-primary" onclick="connectDiscord()" style="width: 100%; padding: 11px; font-size: 14px; font-weight: 700; background: linear-gradient(135deg, #7c3aed, #5865f2); border: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
+          <span>🚀 Lier mon compte Discord</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL SÉLECTEUR D'APPLICATIONS ET JEUX -->
+  <div id="app-modal" class="modal-overlay" style="display: none;" onclick="closeAppModalOnOverlay(event)">
+    <div class="modal-content" style="max-height: 85vh; display: flex; flex-direction: column;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 12px;">
+        <h3 style="font-size: 17px; font-weight: 700; color: #38bdf8; display: flex; align-items: center; gap: 8px;">
+          <span>🔍 Choisir une Application ou un Jeu</span>
+        </h3>
+        <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 14px;" onclick="closeAppPickerModal()">✕</button>
+      </div>
+
+      <div style="margin-bottom: 10px;">
+        <input type="text" id="app-search-input" placeholder="Rechercher une application ou un jeu (ex: Discord, Spotify, Steam, GTA...)" oninput="filterAppList()" style="width: 100%; font-size: 14px; padding: 10px 12px; background: #070a12; border: 1px solid var(--border); border-radius: 8px; color: #fff;">
+      </div>
+
+      <div style="display: flex; gap: 6px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 4px;">
+        <button type="button" class="cat-pill active" onclick="setAppCategory('all', this)">Tous (<span id="count-all">0</span>)</button>
+        <button type="button" class="cat-pill" onclick="setAppCategory('Jeux', this)">🎮 Jeux Steam (<span id="count-games">0</span>)</button>
+        <button type="button" class="cat-pill" onclick="setAppCategory('Applications', this)">💬 Applications (<span id="count-apps">0</span>)</button>
+        <button type="button" class="cat-pill" onclick="setAppCategory('Système', this)">⚙️ Outils Système</button>
+      </div>
+
+      <div id="app-list-container" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; max-height: 52vh; padding-right: 4px;">
+        <!-- Rempli par JavaScript -->
+      </div>
+    </div>
+  </div>
+</body>
+</html>
