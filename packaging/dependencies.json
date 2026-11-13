@@ -1,0 +1,7 @@
+{
+  "python": {"url":"https://www.python.org/ftp/python/3.14.9/python-3.14.9-embed-amd64.zip","sha256":"3c01d7cfc666f746a6f064f60fb2156ab0ec464d3d738ab796371a46a9bb24a2"},
+  "lhm": {"url":"https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/releases/download/v0.9.6/LibreHardwareMonitor.zip","sha256":"086d9f1b5a99e643edc2cfaaac16051685b551e4c5ac0b32a57c58c0e529c001"},
+  "webview2": {"url":"https://api.nuget.org/v3-flatcontainer/microsoft.web.webview2/1.0.4314.35/microsoft.web.webview2.1.0.4314.35.nupkg","sha256":"90778deb1b77e36292828b4b5833c9255c27533f40e0ddd55891ae718944edc4"},
+  "get-pip": {"url":"https://raw.githubusercontent.com/pypa/get-pip/c7135ee10cd1b1fcb8fbf63d5d0004885cba7aa4/public/get-pip.py","sha256":"356e0d0de21cdc348c3394084d90939b85e4246c4d14c76aee6ca4f46646ea98"},
+  "innosetup": {"url":"https://github.com/jrsoftware/issrc/releases/download/is-7_1_1/innosetup-7.1.1-x64.exe","sha256":"8a5a6711c3766a6e5fb74f280ba0e3551e719ce94538d901fdbd1f8f9920b3f0"}
+}
