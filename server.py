@@ -42,6 +42,7 @@ from pycaw.utils import AudioSession
 from discord_rpc import discord_rpc
 from app_paths import DATA_DIR
 from network_access import COOKIE, pairing_key, is_local, allowed_origin, is_paired
+from local_discovery import discovery, HOSTNAME
 
 # Configuration du logging
 logging.basicConfig(
@@ -827,9 +828,14 @@ async def lifespan(app: FastAPI):
     setup_discord_integration(loop)
     discord_rpc.start()
     telemetry.start()
-    yield
-    await telemetry.stop()
-    discord_rpc.stop()
+    discovery_task = asyncio.create_task(asyncio.to_thread(discovery.start))
+    try:
+        yield
+    finally:
+        await discovery_task
+        await asyncio.to_thread(discovery.stop)
+        await telemetry.stop()
+        discord_rpc.stop()
 
 
 app = FastAPI(title="DeckEdge Server", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
@@ -842,13 +848,15 @@ async def protect_desktop_and_pair_phone(request: Request, call_next):
     if not allowed_origin(request):
         return JSONResponse({"detail": "Origine non autorisée"}, status_code=403)
     if not local and not is_paired(request, PHONE_KEY):
-        return HTMLResponse("<h2>Connecter DeckEdge</h2><p>Depuis l’application Windows, utilisez « Connecter le téléphone » et ouvrez le lien complet sur votre téléphone.</p>", status_code=401)
+        return HTMLResponse('''<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Connecter DeckEdge</title><body style="margin:0;background:#191b22;color:#eef1fc;font:17px/1.65 system-ui;padding:28px"><main style="max-width:480px;margin:12vh auto"><h1>Retrouver votre Deck</h1><p>Cette adresse n’est pas encore associée à votre téléphone.</p><ol><li>Sur le PC, ouvrez DeckEdge.</li><li>Cliquez sur <b>Connecter le téléphone</b>.</li><li>Scannez le QR code avec l’appareil photo.</li></ol><p>Ajoutez ensuite le Deck à votre écran d’accueil pour le retrouver aux prochains démarrages.</p></main></body></html>''', status_code=401)
     desktop_only = request.url.path in {"/admin", "/api/apps", "/api/monitoring/sensors", "/api/discord/connect", "/api/discord/disconnect"} or (request.url.path == "/api/config" and request.method != "GET")
     if desktop_only and not local:
         return JSONResponse({"detail": "Ce réglage se modifie dans le Studio sur le PC."}, status_code=403)
     response = await call_next(request)
     if not local and request.query_params.get("key"):
         response.set_cookie(COOKIE, PHONE_KEY, httponly=True, samesite="strict", max_age=31536000)
+    if request.url.path in ('/', '/manifest.webmanifest'):
+        response.headers['Cache-Control'] = 'no-store'
     response.headers["Referrer-Policy"] = "no-referrer"
     response.headers["X-Content-Type-Options"] = "nosniff"
     return response
@@ -1225,6 +1233,20 @@ async def get_admin():
     return HTMLResponse(content=ADMIN_HTML_PATH.read_text(encoding="utf-8"))
 
 
+@app.get('/manifest.webmanifest', include_in_schema=False)
+async def phone_manifest():
+    return JSONResponse({'id': '/', 'name': 'DeckEdge', 'short_name': 'DeckEdge',
+                         'start_url': '/?key=' + PHONE_KEY, 'scope': '/',
+                         'display': 'standalone', 'background_color': '#191b22',
+                         'theme_color': '#191b22', 'icons': [{'src': '/phone-icon.svg', 'sizes': 'any', 'type': 'image/svg+xml'}]},
+                        media_type='application/manifest+json', headers={'Cache-Control': 'no-store'})
+
+
+@app.get('/phone-icon.svg', include_in_schema=False)
+async def phone_icon():
+    return HTMLResponse('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="40" fill="#242a3c"/><g fill="#91adff"><rect x="35" y="35" width="52" height="52" rx="10"/><rect x="105" y="35" width="52" height="52" rx="10"/><rect x="35" y="105" width="52" height="52" rx="10"/><rect x="105" y="105" width="52" height="52" rx="10"/></g></svg>', media_type='image/svg+xml')
+
+
 @app.get("/studio-shell.css", include_in_schema=False)
 async def get_studio_shell_styles():
     return FileResponse(BASE_DIR / "studio-shell.css", media_type="text/css")
@@ -1432,6 +1454,7 @@ async def healthcheck():
         "status": "healthy",
         "timestamp": time.time(),
         "clients_connected": manager.client_count,
+        "phone": {"hostname": HOSTNAME, "discovery_available": discovery.available},
         "pages_count": len(config.pages),
         "discord": discord_rpc.get_status(),
         "monitoring": {

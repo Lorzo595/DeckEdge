@@ -11,6 +11,12 @@ l’association dans un cookie. Pour révoquer tous les téléphones, quittez De
 supprimez `.phone-key` dans le dossier de données et redémarrez, puis reconnectez-les.
 Une origine web externe ne peut pas utiliser le serveur ni ses WebSockets.
 
+Le nom permanent `.local` est dérivé d’un identifiant du PC, sans publier cet
+identifiant brut. La découverte mDNS annonce seulement le nom et le port du service,
+jamais la clé privée. Le QR code est généré localement. Le manifeste de raccourci
+est réservé aux appareils associés, n’est pas mis en cache et conserve le lien
+privé pour retrouver le Deck après redémarrage. Ne partagez pas ce raccourci.
+
 Les données sont stockées dans `%LOCALAPPDATA%\DeckEdge` pour l’installation,
 ou `data` à côté de DeckEdge.exe en portable. Les jetons Discord sont locaux ;
 ils ne doivent jamais être ajoutés à GitHub, aux captures ou aux signalements.

@@ -1,20 +1,20 @@
-# DeckEdge
+﻿# DeckEdge
 
 Votre téléphone devient un pupitre de contrôle pour Windows : raccourcis,
 applications, musique, volume par application et monitoring matériel.
 Le Studio Windows permet de tout organiser avec un aperçu mobile, une bibliothèque
 d’actions et des réglages simples. Aucun Stream Deck physique n’est nécessaire.
 
-**Windows 10 (2004+) / Windows 11 · x64 · version 0.1.0 · licence MIT**
+**Windows 10 (2004+) / Windows 11 · x64 · version 0.1.1 · licence MIT**
 
-Développé par **Lorzo**, avec l’aide de **ChatGPT**.
+Développé par **Lorzo595**, avec l’aide de **ChatGPT**.
 
-> **Première version de test publique.** DeckEdge 0.1.0 fonctionne et a été testé
+> **Version de test publique.** DeckEdge 0.1.1 fonctionne et a été testé
 > sur le poste de développement, mais la validation sur plusieurs PC et les retours
 > utilisateurs restent nécessaires avant une version 1.0.0.
 
-[Télécharger la version 0.1.0](https://github.com/Lolomat595/DeckEdge/releases/tag/v0.1.0)
-· [Signaler un problème](https://github.com/Lolomat595/DeckEdge/issues)
+[Télécharger la version 0.1.1](https://github.com/Lorzo595/DeckEdge/releases/tag/v0.1.1)
+· [Signaler un problème](https://github.com/Lorzo595/DeckEdge/issues)
 · [Guide de démarrage](docs/QUICKSTART.md)
 
 ## Fonctionnalités
@@ -23,6 +23,7 @@ Développé par **Lorzo**, avec l’aide de **ChatGPT**.
 | --- | --- |
 | Studio Windows | Fenêtre dédiée, icône près de l’horloge, réglages locaux et lancement au démarrage facultatif |
 | Pupitre mobile | Interface dans le navigateur du téléphone, en portrait ou paysage, sur le même réseau privé que le PC |
+| Connexion au PC | Premier scan par QR code local, clé conservée et adresse permanente propre au PC pour les ouvertures suivantes |
 | Profils | Plusieurs pages de commandes, ajout, renommage, duplication et déplacement de touches |
 | Organisation | Aperçu de téléphone, glisser-déposer et widgets de largeur et hauteur réglables |
 | Actions | Raccourcis clavier, touches multimédias, lancement d’applications, fichiers et sites web |
@@ -38,13 +39,13 @@ Le logiciel ne nécessite aucun abonnement et son code est disponible sous MIT.
 
 ## Télécharger
 
-Dans la [Release 0.1.0](https://github.com/Lolomat595/DeckEdge/releases/tag/v0.1.0), choisir :
+Dans la [Release 0.1.1](https://github.com/Lorzo595/DeckEdge/releases/tag/v0.1.1), choisir :
 
 | Fichier | Usage |
 | --- | --- |
-| `DeckEdge-0.1.0-Setup-x64.exe` | Installation classique, raccourcis et désinstallation Windows |
-| `DeckEdge-0.1.0-Portable-x64.zip` | Décompresser, puis lancer `DeckEdge/DeckEdge.exe` ; tout reste dans ce dossier |
-| `DeckEdge-0.1.0-Source.zip` | Sources propres à publier, étudier ou modifier |
+| `DeckEdge-0.1.1-Setup-x64.exe` | Installation classique, raccourcis et désinstallation Windows |
+| `DeckEdge-0.1.1-Portable-x64.zip` | Décompresser, puis lancer `DeckEdge/DeckEdge.exe` ; tout reste dans ce dossier |
+| `DeckEdge-0.1.1-Source.zip` | Sources propres à publier, étudier ou modifier |
 | `SHA256SUMS.txt` | Empreintes des fichiers de cette version |
 
 Python et le moteur LibreHardwareMonitor sont inclus. Il n’est pas nécessaire
@@ -57,7 +58,7 @@ l’accès matériel complet est refusé.
 
 ### Installation classique
 
-1. Télécharger `DeckEdge-0.1.0-Setup-x64.exe` depuis la Release.
+1. Télécharger `DeckEdge-0.1.1-Setup-x64.exe` depuis la Release.
 2. Suivre l’assistant. L’installation se fait pour l’utilisateur courant, avec
    un raccourci dans le menu Démarrer et un raccourci Bureau facultatif.
 3. Ouvrir DeckEdge. Accepter l’installation de WebView2 s’il manque et choisir
@@ -67,7 +68,7 @@ l’accès matériel complet est refusé.
 
 ### Version portable
 
-1. Télécharger `DeckEdge-0.1.0-Portable-x64.zip` et extraire **toute** l’archive.
+1. Télécharger `DeckEdge-0.1.1-Portable-x64.zip` et extraire **toute** l’archive.
 2. Ouvrir le dossier `DeckEdge`, puis lancer `DeckEdge.exe`.
 3. Conserver ensemble `runtime`, les bibliothèques et `portable.flag`. Les données
    sont créées dans `data` ; déplacer le dossier entier pour emporter le Deck.
@@ -92,7 +93,10 @@ originale, et vérifiez leur empreinte en cas de doute.
 3. Cliquer sur **Enregistrer**. Le clic droit, le glisser-déposer, Ctrl+Z et Ctrl+S
    permettent de travailler plus rapidement.
 4. Connecter le téléphone au même réseau privé que le PC. Dans DeckEdge,
-   **Connecter le téléphone** copie un lien privé à ouvrir dans son navigateur.
+   **Connecter le téléphone** affiche un QR code privé à scanner. Choisir
+   **Ce PC · adresse permanente**, puis ajouter la page ouverte à l’écran
+   d’accueil du téléphone ou aux favoris : un nouveau scan n’est pas nécessaire
+   à chaque démarrage. Le lien peut toujours être copié en secours.
 5. Si le pare-feu Windows le demande, autoriser DeckEdge/Python sur le réseau
    **privé uniquement**. Le serveur utilise le port TCP 5000.
 
@@ -106,6 +110,13 @@ version installée avant d’utiliser une copie portable, et inversement.
 
 [Guide de démarrage](docs/QUICKSTART.md) · [Construction](docs/BUILD.md) ·
 [Publication GitHub](docs/RELEASE.md) · [Sécurité](SECURITY.md)
+
+L’adresse permanente utilise la découverte locale mDNS (`.local`) et reste propre
+au PC même si son adresse IP change. La clé d’association reste dans les données
+de DeckEdge : ni un redémarrage ni le changement de pseudo GitHub ne la modifient.
+Sur un réseau bloquant le multicast, choisir l’adresse Wi-Fi/Ethernet de secours
+dans l’écran QR ; cette adresse IP peut changer. Effacer les données de DeckEdge
+ou supprimer le raccourci et l’association du navigateur peut nécessiter un nouveau scan.
 
 ## Vos données
 
@@ -183,7 +194,7 @@ ou Microsoft. Les noms de produits appartiennent à leurs propriétaires.
 - Les exécutables DeckEdge ne sont pas encore signés et n’ont pas encore été validés
   sur une machine Windows vierge ou un ensemble représentatif de matériels.
 
-Pour un bug, [ouvrir une issue](https://github.com/Lolomat595/DeckEdge/issues)
+Pour un bug, [ouvrir une issue](https://github.com/Lorzo595/DeckEdge/issues)
 en précisant la version, Windows, le mode installé/portable, les étapes et le
 comportement attendu. Masquer les chemins personnels, les noms de compte, les
 jetons Discord et les liens privés de téléphone avant de joindre une capture
