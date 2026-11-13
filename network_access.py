@@ -4,6 +4,7 @@ import ipaddress
 import secrets
 from urllib.parse import urlsplit
 from app_paths import DATA_DIR
+from local_discovery import HOSTNAME
 
 COOKIE = 'deckedge_pairing'
 KEY_FILE = DATA_DIR / '.phone-key'
@@ -28,7 +29,7 @@ def is_local(host):
 
 
 def valid_host(host):
-    if host == 'localhost':
+    if host.lower() in ('localhost', HOSTNAME):
         return True
     try:
         return ipaddress.ip_address(host).is_private or ipaddress.ip_address(host).is_loopback

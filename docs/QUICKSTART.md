@@ -1,6 +1,6 @@
-# Démarrer avec DeckEdge
+﻿# Démarrer avec DeckEdge
 
-Développé par Lorzo, avec l’aide de ChatGPT. Code source sous licence MIT.
+Développé par Lorzo595, avec l’aide de ChatGPT. Code source sous licence MIT.
 
 ## Installation
 Lancer Setup-x64.exe, choisir le dossier et terminer l’assistant. Un raccourci
@@ -29,9 +29,19 @@ Le clic droit permet de dupliquer, déplacer et supprimer. Ctrl+Z annule.
 Les profils existants s’ouvrent sur Principal lorsqu’il existe.
 
 ## Téléphone
-Le téléphone et le PC doivent être sur le même réseau privé. Utiliser le lien
-complet de Connecter le téléphone : il contient une clé privée. Ne pas le partager
-publiquement. Si un ancien favori ne fonctionne plus, recopier le nouveau lien.
+Le téléphone et le PC doivent être sur le même réseau privé. Dans le Studio,
+cliquer sur Connecter le téléphone, choisir « Ce PC · adresse permanente » et
+scanner le QR code avec l’appareil photo. Ajouter ensuite la page ouverte à
+l’écran d’accueil (Partager sur iPhone ; menu du navigateur sur Android), ou aux
+favoris. Le raccourci conserve l’association : aucun nouveau scan n’est nécessaire
+à chaque ouverture. Le changement de pseudo GitHub et le redémarrage du PC ne
+changent ni son adresse permanente ni sa clé.
+
+Le QR code et le lien contiennent une clé privée : ne pas les partager publiquement.
+Si le réseau bloque la découverte locale `.local`, sélectionner l’adresse
+Wi-Fi/Ethernet de secours dans l’écran QR. Sur cette adresse, un changement d’IP
+peut imposer de refaire le raccourci. La connexion directe doit rester sur un
+réseau privé, avec DeckEdge ouvert sur le PC.
 Glisser verticalement fait défiler ; glisser horizontalement règle un curseur.
 
 ## Capteurs et audio

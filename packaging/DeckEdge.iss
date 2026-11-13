@@ -1,4 +1,4 @@
-#ifndef AppVersion
+﻿#ifndef AppVersion
 #define AppVersion "0.1.0"
 #endif
 #ifndef Payload
@@ -11,7 +11,7 @@
 AppId={{4A8E0309-846A-4E17-827B-8154D77C4060}
 AppName=DeckEdge
 AppVersion={#AppVersion}
-AppPublisher=Lorzo
+AppPublisher=Lorzo595
 DefaultDirName={localappdata}\Programs\DeckEdge
 DefaultGroupName=DeckEdge
 DisableProgramGroupPage=yes

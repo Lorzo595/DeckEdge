@@ -11,6 +11,8 @@ function Receive-Checked($Name, $File) {
     if ((Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant() -ne $asset.sha256) { throw "SHA256 incorrect : $Name. Supprimez le fichier de cache et vérifiez la source avant de relancer." }
     return $path
 }
+$qr = Receive-Checked 'qrcoder' 'qrcoder.zip'
+if (-not (Test-Path (Join-Path $root 'desktop/vendor/qrcoder/lib/net40/QRCoder.dll'))) { Expand-Archive -LiteralPath $qr -DestinationPath (Join-Path $root 'desktop/vendor/qrcoder') -Force }
 $lhm = Receive-Checked 'lhm' 'lhm.zip'
 if (-not (Test-Path (Join-Path $root '.build/lhm/LibreHardwareMonitorLib.dll'))) { Expand-Archive -LiteralPath $lhm -DestinationPath (Join-Path $root '.build/lhm') -Force }
 $null = Receive-Checked 'python' 'python.zip'

@@ -6,6 +6,10 @@ $workspaceDir = Split-Path -Parent $projectDir
 $sdkVersion = '1.0.4314.35'
 $sdkDir = Join-Path $desktopDir 'vendor/webview2'
 $outputDir = Join-Path $desktopDir 'bin'
+$qrDir = Join-Path $desktopDir 'vendor/qrcoder'
+if (-not (Test-Path -LiteralPath (Join-Path $qrDir 'lib/net40/QRCoder.dll'))) {
+    & (Join-Path $projectDir 'packaging/prepare-dependencies.ps1')
+}
 if ($OutputDirectory) { $outputDir = [System.IO.Path]::GetFullPath($OutputDirectory) }
 if (-not $HardwareDirectory) {
     $HardwareDirectory = Join-Path $projectDir '.build/lhm'
@@ -49,6 +53,7 @@ try { $icon.Save($stream) } finally {
 $cscPath = Join-Path $env:WINDIR 'Microsoft.NET/Framework64/v4.0.30319/csc.exe'
 $appPath = Join-Path $outputDir 'DeckEdge.exe'
 $references = @('System.dll','System.Core.dll','System.Drawing.dll','System.Windows.Forms.dll','System.Web.Extensions.dll','System.Xml.dll','System.Security.dll',
+    (Join-Path $qrDir 'lib/net40/QRCoder.dll'),
     (Join-Path $HardwareDirectory 'LibreHardwareMonitorLib.dll'),
     (Join-Path $sdkDir 'lib/net462/Microsoft.Web.WebView2.Core.dll'),
     (Join-Path $sdkDir 'lib/net462/Microsoft.Web.WebView2.WinForms.dll'))
@@ -60,9 +65,11 @@ $compilerArgs += Join-Path $desktopDir 'SensorHost.cs'
 $compilerArgs += Join-Path $desktopDir 'AppSettings.cs'
 $compilerArgs += Join-Path $desktopDir 'ScreenColorPicker.cs'
 $compilerArgs += Join-Path $desktopDir 'AssemblyInfo.cs'
+$compilerArgs += Join-Path $desktopDir 'PhoneConnection.cs'
 & $cscPath $compilerArgs
 if ($LASTEXITCODE -ne 0) { throw 'La compilation de DeckEdge a échoué.' }
 Copy-Item -LiteralPath (Join-Path $desktopDir 'LibreHardwareMonitor-LICENSE.txt'),(Join-Path $desktopDir 'THIRD-PARTY-NOTICES.md') -Destination $outputDir -Force
+Copy-Item -LiteralPath (Join-Path $qrDir 'lib/net40/QRCoder.dll'),(Join-Path $desktopDir 'QRCoder-LICENSE.txt') -Destination $outputDir -Force
 Get-ChildItem -LiteralPath $HardwareDirectory -Filter '*.dll' |
     Where-Object { $_.Name -notin @('Aga.Controls.dll','OxyPlot.dll','OxyPlot.WindowsForms.dll') } |
     Copy-Item -Destination $outputDir -Force

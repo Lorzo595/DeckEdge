@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="DeckEdge">
+  <meta name="theme-color" content="#191b22">
+  <link rel="manifest" href="/manifest.webmanifest" crossorigin="use-credentials">
+  <link rel="icon" href="/phone-icon.svg" type="image/svg+xml">
   <title>Deck Edge</title>
   <style>
     :root {
@@ -403,6 +407,13 @@
 </head>
 <body>
 
+  <details id="phone-shortcut" hidden style="flex-shrink:0;background:#242a36;border:1px solid #45506b;border-radius:7px;padding:8px 12px;color:#dce6fa;font:12px/1.5 system-ui;margin-bottom:8px">
+    <summary style="cursor:pointer">Garder ce Deck sur mon téléphone</summary>
+    <p style="margin:8px 0">Après ce premier scan, ajoutez cette page à l’écran d’accueil ou aux favoris. Vous retrouverez ce PC sans recopier le lien ni scanner à chaque démarrage.</p>
+    <p style="margin:8px 0">iPhone : Partager → Sur l’écran d’accueil. Android : menu du navigateur → Ajouter à l’écran d’accueil. Gardez DeckEdge ouvert sur le PC et utilisez le même réseau privé.</p>
+    <button type="button" id="dismiss-phone-shortcut" style="padding:6px 12px;border:1px solid #65769a;background:#354564;border-radius:5px;color:white;cursor:pointer">Compris</button>
+  </details>
+
   <!-- BANDEAU MONITORING -->
   <div class="monitoring-bar" id="monitoring-bar" aria-label="Mesures du PC"></div>
 
@@ -414,6 +425,11 @@
 
   <script src="/deck-layout.js"></script>
   <script>
+    try {
+      const hint = document.getElementById('phone-shortcut');
+      hint.hidden = matchMedia('(display-mode: standalone)').matches || navigator.standalone || localStorage.getItem('deckedge.shortcut-hint') === 'dismissed';
+      document.getElementById('dismiss-phone-shortcut').onclick = () => { hint.hidden = true; try { localStorage.setItem('deckedge.shortcut-hint', 'dismissed'); } catch {} };
+    } catch {}
     const wsUri = `ws://${window.location.hostname || 'localhost'}:5000/ws`;
     let ws = null;
     let configData = null;

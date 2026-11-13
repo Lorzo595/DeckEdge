@@ -7,6 +7,7 @@ discord_config.*
 app-settings.json
 app-settings.json.*
 .phone-key
+.device-id
 .integrated-monitoring
 .desktop-profile/
 data/
