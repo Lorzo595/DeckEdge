@@ -25,6 +25,8 @@ namespace DeckEdgeDesktop
         internal static string Project;
         internal static string DataDirectory;
         internal static string PhoneKey;
+        internal static string PhoneHost;
+        internal static bool PhoneDiscoveryReady;
         internal static string InstanceKey;
         internal static readonly object LogLock = new object();
 
@@ -138,20 +140,14 @@ namespace DeckEdgeDesktop
             status.SizingGrip = false; status.Padding = new Padding(12, 5, 12, 5);
             serverStatus.Padding = new Padding(0, 0, 20, 0); sensorStatus.Spring = true; sensorStatus.TextAlign = ContentAlignment.MiddleLeft;
             phoneUrl = FindPhoneUrl();
-            var copyPhone = new ToolStripDropDownButton("Connecter le téléphone");
-            copyPhone.DropDownOpening += delegate {
-                copyPhone.DropDownItems.Clear();
-                foreach (string url in PhoneUrls()) {
-                    string selected = url;
-                    copyPhone.DropDownItems.Add("Copier " + selected, null, delegate { Clipboard.SetText(selected); });
-                }
-                if (copyPhone.DropDownItems.Count == 0) copyPhone.DropDownItems.Add("Aucun réseau local détecté").Enabled = false;
-            };
+            var copyPhone = new ToolStripButton("Connecter le téléphone");
+            copyPhone.Click += delegate { OpenPhoneConnection(); };
             status.Items.AddRange(new ToolStripItem[] { serverStatus, sensorStatus, copyPhone });
             Controls.Add(status);
             var menu = new ContextMenuStrip();
             menu.Items.Add("Ouvrir le Studio", null, delegate { RestoreStudio(); });
             menu.Items.Add("Paramètres…", null, delegate { OpenSettings(); });
+            menu.Items.Add("Connecter le téléphone (QR code)…", null, delegate { OpenPhoneConnection(); });
             menu.Items.Add("Copier le lien du téléphone", null, delegate { phoneUrl = FindPhoneUrl(); Clipboard.SetText(phoneUrl); });
             menu.Items.Add("Vérifier les capteurs", null, async delegate { await CheckSensors(); });
             if (File.Exists(Path.Combine(Program.Project, "prerequisites", "PawnIO_setup.exe")))
@@ -189,15 +185,19 @@ namespace DeckEdgeDesktop
 
         static string[] PhoneUrls()
         {
-            return NetworkInterface.GetAllNetworkInterfaces()
-                .Where(n => n.OperationalStatus == OperationalStatus.Up && n.NetworkInterfaceType != NetworkInterfaceType.Loopback && n.NetworkInterfaceType != NetworkInterfaceType.Tunnel)
-                .OrderBy(n => n.NetworkInterfaceType == NetworkInterfaceType.Wireless80211 ? 0 : 1)
-                .SelectMany(n => n.GetIPProperties().UnicastAddresses)
-                .Where(a => a.Address.AddressFamily == AddressFamily.InterNetwork && !a.Address.ToString().StartsWith("169.254."))
-                .Select(a => "http://" + a.Address + ":5000/?key=" + Program.PhoneKey).Distinct().ToArray();
+            return PhoneConnection.Addresses(Program.PhoneKey).Select(a => a.Url).ToArray();
         }
 
         static string FindPhoneUrl() { return PhoneUrls().FirstOrDefault() ?? "http://localhost:5000"; }
+
+        void OpenPhoneConnection()
+        {
+            RestoreStudio();
+            using (var dialog = new PhoneConnectionForm(async delegate {
+                var health = await GetHealth();
+                return health == null ? -1 : Convert.ToInt32(health["clients_connected"]);
+            })) dialog.ShowDialog(this);
+        }
 
         void ApplyKeepAwake() { SetThreadExecutionState(keepAwake.Checked ? 0x80000001u : 0x80000000u); }
 
@@ -232,8 +232,14 @@ namespace DeckEdgeDesktop
                 var request = (HttpWebRequest)WebRequest.Create(HealthUrl);
                 request.Proxy = null; request.Timeout = 1200; request.ReadWriteTimeout = 1200;
                 using (var response = await request.GetResponseAsync())
-                using (var reader = new StreamReader(response.GetResponseStream()))
-                    return new JavaScriptSerializer().Deserialize<Dictionary<string, object>>(await reader.ReadToEndAsync());
+                using (var reader = new StreamReader(response.GetResponseStream())) {
+                    var health = new JavaScriptSerializer().Deserialize<Dictionary<string, object>>(await reader.ReadToEndAsync());
+                    var phone = health.ContainsKey("phone") ? health["phone"] as Dictionary<string, object> : null;
+                    Program.PhoneDiscoveryReady = phone != null && phone.ContainsKey("discovery_available") && (bool)phone["discovery_available"];
+                    string host = phone != null && phone.ContainsKey("hostname") ? phone["hostname"] as string : null;
+                    Program.PhoneHost = host != null && System.Text.RegularExpressions.Regex.IsMatch(host, "^deckedge-[a-f0-9]{12}\\.local$") ? host : null;
+                    return health;
+                }
             }
             catch { return null; }
         }
@@ -263,6 +269,8 @@ namespace DeckEdgeDesktop
                     info.EnvironmentVariables["PYTHONIOENCODING"] = "utf-8";
                     info.EnvironmentVariables["DECKEDGE_DATA_DIR"] = Program.DataDirectory;
                     info.EnvironmentVariables["PYTHONDONTWRITEBYTECODE"] = "1";
+                    var lan = PhoneConnection.Addresses(Program.PhoneKey, false).FirstOrDefault();
+                    if (lan != null) info.EnvironmentVariables["DECKEDGE_LAN_IP"] = new Uri(lan.Url).Host;
                     backend = new Process { StartInfo = info };
                     backend.OutputDataReceived += CaptureBackend;
                     backend.ErrorDataReceived += CaptureBackend;
