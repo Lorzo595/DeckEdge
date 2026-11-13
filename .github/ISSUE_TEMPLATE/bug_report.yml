@@ -1,0 +1,46 @@
+name: Signaler un bug
+description: Un problème avec DeckEdge ou son installation
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: "Merci ! Ne joignez jamais vos identifiants Discord, votre lien privé de téléphone ou votre dossier de données complet. Masquez les informations personnelles dans les captures et journaux."
+  - type: input
+    id: version
+    attributes:
+      label: Version de DeckEdge
+      description: Visible dans Paramètres → À propos.
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: dropdown
+    id: distribution
+    attributes:
+      label: Mode utilisé
+      options: [Installation classique, Version portable, Depuis les sources]
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Version de Windows
+      placeholder: Windows 11 x64
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Étapes pour reproduire
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Résultat attendu et résultat obtenu
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Informations complémentaires
+      description: Téléphone/navigateur, matériel concerné, capture ou extrait de journal nettoyé, si utile.

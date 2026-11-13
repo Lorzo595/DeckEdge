@@ -1,0 +1,17 @@
+name: Proposer une amélioration
+description: Une idée pour rendre DeckEdge plus pratique
+title: "[Idée] "
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: Quel usage souhaites-tu améliorer ?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposition
+      description: Décris le fonctionnement souhaité et, si possible, un exemple concret.
+    validations:
+      required: true
