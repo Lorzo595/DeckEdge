@@ -6,7 +6,7 @@ import os
 import secrets
 import socket
 import threading
-from app_paths import DATA_DIR
+from app_paths import DATA_DIR, PORT
 
 log = logging.getLogger('DeckEdge.discovery')
 
@@ -64,7 +64,7 @@ class LocalDiscovery:
     def _service(self, address):
         from zeroconf import ServiceInfo
         return ServiceInfo('_http._tcp.local.', HOSTNAME[:-6] + '._http._tcp.local.',
-                           addresses=[socket.inet_aton(address)], port=5000,
+                           addresses=[socket.inet_aton(address)], port=PORT,
                            properties={'app': 'DeckEdge', 'path': '/'}, server=HOSTNAME + '.')
 
     def start(self):

@@ -26,10 +26,10 @@ namespace DeckEdgeDesktop
                 .ThenBy(n => n.NetworkInterfaceType == NetworkInterfaceType.Wireless80211 ? 0 : n.NetworkInterfaceType == NetworkInterfaceType.Ethernet ? 1 : 2)
                 .SelectMany(n => n.GetIPProperties().UnicastAddresses
                     .Where(a => a.Address.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(a.Address) && !a.Address.ToString().StartsWith("169.254.") && !a.Address.Equals(IPAddress.Any))
-                    .Select(a => new PhoneAddress { Name = n.Name + " · " + a.Address, Url = "http://" + a.Address + ":5000/?key=" + key }))
+                    .Select(a => new PhoneAddress { Name = n.Name + " · " + a.Address, Url = "http://" + a.Address + ":" + Program.Port + "/?key=" + key }))
                 .GroupBy(a => a.Url).Select(g => g.First()).ToArray();
             if (includePermanent && addresses.Length > 0 && Program.PhoneDiscoveryReady && !String.IsNullOrEmpty(Program.PhoneHost))
-                return new[] { new PhoneAddress { Name = "Ce PC · adresse permanente (recommandée)", Url = "http://" + Program.PhoneHost + ":5000/?key=" + key } }.Concat(addresses).ToArray();
+                return new[] { new PhoneAddress { Name = "Ce PC · adresse permanente (recommandée)", Url = "http://" + Program.PhoneHost + ":" + Program.Port + "/?key=" + key } }.Concat(addresses).ToArray();
             return addresses;
         }
 

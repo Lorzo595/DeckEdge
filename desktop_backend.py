@@ -10,7 +10,7 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 import sys
 import threading
-from app_paths import DATA_DIR
+from app_paths import DATA_DIR, PORT
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -32,7 +32,7 @@ def main():
 
     ensure_default_desktop()
     server = uvicorn.Server(uvicorn.Config(
-        app, host="0.0.0.0", port=5000, log_config=None,
+        app, host="0.0.0.0", port=PORT, log_config=None,
         access_log=False, loop="asyncio", proxy_headers=False,
     ))
 

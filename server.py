@@ -10,6 +10,7 @@ Architecture sécurisée avec validation Pydantic v2 :
 from __future__ import annotations
 
 import asyncio
+from collections import deque
 from contextlib import asynccontextmanager
 import ctypes
 from ctypes import wintypes
@@ -17,6 +18,7 @@ import json
 import logging
 import os
 from pathlib import Path
+import platform
 import re
 import subprocess
 import tempfile
@@ -42,7 +44,7 @@ from pydantic import BaseModel, Field, ValidationError, model_validator
 from pycaw.pycaw import AudioUtilities, ISimpleAudioVolume, IAudioSessionControl2
 from pycaw.utils import AudioSession
 from discord_rpc import discord_rpc
-from app_paths import DATA_DIR
+from app_paths import DATA_DIR, PORT
 from network_access import COOKIE, pairing_key, is_local, allowed_origin, is_paired
 from local_discovery import discovery, HOSTNAME
 
@@ -63,6 +65,7 @@ ADMIN_HTML_PATH = BASE_DIR / "admin.html"
 MONITORING_POLL_INTERVAL_SEC = 1.0
 MAX_WS_MESSAGE_BYTES = 8192
 MAX_BUTTON_CLICKS_PER_SECOND = 30
+LOG_TAIL_LINES = 80
 
 pyautogui.FAILSAFE = False
 
@@ -311,12 +314,19 @@ class ConfigStore:
     précédemment validée, jamais un fichier corrompu.
     """
 
-    def __init__(self, path: Path = CONFIG_PATH, backup_path: Path = CONFIG_BAK_PATH) -> None:
+    def __init__(self, path: Path = CONFIG_PATH, backup_path: Path = CONFIG_BAK_PATH, debounce: float = 0.15) -> None:
         self.path = path
         self.backup_path = backup_path
+        self.debounce = max(0.0, debounce)
         self._lock = threading.RLock()
         self._config: Optional[DeckConfig] = None
+        self._written_config: Optional[DeckConfig] = None
         self._mtime_ns: Optional[int] = None
+        self._dirty = False
+        self._wake = threading.Event()
+        self._stop = threading.Event()
+        self._writer = threading.Thread(target=self._writer_loop, daemon=True, name="DeckEdgeConfigWriter")
+        self._writer.start()
 
     def _read_mtime(self) -> Optional[int]:
         try:
@@ -348,16 +358,18 @@ class ConfigStore:
     def _read_locked(self) -> DeckConfig:
         if self._config is None:
             self._config = self._load_from_disk()
+            self._written_config = self._config.model_copy(deep=True)
             self._mtime_ns = self._read_mtime()
-        else:
+        elif not self._dirty:
             mtime = self._read_mtime()
             if mtime is not None and mtime != self._mtime_ns:
                 self._config = self._load_from_disk()
+                self._written_config = self._config.model_copy(deep=True)
                 self._mtime_ns = mtime
         return self._config.model_copy(deep=True)
 
     def _write_locked(self, config: DeckConfig, keep_backup: bool = True) -> None:
-        previous = self._config
+        previous = self._written_config
         if keep_backup and previous is not None:
             try:
                 _write_json_atomic(self.backup_path, previous.model_dump(mode="json"))
@@ -366,6 +378,7 @@ class ConfigStore:
 
         _write_json_atomic(self.path, config.model_dump(mode="json"))
         self._config = config.model_copy(deep=True)
+        self._written_config = self._config.model_copy(deep=True)
         self._mtime_ns = self._read_mtime()
         logger.info("Configuration persistée de manière atomique.")
 
@@ -374,18 +387,59 @@ class ConfigStore:
         with self._lock:
             return self._read_locked()
 
+    def _writer_loop(self) -> None:
+        while not self._stop.is_set():
+            if not self._wake.wait(0.5):
+                continue
+            # Regroupe les rafales de clics et de synchronisations d'état.
+            time.sleep(self.debounce)
+            if self._stop.is_set():
+                break
+            self._wake.clear()
+            try:
+                self.flush()
+            except Exception:
+                logger.exception("Échec de la sauvegarde différée de la configuration; nouvelle tentative")
+                time.sleep(0.5)
+
+    def flush(self) -> None:
+        """Écrit immédiatement les modifications en attente."""
+        with self._lock:
+            if not self._dirty or self._config is None:
+                return
+            config = self._config.model_copy(deep=True)
+            self._write_locked(config)
+            self._dirty = False
+            self._wake.clear()
+
+    def close(self) -> None:
+        """Écrit les dernières modifications puis arrête le writer."""
+        try:
+            self.flush()
+        except Exception:
+            logger.exception("Sauvegarde finale de la configuration impossible")
+        finally:
+            self._stop.set()
+            self._wake.set()
+            if self._writer.is_alive():
+                self._writer.join(timeout=2.0)
+
     def save(self, config: DeckConfig) -> None:
         """Remplace la configuration de façon atomique et sérialisée."""
         with self._lock:
             self._write_locked(config)
+            self._dirty = False
+            self._wake.clear()
 
     def update(self, mutator: Callable[[DeckConfig], Tuple[T, bool]]) -> T:
-        """Applique une mutation atomique ; n'écrit que si ``dirty`` est vrai."""
+        """Applique une mutation atomique ; l'écriture est regroupée en arrière-plan."""
         with self._lock:
             config = self._read_locked()
             result, dirty = mutator(config)
             if dirty:
-                self._write_locked(config)
+                self._config = config.model_copy(deep=True)
+                self._dirty = True
+                self._wake.set()
             return result
 
     def get_button(self, btn_id: str) -> Optional[ButtonConfig]:
@@ -1062,10 +1116,52 @@ async def lifespan(app: FastAPI):
         await asyncio.to_thread(discovery.stop)
         await telemetry.stop()
         discord_rpc.stop()
+        await asyncio.to_thread(config_store.close)
 
 
 app = FastAPI(title="DeckEdge Server", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
 PHONE_KEY = pairing_key()
+
+_PRIVATE_IP_RE = re.compile(r"\b((?:10|127|192\.168|172\.(?:1[6-9]|2\d|3[01]))\.\d{1,3})\.\d{1,3}\b")
+
+
+def _redact_text(value: Any) -> str:
+    """Masque les chemins personnels, la clé du téléphone et les IP privées."""
+    text = "" if value is None else str(value)
+    for path, replacement in (
+        (str(DATA_DIR), "<données>"),
+        (str(BASE_DIR), "<installation>"),
+        (str(Path.home()), "<utilisateur>"),
+    ):
+        if path:
+            text = text.replace(path, replacement)
+    for name in {os.environ.get("USERNAME"), os.environ.get("USER")}:
+        if name:
+            text = text.replace(name, "<utilisateur>")
+    text = text.replace(PHONE_KEY, "<clé téléphone>")
+    for secret in (
+        getattr(discord_rpc, "access_token", ""),
+        getattr(discord_rpc, "refresh_token", ""),
+        getattr(discord_rpc, "client_secret", ""),
+    ):
+        if secret:
+            text = text.replace(secret, "<secret>")
+    return _PRIVATE_IP_RE.sub(r"\1.x", text)
+
+
+def _tail(path: Path) -> List[str]:
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as file:
+            return [_redact_text(line.rstrip()) for line in deque(file, maxlen=LOG_TAIL_LINES)]
+    except OSError:
+        return []
+
+
+def _app_version() -> str:
+    try:
+        return (BASE_DIR / "VERSION").read_text(encoding="utf-8").strip()
+    except OSError:
+        return "inconnue"
 
 
 @app.middleware("http")
@@ -1075,7 +1171,7 @@ async def protect_desktop_and_pair_phone(request: Request, call_next):
         return JSONResponse({"detail": "Origine non autorisée"}, status_code=403)
     if not local and not is_paired(request, PHONE_KEY):
         return HTMLResponse('''<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Connecter DeckEdge</title><body style="margin:0;background:#191b22;color:#eef1fc;font:17px/1.65 system-ui;padding:28px"><main style="max-width:480px;margin:12vh auto"><h1>Retrouver votre Deck</h1><p>Cette adresse n’est pas encore associée à votre téléphone.</p><ol><li>Sur le PC, ouvrez DeckEdge.</li><li>Cliquez sur <b>Connecter le téléphone</b>.</li><li>Scannez le QR code avec l’appareil photo.</li></ol><p>Ajoutez ensuite le Deck à votre écran d’accueil pour le retrouver aux prochains démarrages.</p></main></body></html>''', status_code=401)
-    desktop_only = request.url.path in {"/admin", "/api/apps", "/api/monitoring/sensors", "/api/discord/connect", "/api/discord/disconnect"} or (request.url.path == "/api/config" and request.method != "GET")
+    desktop_only = request.url.path in {"/admin", "/api/apps", "/api/diagnostics", "/api/monitoring/sensors", "/api/discord/connect", "/api/discord/disconnect"} or (request.url.path == "/api/config" and request.method != "GET")
     if desktop_only and not local:
         return JSONResponse({"detail": "Ce réglage se modifie dans le Studio sur le PC."}, status_code=403)
     response = await call_next(request)
@@ -1667,6 +1763,94 @@ async def get_monitoring_sensors():
     return telemetry.catalog()
 
 
+@app.get("/api/diagnostics", include_in_schema=False)
+async def get_diagnostics(request: Request):
+    """Rapport local destiné au support ; les chemins et secrets sont masqués."""
+    config = await asyncio.to_thread(config_store.load)
+    try:
+        audio = await asyncio.to_thread(get_audio_targets)
+    except Exception:
+        logger.exception("Diagnostic audio indisponible")
+        audio = {"devices": [], "apps": []}
+
+    devices = [{
+        "name": _redact_text(device.get("name")),
+        "target": _redact_text(device.get("target")),
+        "volume": device.get("volume"),
+        "muted": device.get("muted"),
+    } for device in (audio.get("devices") or [])]
+    apps = [{
+        "name": _redact_text(app.get("name")),
+        "target": _redact_text(app.get("target")),
+        "volume": app.get("volume"),
+        "muted": app.get("muted"),
+        "outputs": [_redact_text(output) for output in (app.get("outputs") or [])],
+        "sessions": app.get("sessions", 0),
+    } for app in (audio.get("apps") or [])]
+
+    config_file = {"exists": CONFIG_PATH.exists()}
+    try:
+        stat = CONFIG_PATH.stat()
+        config_file.update({
+            "size": stat.st_size,
+            "modified": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(stat.st_mtime)),
+        })
+    except OSError:
+        pass
+
+    status = discord_rpc.get_status()
+    report = {
+        "generated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "app": {
+            "name": "DeckEdge",
+            "version": _app_version(),
+            "data_dir": _redact_text(DATA_DIR),
+            "config_file": config_file,
+            "config_backup": CONFIG_BAK_PATH.exists(),
+            "pages": len(config.pages),
+            "buttons": sum(len(page.buttons) for page in config.pages),
+            "monitoring_widgets": len(config.monitoring),
+        },
+        "system": {
+            "platform": _redact_text(platform.platform()),
+            "python": platform.python_version(),
+            "executable": _redact_text(sys.executable),
+        },
+        "network": {
+            "hostname": HOSTNAME,
+            "port": request.url.port or PORT,
+            "discovery_available": discovery.available,
+            "clients_connected": manager.client_count,
+            "phone_key_present": (DATA_DIR / ".phone-key").exists(),
+        },
+        "audio": {
+            "devices": devices,
+            "apps": apps,
+        },
+        "monitoring": {
+            "connected": telemetry.is_connected,
+            "elevated": telemetry.elevated,
+            "sensors_count": len(telemetry.sensors),
+            "last_poll": telemetry.last_poll_timestamp,
+            "metrics": telemetry.last_metrics,
+            "widgets": [{
+                "label": _redact_text(widget.label),
+                "sensor_id": widget.sensor_id,
+                "secondary_sensor_id": widget.secondary_sensor_id,
+            } for widget in config.monitoring],
+        },
+        "discord": {
+            key: status.get(key)
+            for key in ("has_config", "is_connected", "is_authenticated", "mute", "deaf", "user")
+        },
+        "logs": {
+            "deckedge": _tail(DATA_DIR / "deckedge.log"),
+            "desktop": _tail(DATA_DIR / "desktop.log"),
+        },
+    }
+    return JSONResponse(report, headers={"Cache-Control": "no-store"})
+
+
 @app.get("/api/health")
 async def healthcheck():
     """Healthcheck complet."""
@@ -1859,4 +2043,4 @@ async def websocket_endpoint(websocket: WebSocket):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("server:app", host="0.0.0.0", port=5000, reload=False, proxy_headers=False)
+    uvicorn.run("server:app", host="0.0.0.0", port=PORT, reload=False, proxy_headers=False)

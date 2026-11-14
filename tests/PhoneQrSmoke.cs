@@ -9,11 +9,12 @@ namespace DeckEdgeDesktop
         internal static string PhoneKey = new String('a', 64);
         internal static string PhoneHost = "deckedge-000000000001.local";
         internal static bool PhoneDiscoveryReady = true;
+        internal static int Port = 5000;
 
         [STAThread]
         static void Main(string[] args)
         {
-            string url = "http://" + PhoneHost + ":5000/?key=" + PhoneKey;
+            string url = "http://" + PhoneHost + ":" + Port + "/?key=" + PhoneKey;
             using (Bitmap image = PhoneConnection.QrImage(url)) {
                 if (image.Width != image.Height || image.Width > 320) throw new Exception("Dimensions du QR incorrectes.");
                 if (image.GetPixel(0, 0).ToArgb() != Color.White.ToArgb()) throw new Exception("Marge blanche manquante.");

@@ -54,9 +54,11 @@ actualiser les sorties et applications dans les réglages d’un curseur de volu
 
 ## Dépannage
 - Studio absent : relancer depuis l’icône près de l’horloge.
-- Port 5000 occupé : quitter l’autre copie de DeckEdge ou l’ancien serveur.
+- Port 5000 occupé : DeckEdge choisit automatiquement le port suivant. Si une
+  autre copie de DeckEdge tourne déjà, la quitter avant de relancer.
 - Téléphone inaccessible : même réseau, lien privé complet, pare-feu réseau privé,
   pas d’isolation Wi-Fi des clients. Ne pas ouvrir de port sur le routeur.
 - Studio blanc : installer/réparer Microsoft WebView2 Runtime depuis Microsoft.
 - Logs : menu DeckEdge → Voir le journal / Ouvrir les données.
+- Avant un signalement : bouton **Diagnostic** dans le Studio, puis copier le rapport masqué.
 - Quitter complètement avant de déplacer ou remplacer une version portable.

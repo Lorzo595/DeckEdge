@@ -5,6 +5,7 @@ from unittest.mock import patch
 from unittest.mock import Mock
 from fastapi.testclient import TestClient
 import network_access
+from app_paths import PORT
 from local_discovery import HOSTNAME, LocalDiscovery
 from server import app, PHONE_KEY
 
@@ -41,6 +42,7 @@ class PersistentPhoneTests(unittest.TestCase):
     def test_discovery_does_not_broadcast_pairing_secret(self):
         info = LocalDiscovery()._service('192.168.1.50')
         self.assertEqual(info.server, HOSTNAME + '.')
+        self.assertEqual(info.port, PORT)
         self.assertNotIn(PHONE_KEY.encode(), info.text)
         self.assertNotIn(b'key=', info.text)
 

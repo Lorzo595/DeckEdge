@@ -53,7 +53,15 @@ packaging\check-release.ps1
 
 Les tests réseau vérifient l’association par clé, le cookie privé, le refus
 d’administration distante et les origines WebSocket. Les tests existants couvrent
-l’audio, le profil de démarrage, les tailles de widgets et le monitoring.
+l’audio, le profil de démarrage, les tailles de widgets, le monitoring, la
+persistance et les régressions de commandes.
+
+Le test C# des préférences vérifie les valeurs par défaut, la migration et
+l’écriture atomique sans modifier l’inscription au démarrage Windows :
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tests\run-csharp-smoke.ps1
+```
 
 Après avoir quitté toute copie de DeckEdge, `packaging/smoke-test.ps1` extrait
 le portable dans un chemin contenant des espaces, le lance avec un PATH sans
@@ -65,24 +73,17 @@ Ce test local ne remplace pas une validation dans une VM Windows propre.
 
 Les tests navigateur nécessitent Node.js, Playwright et Edge. Pour les installer
 sans ajouter de dépendance de production : `npm install --no-save playwright`.
-Lancer le serveur sur 127.0.0.1:5000 puis :
+Le script suivant démarre un serveur isolé sur `127.0.0.1:5011`, exécute les sept
+tests Studio/mobile et s’arrête proprement :
 
 ```powershell
-node tests/studio-shell.cjs
-node tests/studio-ergonomics.cjs
-node tests/studio-colors.cjs
-node tests/mobile-preview.cjs
-node tests/mobile-gestures.cjs
-node tests/startup-profile.cjs
+powershell -ExecutionPolicy Bypass -File tests\run-ui-tests.ps1
 ```
 
-Si le port 5000 est déjà utilisé par une autre copie de DeckEdge, lancer le
-serveur de test sur un autre port et pointer les tests dessus :
-
-```powershell
-.venv\Scripts\python.exe -m uvicorn server:app --host 127.0.0.1 --port 5001
-$env:DECKEDGE_TEST_URL = 'http://127.0.0.1:5001'
-```
+Les tests couverts sont `studio-shell`, `studio-ergonomics`, `studio-colors`,
+`mobile-preview`, `mobile-gestures`, `startup-profile` et `diagnostics`. Le script
+accepte `-Port` et `-DataDirectory` pour isoler les données. Pour lancer un test
+manuel, définir `DECKEDGE_TEST_URL` vers le serveur de test.
 
 Les tests du Studio interceptent les profils et les sauvegardes ; ils ne doivent
 pas modifier les profils réels. Ne jamais activer une commande réelle pour tester

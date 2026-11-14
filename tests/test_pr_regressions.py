@@ -63,6 +63,7 @@ class ButtonCommandTests(unittest.IsolatedAsyncioTestCase):
         self.addCleanup(folder.cleanup)
         root = Path(folder.name)
         self.store = server.ConfigStore(root / 'config.json', root / 'config.json.bak')
+        self.addCleanup(self.store.close)
         self.store.save(server.DeckConfig(pages=[server.PageConfig(
             id='page_main', name='Principal', buttons=[server.ButtonConfig(
                 id='toggle', type='key', target='playpause', is_toggle=True,
