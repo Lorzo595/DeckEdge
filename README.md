@@ -143,7 +143,7 @@ Windows x64, Python 3.14 et .NET Framework 4.8 sont recommandés.
 ```powershell
 python -m venv .venv
 .venv\Scripts\python.exe -m pip install -r requirements.txt
-.venv\Scripts\python.exe -m unittest discover -s tests -p "test_*.py"
+.venv\Scripts\python.exe -m unittest discover -s tests -t . -p "test_*.py"
 powershell -ExecutionPolicy Bypass -File desktop\build.ps1
 ```
 

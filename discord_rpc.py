@@ -213,6 +213,8 @@ class DiscordRPCService:
         try:
             with self._write_lock:
                 if not self.pipe:
+                    with self._lock:
+                        self._pending_events.pop(nonce, None)
                     return None
                 self.pipe.write(packet)
         except Exception as e:

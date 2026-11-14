@@ -78,7 +78,21 @@ namespace DeckEdgeDesktop
 
         internal static void Log(string message)
         {
-            try { lock (LogLock) File.AppendAllText(Path.Combine(DataDirectory, "desktop.log"), DateTime.Now.ToString("s") + " " + message + Environment.NewLine, Encoding.UTF8); }
+            try
+            {
+                lock (LogLock)
+                {
+                    string path = Path.Combine(DataDirectory, "desktop.log");
+                    var info = new FileInfo(path);
+                    if (info.Exists && info.Length > 2000000)
+                    {
+                        string previous = path + ".1";
+                        if (File.Exists(previous)) File.Delete(previous);
+                        File.Move(path, previous);
+                    }
+                    File.AppendAllText(path, DateTime.Now.ToString("s") + " " + message + Environment.NewLine, Encoding.UTF8);
+                }
+            }
             catch { }
         }
     }

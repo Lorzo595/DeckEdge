@@ -1,6 +1,7 @@
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
 const path=require('node:path');
+const base=require('./ui-base.cjs');
 (async()=>{
  const browser=await chromium.launch({channel:'msedge',headless:true});
  try {
@@ -19,7 +20,7 @@ const path=require('node:path');
    return route.fulfill({status:failSave?500:200,json:failSave?{detail:'Test de panne'}:{status:'ok'}});
   });
   let promptText='Profil renommé';page.on('dialog',d=>d.type()==='prompt'?d.accept(promptText):d.accept());
-  await page.goto('http://127.0.0.1:5000/admin');
+  await page.goto(base+'/admin');
   await page.waitForFunction(()=>studioReady);
   const count=()=>page.locator('.preview-btn').count();
   const state=()=>page.evaluate(()=>({dirty:studioDirty(),config:studioClone(config),undo:studioHistoryIndex}));

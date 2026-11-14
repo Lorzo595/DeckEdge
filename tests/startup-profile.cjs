@@ -1,5 +1,6 @@
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
+const base=require('./ui-base.cjs');
 (async()=>{
  const browser=await chromium.launch({channel:'msedge',headless:true});
  try {
@@ -13,7 +14,7 @@ const assert=require('node:assert/strict');
    ? (saved=route.request().postDataJSON(),route.fulfill({json:{status:'ok'}}))
    : route.fulfill({json:fixture}));
   await page.routeWebSocket(/\/ws$/,()=>{});
-  await page.goto('http://127.0.0.1:5000/admin'); await page.waitForFunction(()=>studioReady);
+  await page.goto(base+'/admin'); await page.waitForFunction(()=>studioReady);
   assert.equal(await page.evaluate(()=>currentActivePageId),'page_main');
   await page.locator('[data-page-id=page_music]').click();
   assert.equal(await page.evaluate(()=>studioDirty()),false,'Parcourir les onglets ne doit pas modifier la configuration');
@@ -23,7 +24,7 @@ const assert=require('node:assert/strict');
   await page.reload(); await page.waitForFunction(()=>studioReady);
   assert.equal(await page.evaluate(()=>currentActivePageId),'page_main');
   await page.setViewportSize({width:390,height:844});
-  await page.goto('http://127.0.0.1:5000/'); await page.locator('.deck-btn').first().waitFor();
+  await page.goto(base+'/'); await page.locator('.deck-btn').first().waitFor();
   assert.equal(await page.evaluate(()=>currentActivePageId),'page_main');
   await page.locator('.page-tab').filter({hasText:'Musique'}).click();
   await page.evaluate(()=>loadConfig());

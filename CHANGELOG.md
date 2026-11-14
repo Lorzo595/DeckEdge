@@ -1,5 +1,14 @@
 # Historique
 
+## Non publié
+
+- Sauvegarde de configuration sérialisée : plus d’écriture concurrente sur le même fichier temporaire et plus de perte d’une modification pendant la synchronisation matérielle.
+- Récupération fiable d’une configuration corrompue depuis `config.json.bak`.
+- Identifiants de boutons/pages normalisés et uniques ; validation des messages WebSocket et limitation des clics.
+- Icône et libellé actifs calculés de la même façon dans le Studio, le pupitre et le serveur.
+- Cibles audio vides neutralisées, volume relatif des périphériques pris en charge, échappement renforcé dans le Studio.
+- Rotation des journaux, clé du téléphone écrite de façon atomique, tests isolés du profil de développement.
+
 ## 0.1.1 — Connexion du téléphone simplifiée
 
 - Écran de connexion avec QR code généré localement, accessible depuis le Studio et l’icône près de l’horloge.

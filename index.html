@@ -430,7 +430,7 @@
       hint.hidden = matchMedia('(display-mode: standalone)').matches || navigator.standalone || localStorage.getItem('deckedge.shortcut-hint') === 'dismissed';
       document.getElementById('dismiss-phone-shortcut').onclick = () => { hint.hidden = true; try { localStorage.setItem('deckedge.shortcut-hint', 'dismissed'); } catch {} };
     } catch {}
-    const wsUri = `ws://${window.location.hostname || 'localhost'}:5000/ws`;
+    const wsUri = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`;
     let ws = null;
     let configData = null;
     let currentActivePageId = null;
@@ -544,23 +544,11 @@
     }
 
     function getSmartActiveIcon(btn) {
-      if (btn.active_icon) return btn.active_icon;
-      const ic = btn.icon || '';
-      if (ic === '🎙️' || ic === '🔊' || ic === '🎧') return '🔇';
-      if (ic === '⏯️') return '⏸️';
-      if (ic === '🔴') return '⏹️';
-      return '⚡';
+      return DeckLayout.activeDisplay(btn).icon;
     }
 
     function getSmartActiveLabel(btn) {
-      if (btn.active_label) return btn.active_label;
-      const lb = (btn.label || '').toLowerCase();
-      if (lb.includes('sourdine') || lb.includes('deaf')) return 'SOURDINE';
-      if (lb.includes('discord')) return 'DISCORD MUTÉ';
-      if (lb.includes('micro') || lb.includes('mute')) return 'MUTÉ';
-      if (lb.includes('rec') || lb.includes('obs')) return 'REC EN COURS';
-      if (lb.includes('pause') || lb.includes('play')) return 'EN PAUSE';
-      return btn.label || '';
+      return DeckLayout.activeDisplay(btn).label;
     }
 
     // 3. Rendu de la grille
@@ -623,8 +611,9 @@
 
           const isAct = btn.is_toggle && btn.state;
           const btnBg = isAct ? (btn.active_color || '#991b1b') : (btn.color || '#161c2e');
-          const icon = isAct ? (btn.active_icon || getSmartActiveIcon(btn)) : (btn.icon || '⚡');
-          const label = isAct ? (btn.active_label || getSmartActiveLabel(btn)) : (btn.label || '');
+          const display = isAct ? DeckLayout.activeDisplay(btn) : {icon: btn.icon || '⚡', label: btn.label || ''};
+          const icon = display.icon;
+          const label = display.label;
 
           button.style.backgroundColor = btnBg.toLowerCase() === '#161c2e' ? '#2b2e27' : btnBg;
           button.style.borderColor = isAct ? '#e28c80' : (btnBg.toLowerCase() === '#161c2e' ? '#454a3d' : btnBg);

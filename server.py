@@ -17,10 +17,12 @@ import json
 import logging
 import os
 from pathlib import Path
-import shutil
+import re
 import subprocess
+import tempfile
+import threading
 import time
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, TypeVar
 import sys
 from monitoring import MonitoringState, DEFAULT_WIDGETS
 from audio_sessions import collect_application_volumes
@@ -34,9 +36,8 @@ if sys.stderr is None:
 import comtypes
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
-import httpx
 import pyautogui
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, ValidationError, model_validator
 from pycaw.pycaw import AudioUtilities, ISimpleAudioVolume, IAudioSessionControl2
 from pycaw.utils import AudioSession
 from discord_rpc import discord_rpc
@@ -55,11 +56,12 @@ logger = logging.getLogger("DeckEdge")
 BASE_DIR = Path(__file__).resolve().parent
 CONFIG_PATH = DATA_DIR / "config.json"
 CONFIG_BAK_PATH = DATA_DIR / "config.json.bak"
-CONFIG_TMP_PATH = DATA_DIR / "config.json.tmp"
 INDEX_HTML_PATH = BASE_DIR / "index.html"
 ADMIN_HTML_PATH = BASE_DIR / "admin.html"
 
 MONITORING_POLL_INTERVAL_SEC = 1.0
+MAX_WS_MESSAGE_BYTES = 8192
+MAX_BUTTON_CLICKS_PER_SECOND = 30
 
 pyautogui.FAILSAFE = False
 
@@ -70,8 +72,24 @@ pyautogui.FAILSAFE = False
 
 ActionType = Literal["hotkey", "key", "launch", "volume_app", "slider"]
 
+_IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+
+
+def _sanitize_identifier(value: Any, prefix: str, index: int, used: set[str]) -> str:
+    """Keep legacy configs loadable while guaranteeing safe, unique DOM identifiers."""
+    candidate = value.strip() if isinstance(value, str) else ""
+    if not _IDENTIFIER_PATTERN.fullmatch(candidate) or candidate in used:
+        candidate = f"{prefix}_{index}"
+        suffix = 2
+        while candidate in used:
+            candidate = f"{prefix}_{index}_{suffix}"
+            suffix += 1
+    used.add(candidate)
+    return candidate
+
+
 class ButtonConfig(BaseModel):
-    id: str = Field(..., min_length=1, description="Identifiant unique du bouton")
+    id: str = Field(..., min_length=1, max_length=64, pattern=r"^[A-Za-z0-9_-]+$", description="Identifiant unique du bouton")
     label: str = Field(default="", max_length=50, description="Libellé affiché")
     icon: str = Field(default="⚡", max_length=10, description="Émoji ou symbole")
     type: ActionType = Field(default="hotkey", description="Type d'action")
@@ -95,10 +113,10 @@ class ButtonConfig(BaseModel):
     )
 
 class PageConfig(BaseModel):
-    id: str = Field(..., min_length=1, description="Identifiant unique de la page")
+    id: str = Field(..., min_length=1, max_length=64, pattern=r"^[A-Za-z0-9_-]+$", description="Identifiant unique de la page")
     name: str = Field(..., min_length=1, max_length=50, description="Nom affiché de la page")
     icon: str = Field(default="📄", max_length=10, description="Icône de l'onglet")
-    buttons: List[ButtonConfig] = Field(default_factory=list, description="Liste ordonnée des boutons")
+    buttons: List[ButtonConfig] = Field(default_factory=list, max_length=500, description="Liste ordonnée des boutons")
 
 class MonitoringWidget(BaseModel):
     label: str = Field(default="Indicateur", min_length=1, max_length=24)
@@ -110,7 +128,7 @@ class DeckConfig(BaseModel):
     monitoring: List[MonitoringWidget] = Field(default_factory=lambda: [MonitoringWidget(**w) for w in DEFAULT_WIDGETS], min_length=1, max_length=6)
 
     active_page_id: Optional[str] = Field(default="page_main", description="Page affichée par défaut")
-    pages: List[PageConfig] = Field(default_factory=list, description="Liste des profils / pages")
+    pages: List[PageConfig] = Field(default_factory=list, max_length=50, description="Liste des profils / pages")
 
     @model_validator(mode="before")
     @classmethod
@@ -118,9 +136,12 @@ class DeckConfig(BaseModel):
         if not isinstance(data, dict):
             return data
 
+        data = dict(data)
+
         # Rétrocompatibilité : migration transparente depuis l'ancienne structure {"buttons": [...]}
         if "pages" not in data and "buttons" in data:
             data = {
+                **data,
                 "active_page_id": "page_main",
                 "pages": [
                     {
@@ -132,9 +153,9 @@ class DeckConfig(BaseModel):
                 ]
             }
 
-        pages = data.get("pages", [])
+        pages = data.get("pages") or []
         if not pages:
-            data["pages"] = [
+            pages = [
                 {
                     "id": "page_main",
                     "name": "Principal",
@@ -143,12 +164,55 @@ class DeckConfig(BaseModel):
                 }
             ]
 
+        normalized_pages = []
+        page_ids = []
+        page_id_map: Dict[str, str] = {}
+        used_page_ids: set[str] = set()
+        used_button_ids: set[str] = set()
+
+        for page_index, page in enumerate(pages):
+            if isinstance(page, BaseModel):
+                page = page.model_dump()
+            if not isinstance(page, dict):
+                normalized_pages.append(page)
+                continue
+
+            page = dict(page)
+            original_id = page.get("id")
+            page_id = _sanitize_identifier(original_id, "page", page_index, used_page_ids)
+            if isinstance(original_id, str):
+                page_id_map.setdefault(original_id, page_id)
+            page["id"] = page_id
+            page_ids.append(page_id)
+
+            buttons = page.get("buttons")
+            if isinstance(buttons, list):
+                normalized_buttons = []
+                for button in buttons:
+                    if isinstance(button, BaseModel):
+                        button = button.model_dump()
+                    if isinstance(button, dict):
+                        button = dict(button)
+                        button["id"] = _sanitize_identifier(
+                            button.get("id"), f"b{page_index}", len(normalized_buttons), used_button_ids
+                        )
+                    normalized_buttons.append(button)
+                page["buttons"] = normalized_buttons
+
+            normalized_pages.append(page)
+
+        data["pages"] = normalized_pages
+
         # Principal est le profil d'ouverture ; la navigation reste locale aux interfaces.
-        page_ids = [p.get("id") if isinstance(p, dict) else getattr(p, "id", None) for p in data["pages"]]
+        active_page_id = data.get("active_page_id")
+        if isinstance(active_page_id, str):
+            active_page_id = page_id_map.get(active_page_id, active_page_id)
         if "page_main" in page_ids:
             data["active_page_id"] = "page_main"
-        elif not data.get("active_page_id") or data.get("active_page_id") not in page_ids:
+        elif active_page_id not in page_ids:
             data["active_page_id"] = page_ids[0] if page_ids else "page_main"
+        else:
+            data["active_page_id"] = active_page_id
 
         return data
 
@@ -204,51 +268,206 @@ DEFAULT_CONFIG = DeckConfig(
 
 
 # ============================================================================
-# 2. PERSISTANCE ATOMIQUE DE LA CONFIGURATION
+# 2. PERSISTANCE SÉRIALISÉE ET ATOMIQUE DE LA CONFIGURATION
 # ============================================================================
 
-def load_config() -> DeckConfig:
-    """Charge et valide config.json avec fallback automatique sur .bak ou DEFAULT_CONFIG."""
-    if not CONFIG_PATH.exists():
-        save_config_atomic(DEFAULT_CONFIG)
-        return DEFAULT_CONFIG
+T = TypeVar("T")
 
+
+def _write_json_atomic(path: Path, payload: Dict[str, Any]) -> None:
+    """Écrit un JSON complet puis remplace le fichier, avec un temporaire unique."""
+    text = json.dumps(payload, indent=2, ensure_ascii=False)
+    fd, tmp_name = tempfile.mkstemp(prefix=path.name + ".", suffix=".tmp", dir=path.parent)
     try:
-        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-            raw_data = json.load(f)
-        return DeckConfig.model_validate(raw_data)
-    except (json.JSONDecodeError, ValidationError) as e:
-        logger.error(f"Fichier config.json corrompu ({e}). Tentative de récupération .bak...")
-        if CONFIG_BAK_PATH.exists():
-            try:
-                with open(CONFIG_BAK_PATH, "r", encoding="utf-8") as f:
-                    raw_bak = json.load(f)
-                valid_config = DeckConfig.model_validate(raw_bak)
-                logger.info("Restauration réussie depuis le backup .bak.")
-                return valid_config
-            except Exception as e_bak:
-                logger.critical(f"Backup .bak également illisible ({e_bak}). Restauration configuration usine.")
-        return DEFAULT_CONFIG
-
-
-def save_config_atomic(config: DeckConfig) -> None:
-    """Sauvegarde atomique : écrit dans un .tmp puis remplace le fichier de destination."""
-    payload = config.model_dump(mode="json")
-    json_text = json.dumps(payload, indent=2, ensure_ascii=False)
-
-    with open(CONFIG_TMP_PATH, "w", encoding="utf-8") as f:
-        f.write(json_text)
-        f.flush()
-        os.fsync(f.fileno())
-
-    if CONFIG_PATH.exists():
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(text)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_name, path)
+    except BaseException:
         try:
-            shutil.copy2(CONFIG_PATH, CONFIG_BAK_PATH)
-        except Exception as e:
-            logger.warning(f"Impossible de créer config.json.bak: {e}")
+            os.unlink(tmp_name)
+        except OSError:
+            pass
+        raise
 
-    os.replace(CONFIG_TMP_PATH, CONFIG_PATH)
-    logger.info("Configuration persistée de manière atomique.")
+
+class ConfigStore:
+    """Source de vérité unique : lectures, mutations et écritures sérialisées.
+
+    Toutes les mutations passent par ``update`` afin qu'une sauvegarde lente ne
+    puisse pas écraser une modification faite entre-temps. Les écritures utilisent
+    un fichier temporaire unique et le backup représente toujours la configuration
+    précédemment validée, jamais un fichier corrompu.
+    """
+
+    def __init__(self, path: Path = CONFIG_PATH, backup_path: Path = CONFIG_BAK_PATH) -> None:
+        self.path = path
+        self.backup_path = backup_path
+        self._lock = threading.RLock()
+        self._config: Optional[DeckConfig] = None
+        self._mtime_ns: Optional[int] = None
+
+    def _read_mtime(self) -> Optional[int]:
+        try:
+            return self.path.stat().st_mtime_ns
+        except OSError:
+            return None
+
+    def _load_from_disk(self) -> DeckConfig:
+        if not self.path.exists():
+            self._write_locked(DEFAULT_CONFIG, keep_backup=False)
+            assert self._config is not None
+            return self._config.model_copy(deep=True)
+
+        try:
+            raw_data = json.loads(self.path.read_text(encoding="utf-8"))
+            return DeckConfig.model_validate(raw_data)
+        except (json.JSONDecodeError, ValidationError, OSError) as e:
+            logger.error("Fichier config.json corrompu (%s). Tentative de récupération .bak...", e)
+            if self.backup_path.exists():
+                try:
+                    raw_bak = json.loads(self.backup_path.read_text(encoding="utf-8"))
+                    valid_config = DeckConfig.model_validate(raw_bak)
+                    logger.info("Restauration réussie depuis le backup .bak.")
+                    return valid_config
+                except Exception as e_bak:
+                    logger.critical("Backup .bak également illisible (%s). Restauration configuration usine.", e_bak)
+            return DEFAULT_CONFIG.model_copy(deep=True)
+
+    def _read_locked(self) -> DeckConfig:
+        if self._config is None:
+            self._config = self._load_from_disk()
+            self._mtime_ns = self._read_mtime()
+        else:
+            mtime = self._read_mtime()
+            if mtime is not None and mtime != self._mtime_ns:
+                self._config = self._load_from_disk()
+                self._mtime_ns = mtime
+        return self._config.model_copy(deep=True)
+
+    def _write_locked(self, config: DeckConfig, keep_backup: bool = True) -> None:
+        previous = self._config
+        if keep_backup and previous is not None:
+            try:
+                _write_json_atomic(self.backup_path, previous.model_dump(mode="json"))
+            except Exception as e:
+                logger.warning("Impossible de créer config.json.bak: %s", e)
+
+        _write_json_atomic(self.path, config.model_dump(mode="json"))
+        self._config = config.model_copy(deep=True)
+        self._mtime_ns = self._read_mtime()
+        logger.info("Configuration persistée de manière atomique.")
+
+    def load(self) -> DeckConfig:
+        """Retourne une copie isolée de la configuration courante."""
+        with self._lock:
+            return self._read_locked()
+
+    def save(self, config: DeckConfig) -> None:
+        """Remplace la configuration de façon atomique et sérialisée."""
+        with self._lock:
+            self._write_locked(config)
+
+    def update(self, mutator: Callable[[DeckConfig], Tuple[T, bool]]) -> T:
+        """Applique une mutation atomique ; n'écrit que si ``dirty`` est vrai."""
+        with self._lock:
+            config = self._read_locked()
+            result, dirty = mutator(config)
+            if dirty:
+                self._write_locked(config)
+            return result
+
+    def get_button(self, btn_id: str) -> Optional[ButtonConfig]:
+        with self._lock:
+            config = self._read_locked()
+            for page in config.pages:
+                for button in page.buttons:
+                    if button.id == btn_id:
+                        return button.model_copy(deep=True)
+        return None
+
+
+config_store = ConfigStore()
+
+
+def active_button_display(button: ButtonConfig) -> Tuple[str, str]:
+    """Compute the canonical active icon/label shared by every interface."""
+    target = (button.target or "").lower()
+    if button.active_icon:
+        icon = button.active_icon
+    elif button.icon in ("🎙️", "🔊", "🎧"):
+        icon = "🔇"
+    elif button.icon == "⏯️":
+        icon = "⏸️"
+    elif button.icon == "🔴":
+        icon = "⏹️"
+    else:
+        icon = "⚡"
+
+    if button.active_label:
+        label = button.active_label
+    elif "deaf" in target:
+        label = "SOURDINE"
+    elif "mute" in target:
+        label = "MUTÉ"
+    else:
+        text = (button.label or "").lower()
+        if "sourdine" in text or "deaf" in text:
+            label = "SOURDINE"
+        elif "micro" in text or "mute" in text:
+            label = "MUTÉ"
+        elif "discord" in text:
+            label = "DISCORD MUTÉ"
+        elif "rec" in text or "obs" in text:
+            label = "REC EN COURS"
+        elif "pause" in text or "play" in text:
+            label = "EN PAUSE"
+        else:
+            label = button.label or ""
+    return icon, label
+
+
+def button_state_payload(button: ButtonConfig) -> Dict[str, Any]:
+    icon, label = active_button_display(button)
+    return {
+        "type": "button_state",
+        "btn_id": button.id,
+        "state": button.state,
+        "active_label": label,
+        "active_icon": icon,
+        "active_color": button.active_color or "#991b1b",
+        "label": button.label,
+        "icon": button.icon,
+        "color": button.color or "#161c2e",
+    }
+
+
+def hardware_state_for(
+    button: ButtonConfig,
+    mic_muted: bool,
+    master_muted: bool,
+    apps_muted: Dict[str, bool],
+) -> Optional[bool]:
+    """Map a toggle target to the current Windows/Discord hardware state."""
+    target = (button.target or "").strip().lower()
+    if target == "discord:mute":
+        if discord_rpc.is_authenticated:
+            return discord_rpc.mute
+        return apps_muted.get("discord", False)
+    if target in ("discord:deaf", "discord:deafen"):
+        if discord_rpc.is_authenticated:
+            return discord_rpc.deaf
+        return None
+    if target in ("mic:mute", "mic", "windows:mic"):
+        return mic_muted
+    if target in ("master:mute", "master", "windows:master"):
+        return master_muted
+    if target.startswith("app:"):
+        return apps_muted.get(target[4:].strip())
+    if ":mute" in target:
+        return apps_muted.get(target.split(":", 1)[0].strip())
+    return None
 
 
 # ============================================================================
@@ -257,7 +476,6 @@ def save_config_atomic(config: DeckConfig) -> None:
 
 from pycaw.constants import AudioDeviceState, EDataFlow
 import queue
-import threading
 
 class AudioEngine(threading.Thread):
     """
@@ -341,9 +559,35 @@ class AudioEngine(threading.Thread):
         except Exception as e:
             logger.debug(f"Erreur actualisation sessions: {e}")
 
+    def _resolve_device(self, device_name: str):
+        if not device_name:
+            return None
+        for name, device in self.device_cache.items():
+            if device_name in name:
+                return device
+        self._refresh_caches()
+        for name, device in self.device_cache.items():
+            if device_name in name:
+                return device
+        return None
+
+    def _resolve_app(self, app_name: str):
+        if not app_name:
+            return None
+        for name, control in self.app_cache.items():
+            if app_name in name:
+                return control
+        self._refresh_caches()
+        for name, control in self.app_cache.items():
+            if app_name in name:
+                return control
+        return None
+
     def _apply_volume(self, target: str, pct: int) -> None:
         val = max(0.0, min(1.0, float(pct) / 100.0))
         t = target.strip().lower()
+        if not t:
+            return
 
         # Master
         if t in ("master", "general", "windows"):
@@ -355,46 +599,27 @@ class AudioEngine(threading.Thread):
 
         # Périphérique spécifique
         if t.startswith("device:"):
-            dev_name = t[7:].strip().lower()
-            for name, dev in self.device_cache.items():
-                if dev_name in name:
-                    try:
-                        dev.EndpointVolume.SetMasterVolumeLevelScalar(val, None)
-                    except Exception as e:
-                        logger.debug(f"Erreur set device volume: {e}")
-                    return
-            # Si non trouvé dans le cache, rafraîchir une fois
-            self._refresh_caches()
-            for name, dev in self.device_cache.items():
-                if dev_name in name:
-                    try:
-                        dev.EndpointVolume.SetMasterVolumeLevelScalar(val, None)
-                    except Exception:
-                        pass
-                    return
-
-        # Application
-        app_name = t[4:].strip().lower() if t.startswith("app:") else t
-        for name, vol_ctl in self.app_cache.items():
-            if app_name in name:
+            device = self._resolve_device(t[7:].strip().lower())
+            if device is not None:
                 try:
-                    vol_ctl.SetMasterVolume(val, None)
+                    device.EndpointVolume.SetMasterVolumeLevelScalar(val, None)
                 except Exception as e:
-                    logger.debug(f"Erreur set app volume: {e}")
-                return
+                    logger.debug(f"Erreur set device volume: {e}")
+            return
 
-        # Si non trouvé, rafraîchir et retenter
-        self._refresh_caches()
-        for name, vol_ctl in self.app_cache.items():
-            if app_name in name:
-                try:
-                    vol_ctl.SetMasterVolume(val, None)
-                except Exception:
-                    pass
-                return
+        # Application (une cible vide ne doit jamais toucher la première session)
+        app_name = t[4:].strip().lower() if t.startswith("app:") else t
+        control = self._resolve_app(app_name)
+        if control is not None:
+            try:
+                control.SetMasterVolume(val, None)
+            except Exception as e:
+                logger.debug(f"Erreur set app volume: {e}")
 
     def _toggle_mute(self, target: str) -> bool:
         t = target.strip().lower()
+        if not t:
+            return False
 
         # Master
         if t in ("master", "general", "windows"):
@@ -422,31 +647,32 @@ class AudioEngine(threading.Thread):
 
         # Périphérique spécifique
         if t.startswith("device:"):
-            dev_name = t[7:].strip().lower()
-            for name, dev in self.device_cache.items():
-                if dev_name in name:
-                    try:
-                        m = dev.EndpointVolume.GetMute()
-                        dev.EndpointVolume.SetMute(0 if m else 1, None)
-                        return not m
-                    except Exception:
-                        return False
-            return False
+            device = self._resolve_device(t[7:].strip().lower())
+            if device is None:
+                return False
+            try:
+                m = device.EndpointVolume.GetMute()
+                device.EndpointVolume.SetMute(0 if m else 1, None)
+                return not m
+            except Exception:
+                return False
 
         # Application
         app_name = t[4:].strip().lower() if t.startswith("app:") else t
-        for name, vol_ctl in self.app_cache.items():
-            if app_name in name:
-                try:
-                    m = vol_ctl.GetMute()
-                    vol_ctl.SetMute(0 if m else 1, None)
-                    return not m
-                except Exception:
-                    return False
-        return False
+        control = self._resolve_app(app_name)
+        if control is None:
+            return False
+        try:
+            m = control.GetMute()
+            control.SetMute(0 if m else 1, None)
+            return not m
+        except Exception:
+            return False
 
     def _adjust_relative(self, target_spec: str, delta: float) -> bool:
         t = target_spec.strip().lower()
+        if not t:
+            return False
         if t in ("master", "general", "windows"):
             try:
                 spk = AudioUtilities.GetSpeakers()
@@ -457,17 +683,29 @@ class AudioEngine(threading.Thread):
             except Exception:
                 return False
 
+        if t.startswith("device:"):
+            device = self._resolve_device(t[7:].strip().lower())
+            if device is None:
+                return False
+            try:
+                curr = device.EndpointVolume.GetMasterVolumeLevelScalar()
+                new_vol = max(0.0, min(1.0, curr + delta))
+                device.EndpointVolume.SetMasterVolumeLevelScalar(new_vol, None)
+                return True
+            except Exception:
+                return False
+
         app_name = t[4:].strip().lower() if t.startswith("app:") else t
-        for name, vol_ctl in self.app_cache.items():
-            if app_name in name:
-                try:
-                    curr = vol_ctl.GetMasterVolume()
-                    new_vol = max(0.0, min(1.0, curr + delta))
-                    vol_ctl.SetMasterVolume(new_vol, None)
-                    return True
-                except Exception:
-                    return False
-        return False
+        control = self._resolve_app(app_name)
+        if control is None:
+            return False
+        try:
+            curr = control.GetMasterVolume()
+            new_vol = max(0.0, min(1.0, curr + delta))
+            control.SetMasterVolume(new_vol, None)
+            return True
+        except Exception:
+            return False
 
     def _get_targets(self) -> Dict[str, Any]:
         devices = []
@@ -675,6 +913,24 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
+_background_tasks: set[asyncio.Task] = set()
+
+
+def _finish_background_task(task: asyncio.Task) -> None:
+    _background_tasks.discard(task)
+    if task.cancelled():
+        return
+    error = task.exception()
+    if error is not None:
+        logger.error("Erreur dans une tâche de clic: %s", error)
+
+
+def _spawn_button_click(btn_id: str) -> None:
+    """Keep a strong reference to fire-and-forget click tasks."""
+    task = asyncio.create_task(handle_button_click(btn_id))
+    _background_tasks.add(task)
+    task.add_done_callback(_finish_background_task)
+
 
 # ============================================================================
 # 5. SERVICE CENTRALISÉ DE TÉLÉMÉTRIE HARDWARE (LHM)
@@ -692,7 +948,8 @@ class LHMTelemetryService(MonitoringState):
         while self._running:
             self.refresh()
             if manager.client_count > 0:
-                payload = self.payload(load_config().monitoring)
+                config = await asyncio.to_thread(config_store.load)
+                payload = self.payload(config.monitoring)
                 await manager.broadcast(payload)
 
                 # Synchronisation automatique de l'état matériel (Micro Windows, Master, Discord...)
@@ -702,57 +959,21 @@ class LHMTelemetryService(MonitoringState):
                     master_muted = sys_states.get("master_muted", False)
                     apps_muted = sys_states.get("apps_muted", {})
 
-                    config = load_config()
-                    state_changed = False
-                    for p in config.pages:
-                        for b in p.buttons:
-                            if not b.is_toggle:
-                                continue
-                            new_state = None
-                            t = (b.target or "").strip().lower()
+                    def apply_hardware_states(cfg: DeckConfig):
+                        messages = []
+                        for page in cfg.pages:
+                            for button in page.buttons:
+                                if not button.is_toggle:
+                                    continue
+                                new_state = hardware_state_for(button, mic_muted, master_muted, apps_muted)
+                                if new_state is not None and button.state != new_state:
+                                    button.state = new_state
+                                    messages.append(button_state_payload(button))
+                        return messages, bool(messages)
 
-                            # 1. Discord RPC (priorité absolue pour discord:mute et discord:deaf)
-                            if t == "discord:mute":
-                                if discord_rpc.is_authenticated:
-                                    new_state = discord_rpc.mute
-                                else:
-                                    new_state = apps_muted.get("discord", False)
-                            elif t in ("discord:deaf", "discord:deafen"):
-                                if discord_rpc.is_authenticated:
-                                    new_state = discord_rpc.deaf
-
-                            # 2. Micro Windows (uniquement si cible mic ou mic:mute)
-                            elif t in ("mic:mute", "mic", "windows:mic"):
-                                new_state = mic_muted
-
-                            # 3. Master Windows (sortie générale)
-                            elif t in ("master:mute", "master", "windows:master"):
-                                new_state = master_muted
-
-                            # 4. Autre application Windows
-                            elif t.startswith("app:") or ":mute" in t:
-                                app_key = t.split(":", 1)[0].replace("app:", "").strip()
-                                if app_key in apps_muted:
-                                    new_state = apps_muted[app_key]
-
-                            if new_state is not None and b.state != new_state:
-                                b.state = new_state
-                                state_changed = True
-                                act_icon = b.active_icon or ("🔇" if b.icon in ("🎙️", "🔊", "🎧") else ("⏸️" if b.icon == "⏯️" else "⚡"))
-                                act_label = b.active_label or ("MUTÉ" if any(w in (b.label or "").lower() for w in ["mute", "micro", "son"]) else ("SOURDINE" if "sourdine" in (b.label or "").lower() or "deaf" in (b.label or "").lower() else b.label))
-                                await manager.broadcast({
-                                    "type": "button_state",
-                                    "btn_id": b.id,
-                                    "state": b.state,
-                                    "active_label": act_label,
-                                    "active_icon": act_icon,
-                                    "active_color": b.active_color or "#991b1b",
-                                    "label": b.label,
-                                    "icon": b.icon,
-                                    "color": b.color
-                                })
-                    if state_changed:
-                        asyncio.create_task(asyncio.to_thread(save_config_atomic, config))
+                    messages = await asyncio.to_thread(config_store.update, apply_hardware_states)
+                    for message in messages:
+                        await manager.broadcast(message)
                 except Exception as e_st:
                     logger.debug(f"Erreur sync hardware states: {e_st}")
 
@@ -781,34 +1002,26 @@ telemetry = LHMTelemetryService()
 def setup_discord_integration(main_loop: asyncio.AbstractEventLoop):
     def on_state(mute: bool, deaf: bool):
         async def _notify():
-            cfg = load_config()
-            state_changed = False
-            for p in cfg.pages:
-                for b in p.buttons:
-                    if b.is_toggle:
-                        ns = None
-                        if b.target == "discord:mute":
-                            ns = mute
-                        elif b.target in ("discord:deaf", "discord:deafen"):
-                            ns = deaf
-                        if ns is not None and b.state != ns:
-                            b.state = ns
-                            state_changed = True
-                            act_icon = b.active_icon or "🔇"
-                            act_label = b.active_label or ("MUTÉ" if b.target == "discord:mute" else "SOURDINE")
-                            await manager.broadcast({
-                                "type": "button_state",
-                                "btn_id": b.id,
-                                "state": b.state,
-                                "active_label": act_label,
-                                "active_icon": act_icon,
-                                "active_color": b.active_color or "#991b1b",
-                                "label": b.label,
-                                "icon": b.icon,
-                                "color": b.color
-                            })
-            if state_changed:
-                await asyncio.to_thread(save_config_atomic, cfg)
+            def apply_discord_state(cfg: DeckConfig):
+                messages = []
+                for page in cfg.pages:
+                    for button in page.buttons:
+                        if not button.is_toggle:
+                            continue
+                        target = (button.target or "").strip().lower()
+                        new_state = None
+                        if target == "discord:mute":
+                            new_state = mute
+                        elif target in ("discord:deaf", "discord:deafen"):
+                            new_state = deaf
+                        if new_state is not None and button.state != new_state:
+                            button.state = new_state
+                            messages.append(button_state_payload(button))
+                return messages, bool(messages)
+
+            messages = await asyncio.to_thread(config_store.update, apply_discord_state)
+            for message in messages:
+                await manager.broadcast(message)
 
         try:
             asyncio.run_coroutine_threadsafe(_notify(), main_loop)
@@ -859,6 +1072,8 @@ async def protect_desktop_and_pair_phone(request: Request, call_next):
         response.headers['Cache-Control'] = 'no-store'
     response.headers["Referrer-Policy"] = "no-referrer"
     response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Content-Security-Policy"] = "frame-ancestors 'none'; object-src 'none'; base-uri 'self'"
     return response
 
 
@@ -1072,44 +1287,33 @@ def bring_window_to_front_by_keyword(keyword: str) -> bool:
     return False
 
 async def handle_button_click(btn_id: str) -> None:
-    """Traite le clic d'un bouton avec réactivité instantanée et persistence en tâche de fond."""
-    config = load_config()
-    target_btn: Optional[ButtonConfig] = None
-
-    for page in config.pages:
-        for btn in page.buttons:
-            if btn.id == btn_id:
-                target_btn = btn
+    """Traite le clic d'un bouton avec une mise à jour atomique de la configuration."""
+    def toggle_button(config: DeckConfig):
+        target_btn: Optional[ButtonConfig] = None
+        for page in config.pages:
+            for btn in page.buttons:
+                if btn.id == btn_id:
+                    target_btn = btn
+                    break
+            if target_btn:
                 break
-        if target_btn:
-            break
+        if target_btn is None:
+            return None, False
+        if not target_btn.is_toggle:
+            return target_btn.model_copy(deep=True), False
+        target_btn.state = not target_btn.state
+        return target_btn.model_copy(deep=True), True
 
-    if not target_btn:
+    target_btn = await asyncio.to_thread(config_store.update, toggle_button)
+
+    if target_btn is None:
         logger.warning(f"Bouton introuvable : {btn_id}")
         return
 
     logger.info(f"Clic reçu [{target_btn.id}] '{target_btn.label}' -> Exécution de [{target_btn.type}] : '{target_btn.target}'")
 
-    # Si c'est un bouton à bascule (Toggle)
     if target_btn.is_toggle:
-        target_btn.state = not target_btn.state
-        act_icon = target_btn.active_icon or ("🔇" if target_btn.icon in ("🎙️", "🔊") else ("⏸️" if target_btn.icon == "⏯️" else ("⏹️" if target_btn.icon == "🔴" else "⚡")))
-        act_label = target_btn.active_label or ("MUTÉ" if any(w in (target_btn.label or "").lower() for w in ["mute", "micro", "son"]) else target_btn.label)
-        
-        # Diffusion immédiate aux clients sans attendre le disque
-        await manager.broadcast({
-            "type": "button_state",
-            "btn_id": target_btn.id,
-            "state": target_btn.state,
-            "active_label": act_label,
-            "active_icon": act_icon,
-            "active_color": target_btn.active_color or "#991b1b",
-            "label": target_btn.label,
-            "icon": target_btn.icon,
-            "color": target_btn.color,
-        })
-        # Persistance atomique en tâche de fond pour ne pas bloquer l'action
-        asyncio.create_task(asyncio.to_thread(save_config_atomic, config))
+        await manager.broadcast(button_state_payload(target_btn))
 
     # Exécution de l'action Win32 immédiatement
     await asyncio.to_thread(_execute_action, target_btn.type, target_btn.target)
@@ -1174,13 +1378,8 @@ def launch_win32_target(target: str) -> bool:
         except Exception as e2:
             logger.debug(f"ShellExecuteW a échoué: {e2}")
 
-    # 4. Fallback cmd start
-    try:
-        subprocess.Popen(f'start "" "{t}"', shell=True)
-        return True
-    except Exception as e3:
-        logger.error(f"Erreur lancement '{t}': {e3}")
-        return False
+    logger.error(f"Erreur lancement '{t}': aucune méthode Windows n'a fonctionné")
+    return False
 
 
 def _execute_action(b_type: str, target: str) -> bool:
@@ -1279,14 +1478,14 @@ async def get_deck_layout_styles():
 
 @app.get("/api/config", response_model=DeckConfig)
 async def get_config_endpoint():
-    return load_config()
+    return await asyncio.to_thread(config_store.load)
 
 
 @app.post("/api/config")
 async def save_config_endpoint(config: DeckConfig):
     """Reçoit la nouvelle config, valide via Pydantic, sauvegarde et notifie."""
     try:
-        save_config_atomic(config)
+        await asyncio.to_thread(config_store.save, config)
         await manager.broadcast({"type": "reload_config"})
         return {"status": "ok", "pages_count": len(config.pages)}
     except Exception as e:
@@ -1448,7 +1647,7 @@ async def get_monitoring_sensors():
 @app.get("/api/health")
 async def healthcheck():
     """Healthcheck complet."""
-    config = load_config()
+    config = await asyncio.to_thread(config_store.load)
     return {
         "app": "DeckEdge",
         "status": "healthy",
@@ -1535,7 +1734,7 @@ async def websocket_endpoint(websocket: WebSocket):
         targets_init = await asyncio.to_thread(get_audio_targets)
         await websocket.send_json({"type": "audio_targets", "data": targets_init})
 
-        cfg = load_config()
+        cfg = await asyncio.to_thread(config_store.load)
         states_init = {b.id: b.state for p in cfg.pages for b in p.buttons if b.is_toggle}
         if discord_rpc.is_authenticated:
             for p in cfg.pages:
@@ -1551,54 +1750,82 @@ async def websocket_endpoint(websocket: WebSocket):
     except Exception as e:
         logger.debug(f"Erreur envoi init data: {e}")
 
+    click_window_start = time.monotonic()
+    click_count = 0
+
+    def allow_button_click() -> bool:
+        nonlocal click_window_start, click_count
+        now = time.monotonic()
+        if now - click_window_start >= 1.0:
+            click_window_start = now
+            click_count = 0
+        if click_count >= MAX_BUTTON_CLICKS_PER_SECOND:
+            return False
+        click_count += 1
+        return True
+
     try:
         while True:
             raw_msg = await websocket.receive_text()
-            if not raw_msg:
+            if not raw_msg or len(raw_msg) > MAX_WS_MESSAGE_BYTES:
                 continue
 
             # Support soit d'un objet JSON {action: "set_volume" / "toggle_mute" / "click"}, soit d'un ID de bouton brut ("b1")
             if raw_msg.startswith("{"):
                 try:
                     parsed = json.loads(raw_msg)
-                    action = parsed.get("action")
-
-                    # 1. Slider : réglage en temps réel du volume (instantané et coalescé)
-                    if action == "set_volume":
-                        target = parsed.get("target", "master")
-                        val = int(parsed.get("value", 50))
-                        set_audio_target_volume(target, val)
-                        # Diffusion aux AUTRES clients pour synchroniser (évite tout écho/saccade sur le téléphone qui manipule)
-                        await manager.broadcast({
-                            "type": "volume_update",
-                            "target": target,
-                            "value": val
-                        }, exclude_ws=websocket)
-                        continue
-
-                    # 2. Slider : bascule Mute
-                    elif action == "toggle_mute":
-                        target = parsed.get("target", "master")
-                        new_mute = await asyncio.to_thread(toggle_audio_target_mute, target)
-                        await manager.broadcast({
-                            "type": "mute_update",
-                            "target": target,
-                            "muted": new_mute
-                        }, exclude_ws=websocket)
-                        continue
-
-                    # 3. Clic bouton via JSON
-                    btn_id = parsed.get("btn_id")
-                    if btn_id:
-                        asyncio.create_task(handle_button_click(btn_id))
-                        continue
-                except Exception as e:
+                except (TypeError, ValueError) as e:
                     logger.debug(f"Erreur parsing WS payload: {e}")
+                    continue
+                if not isinstance(parsed, dict):
+                    continue
+
+                action = parsed.get("action")
+
+                # 1. Slider : réglage en temps réel du volume (instantané et coalescé)
+                if action == "set_volume":
+                    target = parsed.get("target")
+                    if not isinstance(target, str) or not target.strip() or len(target) > 256:
+                        continue
+                    target = target.strip()
+                    try:
+                        val = int(parsed.get("value", 50))
+                    except (TypeError, ValueError):
+                        continue
+                    val = max(0, min(100, val))
+                    set_audio_target_volume(target, val)
+                    # Diffusion aux AUTRES clients pour synchroniser (évite tout écho/saccade sur le téléphone qui manipule)
+                    await manager.broadcast({
+                        "type": "volume_update",
+                        "target": target,
+                        "value": val
+                    }, exclude_ws=websocket)
+                    continue
+
+                # 2. Slider : bascule Mute
+                if action == "toggle_mute":
+                    target = parsed.get("target")
+                    if not isinstance(target, str) or not target.strip() or len(target) > 256:
+                        continue
+                    target = target.strip()
+                    new_mute = await asyncio.to_thread(toggle_audio_target_mute, target)
+                    await manager.broadcast({
+                        "type": "mute_update",
+                        "target": target,
+                        "muted": new_mute
+                    }, exclude_ws=websocket)
+                    continue
+
+                # 3. Clic bouton via JSON
+                btn_id = parsed.get("btn_id")
+                if isinstance(btn_id, str) and _IDENTIFIER_PATTERN.fullmatch(btn_id) and allow_button_click():
+                    _spawn_button_click(btn_id)
+                continue
 
             # Traitement d'un clic bouton envoyé sous forme de texte brut
             btn_id = raw_msg.strip()
-            if btn_id:
-                asyncio.create_task(handle_button_click(btn_id))
+            if _IDENTIFIER_PATTERN.fullmatch(btn_id) and allow_button_click():
+                _spawn_button_click(btn_id)
     except (WebSocketDisconnect, ConnectionResetError):
         pass
     except Exception as e:

@@ -6,6 +6,7 @@ Aucun endpoint HTTP d'arrêt n'est exposé sur le réseau.
 import asyncio
 import logging
 import json
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 import sys
 import threading
@@ -18,7 +19,9 @@ def main():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-        handlers=[logging.FileHandler(DATA_DIR / "deckedge.log", encoding="utf-8")],
+        handlers=[RotatingFileHandler(
+            DATA_DIR / "deckedge.log", maxBytes=2_000_000, backupCount=3, encoding="utf-8"
+        )],
     )
     import uvicorn
     from server import app, ensure_default_desktop, telemetry

@@ -1,5 +1,6 @@
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
+const base=require('./ui-base.cjs');
 (async()=>{
  const browser=await chromium.launch({channel:'msedge',headless:true});
  try {
@@ -13,7 +14,7 @@ const assert=require('node:assert/strict');
    {id:'a',label:'A',icon:'⌘',type:'key',target:'playpause',color:'#161c2e',is_toggle:true,active_color:'#991b1b'},
    {id:'b',label:'B',icon:'⌘',type:'key',target:'playpause',color:'#123456'}]}],monitoring:[{label:'CPU',sensor_id:'cpu_load',secondary_sensor_id:''}]};
   await page.route('**/api/config',route=>route.fulfill({json:fixture}));
-  await page.goto('http://127.0.0.1:5000/admin');await page.waitForFunction(()=>studioReady);
+  await page.goto(base+'/admin');await page.waitForFunction(()=>studioReady);
   const latest=()=>page.evaluate(()=>colorMessages.filter(m=>m.type==='pickColor').at(-1));
   const read=()=>page.evaluate(()=>studioClone(config.pages[0].buttons));
   const reply=(request,extra)=>page.evaluate(data=>replyColor(data),{type:'colorPicked',requestId:request.requestId,...extra});

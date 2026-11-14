@@ -72,7 +72,7 @@ try {
     $env:DECKEDGE_DATA_DIR=Join-Path $root ('.build/check-'+$stamp)
     & (Join-Path $runtimeTarget 'python.exe') -B (Join-Path $stage 'desktop_backend.py') --check
     if($LASTEXITCODE -ne 0){throw 'Le serveur autonome ne démarre pas.'}
-    & $python -m unittest discover -s tests -p 'test_*.py'
+    & $python -m unittest discover -s tests -t . -p 'test_*.py'
     if($LASTEXITCODE -ne 0){throw 'Tests Python en échec.'}
 } finally {$env:DECKEDGE_DATA_DIR=$previousData}
 $dist=Join-Path $root 'dist';New-Item -ItemType Directory -Path $dist -Force | Out-Null
