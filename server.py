@@ -74,10 +74,17 @@ pyautogui.FAILSAFE = False
 # 1. MODÈLES DE VALIDATION (Pydantic v2)
 # ============================================================================
 
-ActionType = Literal["hotkey", "key", "launch", "volume_app", "slider"]
+ActionType = Literal["hotkey", "key", "launch", "volume_app", "slider", "sequence"]
+StepType = Literal["hotkey", "key", "launch", "volume_app"]
 
 _IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 _BACKUP_NAME_RE = re.compile(r"^deckedge-\d{8}-\d{6}-\d{3}\.json$")
+
+
+class ActionStep(BaseModel):
+    type: StepType = Field(default="hotkey", description="Type de l'étape")
+    target: str = Field(default="", max_length=255, description="Touche, application ou cible audio")
+    delay: float = Field(default=0.0, ge=0.0, le=5.0, description="Pause après l'étape, en secondes")
 
 
 def _sanitize_identifier(value: Any, prefix: str, index: int, used: set[str]) -> str:
@@ -99,6 +106,7 @@ class ButtonConfig(BaseModel):
     icon: str = Field(default="⚡", max_length=10, description="Émoji ou symbole")
     type: ActionType = Field(default="hotkey", description="Type d'action")
     target: str = Field(default="", max_length=255, description="Touches, cible volume ou exécutable")
+    steps: List[ActionStep] = Field(default_factory=list, max_length=10, description="Étapes d'une séquence")
     width: Literal["auto", "quarter", "third", "half", "full"] = "auto"
     height: Literal["compact", "normal", "tall"] = "normal"
     color: Optional[str] = Field(
@@ -116,6 +124,12 @@ class ButtonConfig(BaseModel):
         pattern=r"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$",
         description="Couleur hexadécimale de fond si actif"
     )
+
+    @model_validator(mode="after")
+    def validate_sequence(self):
+        if self.type == "sequence" and not self.steps:
+            raise ValueError("Une séquence doit contenir au moins une étape.")
+        return self
 
 class PageConfig(BaseModel):
     id: str = Field(..., min_length=1, max_length=64, pattern=r"^[A-Za-z0-9_-]+$", description="Identifiant unique de la page")
@@ -1502,7 +1516,7 @@ async def handle_button_click(btn_id: str) -> None:
             return
 
         logger.info("Clic reçu [%s] '%s'", target_btn.id, target_btn.label)
-        await asyncio.to_thread(_execute_action, target_btn.type, target_btn.target)
+        await asyncio.to_thread(_execute_button, target_btn)
         # Mute commands return the new mute state: False also means a successful
         # unmute. Keep the existing optimistic toggle; telemetry reconciles it.
         if not target_btn.is_toggle:
@@ -1625,6 +1639,23 @@ def _execute_action(b_type: str, target: str) -> bool:
     except Exception as e:
         logger.error(f"Erreur exécution action [{b_type} -> {target}]: {e}")
         return False
+
+
+def _execute_sequence(steps: List[ActionStep]) -> bool:
+    if not steps:
+        return False
+    for index, step in enumerate(steps):
+        if not _execute_action(step.type, step.target):
+            return False
+        if step.delay > 0 and index < len(steps) - 1:
+            time.sleep(min(5.0, step.delay))
+    return True
+
+
+def _execute_button(button: ButtonConfig) -> bool:
+    if button.type == "sequence":
+        return _execute_sequence(button.steps)
+    return _execute_action(button.type, button.target)
 
 
 # ============================================================================

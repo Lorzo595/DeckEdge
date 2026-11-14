@@ -214,6 +214,27 @@
       flex-direction: column;
       gap: 12px;
     }
+    .sequence-box {
+      background: #0b0f19;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .sequence-step {
+      display: grid;
+      grid-template-columns: 120px minmax(0, 1fr) 76px 32px;
+      gap: 6px;
+      align-items: center;
+    }
+    .sequence-step select, .sequence-step input {
+      width: 100%;
+      padding: 7px 8px;
+      font-size: 12px;
+    }
+    .sequence-step .btn { padding: 6px 8px; }
     .toggle-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
     .switch-label { font-size: 13px; font-weight: 600; color: #fff; }
 
@@ -617,6 +638,7 @@
           <option value="hotkey">Raccourci combiné (ex: ctrl,shift,m ou win,d)</option>
           <option value="launch">Lancer une application / Fichier</option>
           <option value="volume_app">Incrément Volume App / Pas à pas (ex: spotify:+10)</option>
+          <option value="sequence">🔗 Séquence d'actions (plusieurs commandes)</option>
         </select>
       </div>
 
@@ -651,6 +673,17 @@
             <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px; margin-top: 4px;" onclick="fetchAudioTargets(true)">🔄 Actualiser les sorties & apps</button>
           </div>
         </div>
+      </div>
+
+      <!-- Configuration spécifique pour la SÉQUENCE D'ACTIONS -->
+      <div class="sequence-box" id="box-sequence-setup">
+        <div class="section-title" style="color: var(--primary);">Séquence d’actions</div>
+        <div id="sequence-steps" style="display: flex; flex-direction: column; gap: 8px;"></div>
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+          <button type="button" class="btn btn-secondary" style="font-size: 12px; padding: 6px 10px;" onclick="addSequenceStep()">+ Ajouter une étape</button>
+          <span style="font-size: 11px; color: var(--text-muted);">10 étapes max · pause max 5 s</span>
+        </div>
+        <p style="font-size: 11px; color: var(--text-muted); line-height: 1.6;">Les étapes s’exécutent dans l’ordre. La pause est appliquée après l’étape. Une étape en échec arrête la séquence.</p>
       </div>
 
       <div class="field-group">
@@ -1067,7 +1100,7 @@
         } else {
           el.innerHTML = `
             <span class="btn-index-badge">#${idx + 1}</span>
-            ${btn.is_toggle ? `<span class="btn-toggle-badge">${btn.state ? 'ON' : 'OFF'}</span>` : ''}
+            ${btn.type === 'sequence' ? `<span class="btn-toggle-badge">${(btn.steps || []).length} étapes</span>` : (btn.is_toggle ? `<span class="btn-toggle-badge">${btn.state ? 'ON' : 'OFF'}</span>` : '')}
             <span class="icon">${icon}</span>
             <span class="label">${label}</span>
           `;
@@ -1163,14 +1196,17 @@
 
     function onTypeChange(type, selecting = false) {
       if (!selecting) liveUpdate('type', type);
-      
+
       const isSlider = type === 'slider';
+      const isSequence = type === 'sequence';
+      const btn = getCurrentPage()?.buttons?.[selectedIndex];
       document.getElementById('box-slider-setup').style.display = isSlider ? 'flex' : 'none';
-      document.getElementById('box-toggle').style.display = isSlider ? 'none' : 'flex';
-      
-      if (isSlider && !selecting) {
+      document.getElementById('box-toggle').style.display = (isSlider || isSequence) ? 'none' : 'flex';
+      document.getElementById('grp-target').style.display = isSequence ? 'none' : 'flex';
+      document.getElementById('box-sequence-setup').style.display = isSequence ? 'flex' : 'none';
+
+      if (isSlider && !selecting && btn) {
         // Défaut couleur slider cyan si sombre
-        const btn = getCurrentPage().buttons[selectedIndex];
         if (!btn.color || btn.color === '#161c2e') {
           setColor('#38bdf8');
         }
@@ -1178,9 +1214,79 @@
           liveUpdate('target', 'master');
         }
       }
+      if (isSequence && !selecting && btn) {
+        if (!Array.isArray(btn.steps) || !btn.steps.length) {
+          btn.steps = [{type: 'hotkey', target: '', delay: 0}];
+        }
+      }
 
+      renderSequenceEditor();
       refreshPresets();
       renderGrid();
+    }
+
+    function sequencePlaceholder(type) {
+      return {
+        key: 'ex: playpause, volumeup',
+        hotkey: 'ex: ctrl,shift,m',
+        launch: 'ex: calc.exe ou https://…',
+        volume_app: 'ex: spotify:+10 ou discord:mute'
+      }[type] || 'Commande';
+    }
+
+    function renderSequenceEditor() {
+      const container = document.getElementById('sequence-steps');
+      if (!container) return;
+      container.replaceChildren();
+      const page = getCurrentPage();
+      const btn = page?.buttons?.[selectedIndex];
+      if (!btn || btn.type !== 'sequence') return;
+      if (!Array.isArray(btn.steps)) btn.steps = [];
+      if (!btn.steps.length) {
+        const empty = document.createElement('p');
+        empty.textContent = 'Aucune étape. Ajoutez-en au moins une pour enregistrer cette séquence.';
+        empty.style.cssText = 'font-size:12px;color:var(--text-muted);margin:0';
+        container.append(empty);
+        return;
+      }
+      btn.steps.forEach((step, index) => {
+        const row = document.createElement('div'); row.className = 'sequence-step';
+        const type = document.createElement('select');
+        for (const [value, label] of [['key', 'Touche'], ['hotkey', 'Raccourci'], ['launch', 'Application'], ['volume_app', 'Audio']]) {
+          const option = document.createElement('option'); option.value = value; option.textContent = label; type.append(option);
+        }
+        type.value = step.type || 'key';
+        const target = document.createElement('input');
+        target.type = 'text'; target.value = step.target || ''; target.placeholder = sequencePlaceholder(type.value);
+        const delay = document.createElement('input');
+        delay.type = 'number'; delay.min = '0'; delay.max = '5'; delay.step = '0.1'; delay.value = String(step.delay ?? 0); delay.title = 'Pause après cette étape';
+        const remove = document.createElement('button');
+        remove.type = 'button'; remove.className = 'btn btn-delete'; remove.textContent = '×'; remove.title = 'Supprimer cette étape'; remove.setAttribute('aria-label', `Supprimer l’étape ${index + 1}`);
+        type.onchange = () => { step.type = type.value; target.placeholder = sequencePlaceholder(type.value); studioScheduleCheckpoint(); };
+        target.oninput = () => { step.target = target.value; studioScheduleCheckpoint(); };
+        delay.oninput = () => {
+          const value = Number.parseFloat(delay.value);
+          step.delay = Number.isFinite(value) ? Math.max(0, Math.min(5, value)) : 0;
+          studioScheduleCheckpoint();
+        };
+        remove.onclick = () => {
+          btn.steps.splice(index, 1);
+          renderSequenceEditor(); renderGrid(); studioScheduleCheckpoint();
+        };
+        row.append(type, target, delay, remove);
+        container.append(row);
+      });
+    }
+
+    function addSequenceStep() {
+      const page = getCurrentPage();
+      const btn = page?.buttons?.[selectedIndex];
+      if (!btn || btn.type !== 'sequence') return;
+      if (!Array.isArray(btn.steps)) btn.steps = [];
+      if (btn.steps.length >= 10) { studioNotify('Une séquence est limitée à 10 étapes.'); return; }
+      btn.steps.push({type: 'key', target: '', delay: 0});
+      renderSequenceEditor(); renderGrid(); studioScheduleCheckpoint();
+      document.querySelector('#sequence-steps .sequence-step:last-child input[type=text]')?.focus();
     }
 
     function refreshPresets() {

@@ -20,7 +20,8 @@ function setupStudioShell() {
     {group:'Applications',icon:'↗',name:'Ouvrir une application',description:'Application, jeu ou fichier',type:'launch',target:'',label:'Mon application',picker:true},
     {group:'Applications',icon:'◎',name:'Ouvrir un site',description:'Accéder à une adresse web',type:'launch',target:'https://',label:'Mon site'},
     {group:'Clavier',icon:'⌘',name:'Raccourci clavier',description:'Combiner plusieurs touches',type:'hotkey',target:'',label:'Mon raccourci'},
-    {group:'Clavier',icon:'▣',name:'Afficher le bureau',description:'Retrouver le bureau Windows',type:'hotkey',target:'win,d',label:'Bureau'}
+    {group:'Clavier',icon:'▣',name:'Afficher le bureau',description:'Retrouver le bureau Windows',type:'hotkey',target:'win,d',label:'Bureau'},
+    {group:'Avancé',icon:'⋯',name:'Séquence',description:'Enchaîner plusieurs actions',type:'sequence',target:'',label:'Séquence',steps:[{type:'hotkey',target:'',delay:0}]}
   ];
   const list = actionSidebar.querySelector('.action-list');
   function renderActions(filter='') {
@@ -43,11 +44,11 @@ function setupStudioShell() {
   function addTemplate(index) {
     const template=templates[index]; if(!template || !studioReady)return;
     const page=getCurrentPage();
-    page.buttons.push({id:studioId('b'),label:template.label,icon:template.icon,type:template.type,target:template.target,color:template.type==='slider'?'#6188e8':'#30394f',is_toggle:!!template.toggle,state:false});
+    page.buttons.push({id:studioId('b'),label:template.label,icon:template.icon,type:template.type,target:template.target,color:template.type==='slider'?'#6188e8':'#30394f',is_toggle:!!template.toggle,state:false,...(template.steps?{steps:studioClone(template.steps)}:{})});
     renderGrid();selectButton(page.buttons.length-1);studioCheckpoint();
     document.getElementById('editor-panel').scrollIntoView({behavior:'smooth',block:'nearest'});
     studioNotify(`${template.name} ajouté`);
-    if(template.picker)openAppPickerModal();else studioFocusLabel();
+    if(template.picker)openAppPickerModal();else if(template.type==='sequence')document.querySelector('#sequence-steps input[type=text]')?.focus();else studioFocusLabel();
   }
   actionSidebar.querySelector('input').oninput=e=>renderActions(e.target.value); renderActions();
   const stage=document.getElementById('preview-stage');
