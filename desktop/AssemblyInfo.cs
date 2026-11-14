@@ -4,5 +4,5 @@
 [assembly: AssemblyCompany("Lorzo595")]
 [assembly: AssemblyProduct("DeckEdge")]
 [assembly: AssemblyCopyright("Copyright © 2026 Lorzo595 et les contributeurs de DeckEdge — MIT")]
-[assembly: AssemblyVersion("0.1.1.0")]
-[assembly: AssemblyFileVersion("0.1.1.0")]
+[assembly: AssemblyVersion("0.1.2.0")]
+[assembly: AssemblyFileVersion("0.1.2.0")]
