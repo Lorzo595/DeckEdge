@@ -620,7 +620,7 @@
           if (isAct) button.classList.add('is-active');
 
           button.innerHTML = `
-            ${btn.is_toggle ? `<span class="badge-toggle ${isAct ? 'on' : 'off'}">${isAct ? 'ON' : 'OFF'}</span>` : ''}
+            ${btn.type === 'sequence' ? `<span class="badge-toggle">${(btn.steps || []).length} ÉTAPES</span>` : (btn.is_toggle ? `<span class="badge-toggle ${isAct ? 'on' : 'off'}">${isAct ? 'ON' : 'OFF'}</span>` : '')}
             <span class="icon">${deckText(icon)}</span>
             <span class="label">${deckText(label)}</span>
           `;

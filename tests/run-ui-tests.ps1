@@ -42,7 +42,8 @@ try {
         'tests/mobile-gestures.cjs',
         'tests/startup-profile.cjs',
         'tests/diagnostics.cjs',
-        'tests/profiles.cjs'
+        'tests/profiles.cjs',
+        'tests/sequences.cjs'
     )
     foreach ($test in $tests) {
         node $test

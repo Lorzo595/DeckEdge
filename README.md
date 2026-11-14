@@ -27,6 +27,7 @@ Développé par **Lorzo595**, avec l’aide de **ChatGPT**.
 | Profils | Plusieurs pages de commandes, ajout, renommage, duplication et déplacement de touches |
 | Organisation | Aperçu de téléphone, glisser-déposer et widgets de largeur et hauteur réglables |
 | Actions | Raccourcis clavier, touches multimédias, lancement d’applications, fichiers et sites web |
+| Séquences | Enchaînement de plusieurs actions avec pauses, jusqu’à 10 étapes |
 | Audio | Volume Windows, sorties audio et applications ayant une session audio active, avec curseurs et sourdine |
 | Monitoring | Moteur LibreHardwareMonitor intégré et choix de 1 à 6 indicateurs, avec une seconde mesure facultative |
 | Personnalisation | Nom, icône, couleurs, pipette et états actif/inactif pour les touches à bascule |

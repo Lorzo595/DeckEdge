@@ -182,8 +182,10 @@ function studioFocusLabel() {
 function addStudioButton(type = 'hotkey') {
   const page = getCurrentPage();
   const slider = type === 'slider';
-  page.buttons.push({id:studioId('b'), label:slider ? 'Volume' : 'Nouvelle touche', icon:slider ? '🔊' : '⌘',
-    type, target:slider ? 'master' : '', color:slider ? '#38bdf8' : '#161c2e', is_toggle:false, state:false});
+  const sequence = type === 'sequence';
+  page.buttons.push({id:studioId('b'), label:slider ? 'Volume' : (sequence ? 'Séquence' : 'Nouvelle touche'), icon:slider ? '🔊' : (sequence ? '🔗' : '⌘'),
+    type, target:slider ? 'master' : '', color:slider ? '#38bdf8' : '#161c2e', is_toggle:false, state:false,
+    ...(sequence ? {steps:[{type:'hotkey', target:'', delay:0}]} : {})});
   renderGrid(); selectButton(page.buttons.length - 1); studioFocusLabel();
 }
 
@@ -261,7 +263,8 @@ function openAddMenu(event) {
   const rect = event?.currentTarget?.getBoundingClientRect();
   studioMenu(event?.clientX ? event : {clientX:rect?.left || 20,clientY:rect?.bottom || 100}, 'Ajouter au profil', [
     {label:'Touche / raccourci', key:'Ctrl+N', action:() => addStudioButton('hotkey')},
-    {label:'Curseur de volume', action:() => addStudioButton('slider')}
+    {label:'Curseur de volume', action:() => addStudioButton('slider')},
+    {label:'Séquence d’actions', action:() => addStudioButton('sequence')}
   ]);
 }
 
