@@ -60,6 +60,7 @@ actualiser les sorties et applications dans les réglages d’un curseur de volu
   pas d’isolation Wi-Fi des clients. Ne pas ouvrir de port sur le routeur.
 - Studio blanc : installer/réparer Microsoft WebView2 Runtime depuis Microsoft.
 - Logs : menu DeckEdge → Voir le journal / Ouvrir les données.
+- Langue du pupitre : bouton `EN`/`FR` à droite des onglets de profils sur le téléphone.
 - Avant un signalement : bouton **Diagnostic** dans le Studio, puis copier le rapport masqué.
 - Avant une modification importante : menu **Profils** → **Sauvegardes locales**. L’export/import JSON permet aussi de conserver les profils hors du PC.
 - Quitter complètement avant de déplacer ou remplacer une version portable.

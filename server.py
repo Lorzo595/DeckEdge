@@ -1710,6 +1710,11 @@ async def get_studio_colors_script():
     return FileResponse(BASE_DIR / "studio-colors.js", media_type="text/javascript")
 
 
+@app.get("/i18n.js", include_in_schema=False)
+async def get_i18n_script():
+    return FileResponse(BASE_DIR / "i18n.js", media_type="text/javascript")
+
+
 @app.get("/deck-layout.js", include_in_schema=False)
 async def get_deck_layout_script():
     return FileResponse(BASE_DIR / "deck-layout.js", media_type="text/javascript")

@@ -1,5 +1,9 @@
 # Historique
 
+## Non publié
+
+- Pupitre mobile en français ou anglais avec bascule mémorisée par appareil.
+
 ## 0.1.3 — Profils, sauvegardes et diagnostic
 
 - Restauration annulée si la sauvegarde de sécurité échoue, avec conservation de la configuration actuelle.

@@ -11,6 +11,7 @@ class NetworkAccessTests(unittest.TestCase):
     def test_local_admin_works_without_pairing(self):
         response = self.client().get('/admin')
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.client().get('/i18n.js').status_code, 200)
         self.assertEqual(response.headers['x-frame-options'], 'DENY')
         self.assertIn("frame-ancestors 'none'", response.headers['content-security-policy'])
 

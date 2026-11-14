@@ -30,6 +30,7 @@ Développé par **Lorzo595**, avec l’aide de **ChatGPT**.
 | Audio | Volume Windows, sorties audio et applications ayant une session audio active, avec curseurs et sourdine |
 | Monitoring | Moteur LibreHardwareMonitor intégré et choix de 1 à 6 indicateurs, avec une seconde mesure facultative |
 | Personnalisation | Nom, icône, couleurs, pipette et états actif/inactif pour les touches à bascule |
+| Langues | Interface du pupitre en français ou anglais, choix mémorisé sur l’appareil |
 | Édition | Bibliothèque avec recherche, clic droit, duplication, annuler/rétablir et raccourcis clavier |
 | Profils | Export/import JSON et sauvegardes locales avec restauration |
 | Diagnostic | Rapport local copiable avec chemins, clé et IP privées masqués |
@@ -114,7 +115,8 @@ suivant et le mémorise pour les prochains lancements. Si une autre copie de
 DeckEdge tourne déjà, quittez-la avant d’ouvrir la version installée ou portable.
 
 [Guide de démarrage](docs/QUICKSTART.md) · [Construction](docs/BUILD.md) ·
-[Publication GitHub](docs/RELEASE.md) · [Sécurité](SECURITY.md)
+[Publication GitHub](docs/RELEASE.md) · [Internationalisation](docs/I18N.md) ·
+[Sécurité](SECURITY.md)
 
 L’adresse permanente utilise la découverte locale mDNS (`.local`) et reste propre
 au PC même si son adresse IP change. La clé d’association reste dans les données

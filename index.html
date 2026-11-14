@@ -89,6 +89,12 @@
       color: #38bdf8;
       box-shadow: 0 0 10px rgba(56, 189, 248, 0.25);
     }
+    .language-tab {
+      margin-left: auto;
+      font-weight: 800;
+      color: #dce6fa;
+      flex-shrink: 0;
+    }
 
     /* ========================================================================== */
     /* GRILLE STREAM DECK                                                         */
@@ -408,14 +414,14 @@
 <body>
 
   <details id="phone-shortcut" hidden style="flex-shrink:0;background:#242a36;border:1px solid #45506b;border-radius:7px;padding:8px 12px;color:#dce6fa;font:12px/1.5 system-ui;margin-bottom:8px">
-    <summary style="cursor:pointer">Garder ce Deck sur mon téléphone</summary>
-    <p style="margin:8px 0">Après ce premier scan, ajoutez cette page à l’écran d’accueil ou aux favoris. Vous retrouverez ce PC sans recopier le lien ni scanner à chaque démarrage.</p>
-    <p style="margin:8px 0">iPhone : Partager → Sur l’écran d’accueil. Android : menu du navigateur → Ajouter à l’écran d’accueil. Gardez DeckEdge ouvert sur le PC et utilisez le même réseau privé.</p>
-    <button type="button" id="dismiss-phone-shortcut" style="padding:6px 12px;border:1px solid #65769a;background:#354564;border-radius:5px;color:white;cursor:pointer">Compris</button>
+    <summary style="cursor:pointer" data-i18n="phone.install.title">Garder ce Deck sur mon téléphone</summary>
+    <p style="margin:8px 0" data-i18n="phone.install.intro">Après ce premier scan, ajoutez cette page à l’écran d’accueil ou aux favoris. Vous retrouverez ce PC sans recopier le lien ni scanner à chaque démarrage.</p>
+    <p style="margin:8px 0" data-i18n="phone.install.ios">iPhone : Partager → Sur l’écran d’accueil. Android : menu du navigateur → Ajouter à l’écran d’accueil. Gardez DeckEdge ouvert sur le PC et utilisez le même réseau privé.</p>
+    <button type="button" id="dismiss-phone-shortcut" style="padding:6px 12px;border:1px solid #65769a;background:#354564;border-radius:5px;color:white;cursor:pointer" data-i18n="phone.install.dismiss">Compris</button>
   </details>
 
   <!-- BANDEAU MONITORING -->
-  <div class="monitoring-bar" id="monitoring-bar" aria-label="Mesures du PC"></div>
+  <div class="monitoring-bar" id="monitoring-bar" data-i18n-aria-label="deck.monitoring" aria-label="Mesures du PC"></div>
 
   <!-- SÉLECTEUR DE PAGES / PROFILS -->
   <div class="pages-bar" id="pages-bar"></div>
@@ -423,6 +429,7 @@
   <!-- GRILLE STREAM DECK RESPONSIVE -->
   <div class="deck-grid deck-layout-grid" id="deck-grid"></div>
 
+  <script src="/i18n.js"></script>
   <script src="/deck-layout.js"></script>
   <script>
     try {
@@ -510,6 +517,16 @@
         tab.onclick = () => switchPage(p.id);
         bar.appendChild(tab);
       });
+
+      const language = document.createElement('button');
+      language.type = 'button';
+      language.id = 'phone-language';
+      language.className = 'page-tab language-tab';
+      language.textContent = I18n.t('language.button');
+      language.title = I18n.t('language.switch');
+      language.setAttribute('aria-label', I18n.t('language.switch'));
+      language.onclick = () => I18n.toggleLanguage();
+      bar.appendChild(language);
     }
 
     function switchPage(pageId) {
@@ -579,20 +596,20 @@
           slider.style.borderColor = accentColor;
 
           const isDev = (btn.target || '').startsWith('device:');
-          const typeBadge = isDev ? 'SORTIE' : ((btn.target === 'master') ? 'MASTER' : 'APP');
+          const typeBadge = isDev ? I18n.t('deck.output') : ((btn.target === 'master') ? I18n.t('deck.master') : I18n.t('deck.app'));
 
           slider.innerHTML = `
             <div class="slider-fill" id="fill-${btn.id}" style="width: ${currentVol}%; background: ${accentColor}40; border-right-color: ${accentColor};"></div>
             <div class="slider-content">
               <div class="slider-left">
-                <button type="button" class="slider-mute-btn" id="mute-btn-${btn.id}" aria-label="Activer ou couper le son">${deckText(isMuted ? '🔇' : (btn.icon || '🔊'))}</button>
+                <button type="button" class="slider-mute-btn" id="mute-btn-${btn.id}" aria-label="${deckText(I18n.t('deck.mute'))}">${deckText(isMuted ? '🔇' : (btn.icon || '🔊'))}</button>
                 <div class="slider-info">
-                  <span class="slider-name">${deckText(btn.label || 'Volume')}</span>
+                  <span class="slider-name">${deckText(btn.label || I18n.t('deck.volume'))}</span>
                   <span class="slider-type-badge">${typeBadge}</span>
                 </div>
               </div>
               <div class="slider-right">
-                <span class="slider-muted-tag" id="muted-ind-${btn.id}">MUTÉ</span>
+                <span class="slider-muted-tag" id="muted-ind-${btn.id}">${deckText(I18n.t('deck.muted'))}</span>
                 <span class="slider-val" id="val-${btn.id}" style="color: ${accentColor};">${currentVol}%</span>
               </div>
             </div>
@@ -620,7 +637,7 @@
           if (isAct) button.classList.add('is-active');
 
           button.innerHTML = `
-            ${btn.type === 'sequence' ? `<span class="badge-toggle">${(btn.steps || []).length} ÉTAPES</span>` : (btn.is_toggle ? `<span class="badge-toggle ${isAct ? 'on' : 'off'}">${isAct ? 'ON' : 'OFF'}</span>` : '')}
+            ${btn.type === 'sequence' ? `<span class="badge-toggle">${deckText(I18n.t('deck.steps', {count: (btn.steps || []).length}))}</span>` : (btn.is_toggle ? `<span class="badge-toggle ${isAct ? 'on' : 'off'}">${isAct ? 'ON' : 'OFF'}</span>` : '')}
             <span class="icon">${deckText(icon)}</span>
             <span class="label">${deckText(label)}</span>
           `;
@@ -856,7 +873,7 @@
           if (msg.type === "stats" && msg.data) {
             if (msg.monitoring) renderMonitoring(msg.monitoring);
             monBar.style.borderColor = msg.lhm_connected ? '#71825e' : '#8a6650';
-            monBar.title = msg.lhm_connected ? 'Capteurs intégrés connectés' : 'Mesures indisponibles';
+            monBar.title = msg.lhm_connected ? I18n.t('deck.sensors.connected') : I18n.t('deck.sensors.unavailable');
           }
           
           else if (msg.type === "audio_targets" && msg.data) {
@@ -1058,6 +1075,12 @@
     window.visualViewport?.addEventListener('resize', updateViewportHeight, {passive:true});
     window.addEventListener('pageshow', updateViewportHeight, {passive:true});
     updateViewportHeight();
+
+    I18n.onChange(() => {
+      renderTabs();
+      renderActivePage();
+      renderMonitoring(lastMonitoringReadings);
+    });
 
     loadConfig();
     connectWS();
