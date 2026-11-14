@@ -1,6 +1,6 @@
 # Historique
 
-## Non publié
+## 0.1.3 — Profils, sauvegardes et diagnostic
 
 - Restauration annulée si la sauvegarde de sécurité échoue, avec conservation de la configuration actuelle.
 - Enregistrement et restauration du Studio protégés contre les opérations concurrentes.
