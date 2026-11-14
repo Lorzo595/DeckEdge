@@ -44,7 +44,8 @@ try {
         'tests/diagnostics.cjs',
         'tests/profiles.cjs',
         'tests/sequences.cjs',
-        'tests/i18n.cjs'
+        'tests/i18n.cjs',
+        'tests/studio-i18n.cjs'
     )
     foreach ($test in $tests) {
         node $test

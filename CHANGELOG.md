@@ -2,7 +2,7 @@
 
 ## Non publié
 
-- Pupitre mobile en français ou anglais avec bascule mémorisée par appareil.
+- Pupitre mobile et Studio en français ou anglais, avec bascule mémorisée par appareil.
 
 ## 0.1.3 — Profils, sauvegardes et diagnostic
 
