@@ -58,10 +58,20 @@ begin
     Exec(ExpandConstant('{localappdata}\Programs\DeckEdge\DeckEdge.exe'), '--quit', '', SW_HIDE, ewWaitUntilTerminated, Code);
 end;
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
-var Command: String; Code: Integer;
+var Command: String; Code: Integer; Shell, Shortcut: Variant;
 begin
   if CurUninstallStep = usUninstall then begin
     Exec(ExpandConstant('{app}\DeckEdge.exe'), '--quit', '', SW_HIDE, ewWaitUntilTerminated, Code);
+    if FileExists(ExpandConstant('{userstartup}\DeckEdge.lnk')) then begin
+      try
+        Shell := CreateOleObject('WScript.Shell');
+        Shortcut := Shell.CreateShortcut(ExpandConstant('{userstartup}\DeckEdge.lnk'));
+        if (CompareText(Shortcut.TargetPath, ExpandConstant('{app}\DeckEdge.exe')) = 0) and (Shortcut.Arguments = '--startup') then
+          DeleteFile(ExpandConstant('{userstartup}\DeckEdge.lnk'));
+      except
+        Log('Impossible de vérifier le raccourci de démarrage DeckEdge.');
+      end;
+    end;
     if RegQueryStringValue(HKCU, 'Software\Microsoft\Windows\CurrentVersion\Run', 'DeckEdge', Command) then
       if CompareText(Command, '"' + ExpandConstant('{app}\DeckEdge.exe') + '" --startup') = 0 then
         RegDeleteValue(HKCU, 'Software\Microsoft\Windows\CurrentVersion\Run', 'DeckEdge');
