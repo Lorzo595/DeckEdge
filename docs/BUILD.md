@@ -73,7 +73,7 @@ Ce test local ne remplace pas une validation dans une VM Windows propre.
 
 Les tests navigateur nécessitent Node.js, Playwright et Edge. Pour les installer
 sans ajouter de dépendance de production : `npm install --no-save playwright`.
-Le script suivant démarre un serveur isolé sur `127.0.0.1:5011`, exécute les sept
+Le script suivant démarre un serveur isolé sur `127.0.0.1:5011`, exécute les huit
 tests Studio/mobile et s’arrête proprement :
 
 ```powershell
@@ -81,10 +81,10 @@ powershell -ExecutionPolicy Bypass -File tests\run-ui-tests.ps1
 ```
 
 Les tests couverts sont `studio-shell`, `studio-ergonomics`, `studio-colors`,
-`mobile-preview`, `mobile-gestures`, `startup-profile` et `diagnostics`. Le script
-accepte `-Port` et `-DataDirectory` pour isoler les données ; le dossier de données
-doit rester sous `.build`. Pour lancer un test manuel, définir `DECKEDGE_TEST_URL`
-vers le serveur de test.
+`mobile-preview`, `mobile-gestures`, `startup-profile`, `diagnostics` et `profiles`.
+Le script accepte `-Port` et `-DataDirectory` pour isoler les données ; le dossier
+de données doit rester sous `.build`. Pour lancer un test manuel, définir
+`DECKEDGE_TEST_URL` vers le serveur de test.
 
 Les tests du Studio interceptent les profils et les sauvegardes ; ils ne doivent
 pas modifier les profils réels. Ne jamais activer une commande réelle pour tester

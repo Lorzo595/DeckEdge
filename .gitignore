@@ -1,6 +1,7 @@
 # Runtime state / personal information ? never commit
 config.json
 config.json.*
+backups/
 config_safe_backup.json
 discord_config.json
 discord_config.*
