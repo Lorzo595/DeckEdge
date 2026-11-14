@@ -1,6 +1,7 @@
 import json
 import tempfile
 import threading
+import time
 import unittest
 from pathlib import Path
 
@@ -15,6 +16,7 @@ class ConfigStoreTests(unittest.TestCase):
         self.path = root / "config.json"
         self.backup = root / "config.json.bak"
         self.store = ConfigStore(self.path, self.backup)
+        self.addCleanup(self.store.close)
 
     def test_missing_file_creates_default_and_returns_isolated_copies(self):
         config = self.store.load()
@@ -81,6 +83,54 @@ class ConfigStoreTests(unittest.TestCase):
         self.path.write_text(json.dumps({"pages": "invalide"}), encoding="utf-8")
         restored = ConfigStore(self.path, self.backup).load()
         self.assertEqual(restored.pages[0].name, "Valide")
+
+    def test_deferred_update_is_flushed_explicitly(self):
+        store = ConfigStore(self.path, self.backup, debounce=5.0)
+        self.addCleanup(store.close)
+        store.load()
+        baseline = self.path.read_text(encoding="utf-8")
+
+        def rename(config):
+            config.pages[0].name = "Différé"
+            return None, True
+
+        store.update(rename)
+        self.assertEqual(self.path.read_text(encoding="utf-8"), baseline)
+        store.flush()
+        self.assertIn("Différé", self.path.read_text(encoding="utf-8"))
+        backup = json.loads(self.backup.read_text(encoding="utf-8"))
+        self.assertEqual(backup["pages"][0]["name"], "Principal")
+
+    def test_writer_retries_after_a_temporary_failure(self):
+        store = ConfigStore(self.path, self.backup, debounce=0.01, retry_delay=0.01)
+        self.addCleanup(store.close)
+        store.load()
+        original = store._write_locked
+        attempts = []
+
+        def flaky_write(config, keep_backup=True):
+            attempts.append(True)
+            if len(attempts) == 1:
+                raise OSError("temporary disk error")
+            return original(config, keep_backup)
+
+        store._write_locked = flaky_write
+        try:
+            def rename(config):
+                config.pages[0].name = "Après reprise"
+                return None, True
+
+            store.update(rename)
+            deadline = time.time() + 3
+            while time.time() < deadline:
+                if len(attempts) >= 2 and not store._dirty:
+                    break
+                time.sleep(0.02)
+            self.assertGreaterEqual(len(attempts), 2)
+            self.assertFalse(store._dirty)
+            self.assertIn("Après reprise", self.path.read_text(encoding="utf-8"))
+        finally:
+            store._write_locked = original
 
     def test_invalid_and_duplicate_identifiers_are_normalized(self):
         config = DeckConfig.model_validate({

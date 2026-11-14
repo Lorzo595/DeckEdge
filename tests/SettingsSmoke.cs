@@ -26,16 +26,19 @@ namespace DeckEdgeDesktop
                 if ((inactive & 3u) != 0) throw new Exception("La protection reste active après désactivation.");
             } finally { SetThreadExecutionState(previous); }
             var defaults = PreferencesStore.Load();
-            if (!defaults.CloseToTray || !defaults.StartupInTray || !defaults.KeepAwake || !defaults.FullSensorAccess)
+            if (!defaults.CloseToTray || !defaults.StartupInTray || !defaults.KeepAwake || !defaults.FullSensorAccess || defaults.ServerPort != 5000)
                 throw new Exception("Valeurs par défaut incorrectes.");
             if (!PreferencesStore.StartupCommand.StartsWith("\"" + Application.ExecutablePath + "\"") || !PreferencesStore.StartupCommand.EndsWith(" --startup"))
                 throw new Exception("Commande de démarrage non protégée pour les chemins avec espaces.");
             defaults.CloseToTray = false; defaults.KeepAwake = false; defaults.FullSensorAccess = false;
-            defaults.WindowWidth = 1024; defaults.WindowHeight = 700;
+            defaults.WindowWidth = 1024; defaults.WindowHeight = 700; defaults.ServerPort = 5012;
             PreferencesStore.Save(defaults, false);
             var restored = PreferencesStore.Load();
-            if (restored.CloseToTray || restored.KeepAwake || restored.FullSensorAccess || restored.WindowWidth != 1024)
+            if (restored.CloseToTray || restored.KeepAwake || restored.FullSensorAccess || restored.WindowWidth != 1024 || restored.ServerPort != 5012)
                 throw new Exception("Préférences non restaurées.");
+            var applied = SettingsForm.BuildResult(restored, false, false, false, false, false);
+            if (applied.ServerPort != 5012)
+                throw new Exception("Le port serveur n'est pas conservé après « Appliquer ».");
             restored.WindowMaximized = true; PreferencesStore.Save(restored, false);
             if (!PreferencesStore.Load().WindowMaximized || File.Exists(Path.Combine(Project,"app-settings.json.tmp")))
                 throw new Exception("Écriture atomique incorrecte.");

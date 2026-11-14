@@ -31,6 +31,7 @@ Développé par **Lorzo595**, avec l’aide de **ChatGPT**.
 | Monitoring | Moteur LibreHardwareMonitor intégré et choix de 1 à 6 indicateurs, avec une seconde mesure facultative |
 | Personnalisation | Nom, icône, couleurs, pipette et états actif/inactif pour les touches à bascule |
 | Édition | Bibliothèque avec recherche, clic droit, duplication, annuler/rétablir et raccourcis clavier |
+| Diagnostic | Rapport local copiable avec chemins, clé et IP privées masqués |
 | Discord | Intégration RPC facultative pour le micro et la sourdine, nécessitant une configuration Discord personnelle |
 
 Le téléphone n’a pas d’application à installer et aucun compte DeckEdge n’est
@@ -98,15 +99,18 @@ originale, et vérifiez leur empreinte en cas de doute.
    d’accueil du téléphone ou aux favoris : un nouveau scan n’est pas nécessaire
    à chaque démarrage. Le lien peut toujours être copié en secours.
 5. Si le pare-feu Windows le demande, autoriser DeckEdge/Python sur le réseau
-   **privé uniquement**. Le serveur utilise le port TCP 5000.
+   **privé uniquement**. Le serveur utilise le port TCP 5000, ou le suivant s'il
+   est déjà occupé ; le QR code indique toujours le bon port.
 
 Fermer la fenêtre conserve par défaut DeckEdge près de l’horloge. Le menu de
 cette icône permet de rouvrir le Studio, quitter complètement, voir les journaux
 ou ouvrir les données. **Paramètres** permet notamment le lancement au démarrage.
 La section **À propos de DeckEdge** y affiche la version, le développeur, la
 licence et les crédits des principaux composants, avec accès au texte de licence.
-Une seule copie de DeckEdge peut utiliser le port 5000 à la fois : quittez la
-version installée avant d’utiliser une copie portable, et inversement.
+Une seule copie de DeckEdge doit utiliser un port donné à la fois. Si le port
+5000 est occupé par un autre logiciel, DeckEdge choisit automatiquement le port
+suivant et le mémorise pour les prochains lancements. Si une autre copie de
+DeckEdge tourne déjà, quittez-la avant d’ouvrir la version installée ou portable.
 
 [Guide de démarrage](docs/QUICKSTART.md) · [Construction](docs/BUILD.md) ·
 [Publication GitHub](docs/RELEASE.md) · [Sécurité](SECURITY.md)
@@ -144,6 +148,9 @@ Windows x64, Python 3.14 et .NET Framework 4.8 sont recommandés.
 python -m venv .venv
 .venv\Scripts\python.exe -m pip install -r requirements.txt
 .venv\Scripts\python.exe -m unittest discover -s tests -t . -p "test_*.py"
+powershell -ExecutionPolicy Bypass -File tests\run-csharp-smoke.ps1
+npm install --no-save playwright
+powershell -ExecutionPolicy Bypass -File tests\run-ui-tests.ps1
 powershell -ExecutionPolicy Bypass -File desktop\build.ps1
 ```
 
@@ -151,6 +158,10 @@ powershell -ExecutionPolicy Bypass -File desktop\build.ps1
 le Studio avec le compilateur .NET Framework de Windows. Le raccourci généré
 ouvre le Studio, son serveur et les capteurs intégrés. Aucune dépendance ne
 provient d’un dossier LibreHardwareMonitor installé sur le poste de l’auteur.
+
+Pour les tests ou un lancement isolé, `DECKEDGE_DATA_DIR` déplace les données et
+`DECKEDGE_PORT` force le port TCP du serveur. Sans cette variable, le port 5000
+est utilisé puis le suivant s’il est occupé.
 
 Pour fabriquer l’installateur, le portable et les sources propres :
 
@@ -171,8 +182,8 @@ Les résultats sont écrits dans `dist`. Les détails, tests et prérequis sont 
 - `packaging/`, `.github/workflows/` : distributions et automatisation.
 
 L’API d’administration est locale au PC. Le téléphone est associé par un lien
-privé. Utiliser uniquement un réseau privé de confiance ; ne pas exposer le
-port 5000 sur Internet. Voir [SECURITY.md](SECURITY.md).
+privé. Utiliser uniquement un réseau privé de confiance ; ne pas exposer le port
+du serveur sur Internet. Voir [SECURITY.md](SECURITY.md).
 
 ## Licence et composants tiers
 
@@ -187,7 +198,9 @@ ou Microsoft. Les noms de produits appartiennent à leurs propriétaires.
 ## Retours et limites de la version de test
 
 - Windows x64 uniquement ; les autres systèmes hôtes ne sont pas pris en charge.
-- Une seule instance peut utiliser le port TCP 5000 à la fois.
+- Le port TCP 5000 est utilisé par défaut. Si un autre logiciel l’occupe,
+  DeckEdge choisit automatiquement le port suivant ; une seule instance
+  DeckEdge doit utiliser un port donné.
 - La disponibilité des capteurs dépend du matériel, des pilotes et des droits Windows.
 - Une application audio doit avoir créé une session audio pour apparaître dans la liste.
 - L’intégration Discord est facultative et demande ses propres identifiants de configuration.

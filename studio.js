@@ -345,7 +345,7 @@ function setupStudioErgonomics() {
       }
     }
     if (modal) {
-      if (event.key === 'Escape') { closeAppPickerModal(); closeDiscordModal(); }
+      if (event.key === 'Escape') { closeAppPickerModal(); closeDiscordModal(); closeDiagnosticsModal(); }
       return;
     }
     if (ctrl && event.key.toLowerCase() === 's') { event.preventDefault(); saveData(); return; }

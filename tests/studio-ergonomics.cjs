@@ -83,6 +83,7 @@ const base=require('./ui-base.cjs');
   await page.waitForFunction(()=>!studioSaving);
   assert.equal((await state()).dirty,true,'Une modification pendant la requête doit rester non enregistrée');
   await page.getByRole('button',{name:'Recharger',exact:true}).click();
+  await page.waitForFunction(()=>!studioDirty());
   assert.equal((await state()).dirty,false);
   await page.locator('.preview-btn').first().locator('.tile-more').click();
   await page.screenshot({path:path.resolve(__dirname,'../previews/studio-actions-rapides.png'),fullPage:true});

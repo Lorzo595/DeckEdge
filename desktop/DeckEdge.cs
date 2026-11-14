@@ -28,6 +28,7 @@ namespace DeckEdgeDesktop
         internal static string PhoneHost;
         internal static bool PhoneDiscoveryReady;
         internal static string InstanceKey;
+        internal static int Port;
         internal static readonly object LogLock = new object();
 
         [STAThread]
@@ -41,6 +42,7 @@ namespace DeckEdgeDesktop
             string customData = Environment.GetEnvironmentVariable("DECKEDGE_DATA_DIR");
             if (!String.IsNullOrWhiteSpace(customData)) DataDirectory = Path.GetFullPath(customData);
             Directory.CreateDirectory(DataDirectory);
+            Port = ReadConfiguredPort();
             string keyFile = Path.Combine(DataDirectory, ".phone-key");
             PhoneKey = File.Exists(keyFile) ? File.ReadAllText(keyFile).Trim() : "";
             if (!System.Text.RegularExpressions.Regex.IsMatch(PhoneKey, "^[a-f0-9]{64}$")) {
@@ -95,12 +97,64 @@ namespace DeckEdgeDesktop
             }
             catch { }
         }
+
+        internal static int ReadConfiguredPort()
+        {
+            int port;
+            string raw = Environment.GetEnvironmentVariable("DECKEDGE_PORT");
+            return Int32.TryParse(raw, out port) && port >= 1 && port <= 65535 ? port : 5000;
+        }
+
+        internal static int SelectPort(int preferred)
+        {
+            int configured;
+            bool explicitPort = Int32.TryParse(Environment.GetEnvironmentVariable("DECKEDGE_PORT"), out configured)
+                && configured >= 1 && configured <= 65535;
+            int last = explicitPort ? preferred : Math.Min(65535, preferred + 20);
+            for (int port = preferred; port <= last; port++)
+            {
+                if (IsPortAvailable(port)) return port;
+                if (IsDeckEdgeOnPort(port))
+                    throw new InvalidOperationException("Une autre copie de DeckEdge utilise déjà le port " + port + ". Quittez-la avant de relancer DeckEdge.");
+                if (explicitPort)
+                    throw new InvalidOperationException("Le port " + port + " est déjà utilisé. Choisissez un autre port avec DECKEDGE_PORT.");
+            }
+            throw new InvalidOperationException("Aucun port local n'est disponible entre " + preferred + " et " + last + ".");
+        }
+
+        static bool IsPortAvailable(int port)
+        {
+            try
+            {
+                var listener = new TcpListener(IPAddress.Any, port);
+                listener.Start();
+                listener.Stop();
+                return true;
+            }
+            catch (SocketException) { return false; }
+        }
+
+        static bool IsDeckEdgeOnPort(int port)
+        {
+            try
+            {
+                var request = (HttpWebRequest)WebRequest.Create("http://127.0.0.1:" + port + "/api/health");
+                request.Proxy = null; request.Timeout = 800; request.ReadWriteTimeout = 800;
+                using (var response = request.GetResponse())
+                using (var reader = new StreamReader(response.GetResponseStream()))
+                {
+                    var health = new JavaScriptSerializer().Deserialize<Dictionary<string, object>>(reader.ReadToEnd());
+                    return health.ContainsKey("app") && (string)health["app"] == "DeckEdge";
+                }
+            }
+            catch { return false; }
+        }
     }
 
     public sealed class StudioForm : Form
     {
-        const string AdminUrl = "http://127.0.0.1:5000/admin";
-        const string HealthUrl = "http://127.0.0.1:5000/api/health";
+        static string AdminUrl { get { return "http://127.0.0.1:" + Program.Port + "/admin"; } }
+        static string HealthUrl { get { return "http://127.0.0.1:" + Program.Port + "/api/health"; } }
         readonly WebView2 view = new WebView2();
         readonly Label message = new Label();
         readonly StatusStrip status = new StatusStrip();
@@ -118,7 +172,7 @@ namespace DeckEdgeDesktop
         StreamWriter backendInput;
         SensorBridge sensorBridge;
         readonly object backendInputLock = new object();
-        bool quitting, cleaning, starting, polling, notified;
+        bool quitting, cleaning, starting, polling, notified, portNoticeShown;
         string phoneUrl;
 
         [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr window);
@@ -202,7 +256,7 @@ namespace DeckEdgeDesktop
             return PhoneConnection.Addresses(Program.PhoneKey).Select(a => a.Url).ToArray();
         }
 
-        static string FindPhoneUrl() { return PhoneUrls().FirstOrDefault() ?? "http://localhost:5000"; }
+        static string FindPhoneUrl() { return PhoneUrls().FirstOrDefault() ?? ("http://localhost:" + Program.Port); }
 
         void OpenPhoneConnection()
         {
@@ -271,10 +325,32 @@ namespace DeckEdgeDesktop
             try
             {
                 await EnsureWebViewRuntime();
+                if (backend == null || backend.HasExited)
+                {
+                    bool explicitPort = !String.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("DECKEDGE_PORT"));
+                    int preferred = Program.Port;
+                    if (!explicitPort && preferences.ServerPort >= 1 && preferences.ServerPort <= 65535)
+                        preferred = preferences.ServerPort;
+                    Program.Port = Program.SelectPort(preferred);
+                    if (!explicitPort && preferences.ServerPort != Program.Port)
+                    {
+                        bool changed = preferences.ServerPort >= 1;
+                        preferences.ServerPort = Program.Port;
+                        try { PreferencesStore.Save(preferences, false); } catch (Exception ex) { Program.Log("Port: " + ex.Message); }
+                        if (changed && !portNoticeShown)
+                        {
+                            portNoticeShown = true;
+                            tray.ShowBalloonTip(6000, "DeckEdge — port du téléphone",
+                                "Le port " + Program.Port + " est utilisé pour cette session. Rouvrez « Connecter le téléphone » et rescannez le QR code si votre raccourci ne répond plus.",
+                                ToolTipIcon.Info);
+                        }
+                    }
+                    phoneUrl = FindPhoneUrl();
+                }
                 var health = await GetHealth();
                 if (quitting) return;
                 if (health != null && (!health.ContainsKey("app") || (string)health["app"] != "DeckEdge"))
-                    throw new InvalidOperationException("Le port 5000 est déjà utilisé. Arrêtez l'ancien serveur DeckEdge avant de réessayer.");
+                    throw new InvalidOperationException("Le port " + Program.Port + " est déjà utilisé. Arrêtez l'ancien serveur DeckEdge avant de réessayer.");
                 if (health == null)
                 {
                     if (backend != null && !backend.HasExited) throw new InvalidOperationException("Le serveur ne répond plus. Quittez DeckEdge puis relancez-le.");
@@ -286,6 +362,7 @@ namespace DeckEdgeDesktop
                     };
                     info.EnvironmentVariables["PYTHONIOENCODING"] = "utf-8";
                     info.EnvironmentVariables["DECKEDGE_DATA_DIR"] = Program.DataDirectory;
+                    info.EnvironmentVariables["DECKEDGE_PORT"] = Program.Port.ToString();
                     info.EnvironmentVariables["PYTHONDONTWRITEBYTECODE"] = "1";
                     var lan = PhoneConnection.Addresses(Program.PhoneKey, false).FirstOrDefault();
                     if (lan != null) info.EnvironmentVariables["DECKEDGE_LAN_IP"] = new Uri(lan.Url).Host;
@@ -295,7 +372,7 @@ namespace DeckEdgeDesktop
                     backend.Start();
                     backendInput = new StreamWriter(backend.StandardInput.BaseStream, new UTF8Encoding(false)) { AutoFlush = true };
                     backend.BeginOutputReadLine(); backend.BeginErrorReadLine();
-                    Program.Log("Serveur lancé, PID " + backend.Id);
+                    Program.Log("Serveur lancé, PID " + backend.Id + ", port " + Program.Port);
                     for (int i = 0; i < 80 && !quitting; i++) {
                         health = await GetHealth();
                         if (health != null) break;
@@ -337,7 +414,7 @@ namespace DeckEdgeDesktop
                     view.CoreWebView2.NewWindowRequested += delegate(object sender, CoreWebView2NewWindowRequestedEventArgs e) { e.Handled = true; };
                     view.CoreWebView2.NavigationStarting += delegate(object sender, CoreWebView2NavigationStartingEventArgs e) {
                         Uri uri;
-                        if (!Uri.TryCreate(e.Uri, UriKind.Absolute, out uri) || uri.Scheme != "http" || uri.Host != "127.0.0.1" || uri.Port != 5000) e.Cancel = true;
+                        if (!Uri.TryCreate(e.Uri, UriKind.Absolute, out uri) || uri.Scheme != "http" || uri.Host != "127.0.0.1" || uri.Port != Program.Port) e.Cancel = true;
                     };
                     view.CoreWebView2.NavigationCompleted += delegate(object sender, CoreWebView2NavigationCompletedEventArgs e) {
                         if (e.IsSuccess) { message.Visible = false; Program.Log("Studio WebView2 prêt."); }
@@ -476,7 +553,7 @@ namespace DeckEdgeDesktop
                 var health = await GetHealth();
                 if (quitting) return;
                 bool alive = health != null && health.ContainsKey("app") && (string)health["app"] == "DeckEdge";
-                serverStatus.Text = alive ? "● Serveur prêt" : "● Serveur indisponible";
+                serverStatus.Text = alive ? ("● Serveur prêt · port " + Program.Port) : "● Serveur indisponible";
                 serverStatus.ForeColor = alive ? Color.FromArgb(178, 199, 151) : Color.FromArgb(226, 140, 128);
                 var sensors = alive && health.ContainsKey("monitoring") ? health["monitoring"] as Dictionary<string, object> : null;
                 bool connected = sensors != null && sensors.ContainsKey("connected") && (bool)sensors["connected"];
