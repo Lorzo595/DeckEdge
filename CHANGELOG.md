@@ -1,6 +1,12 @@
 # Historique
 
-## Non publié
+## 0.1.2 — Fiabilité et contributions
+
+- Contribution de xavco63 (PR #2), complétée par des correctifs de verrouillage Discord et de réactivité des commandes.
+- Volume relatif des périphériques et cibles audio préfixées corrigés ; reprises bornées des écritures Windows.
+- Démarrage Windows par raccourci vérifié, migration de l’ancienne inscription et nettoyage à la désinstallation.
+- Maintien en éveil du PC et de l’écran, renouvelé en arrière-plan.
+- Liste des contributeurs dans À propos et à la fin du README.
 
 - Sauvegarde de configuration sérialisée : plus d’écriture concurrente sur le même fichier temporaire et plus de perte d’une modification pendant la synchronisation matérielle.
 - Récupération fiable d’une configuration corrompue depuis `config.json.bak`.

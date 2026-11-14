@@ -212,11 +212,16 @@ class DiscordRPCService:
 
         try:
             with self._write_lock:
-                if not self.pipe:
-                    with self._lock:
-                        self._pending_events.pop(nonce, None)
-                    return None
-                self.pipe.write(packet)
+                pipe_missing = self.pipe is None
+                if not pipe_missing:
+                    self.pipe.write(packet)
+            # Never acquire _lock while holding _write_lock: _close_pipe
+            # acquires them in the opposite order.
+            if pipe_missing:
+                with self._lock:
+                    self._pending_events.pop(nonce, None)
+                    self._pending_responses.pop(nonce, None)
+                return None
         except Exception as e:
             logger.debug(f"Erreur écriture pipe: {e}")
             self._close_pipe()

@@ -5,15 +5,15 @@ applications, musique, volume par application et monitoring matériel.
 Le Studio Windows permet de tout organiser avec un aperçu mobile, une bibliothèque
 d’actions et des réglages simples. Aucun Stream Deck physique n’est nécessaire.
 
-**Windows 10 (2004+) / Windows 11 · x64 · version 0.1.1 · licence MIT**
+**Windows 10 (2004+) / Windows 11 · x64 · version 0.1.2 · licence MIT**
 
 Développé par **Lorzo595**, avec l’aide de **ChatGPT**.
 
-> **Version de test publique.** DeckEdge 0.1.1 fonctionne et a été testé
+> **Version de test publique.** DeckEdge 0.1.2 fonctionne et a été testé
 > sur le poste de développement, mais la validation sur plusieurs PC et les retours
 > utilisateurs restent nécessaires avant une version 1.0.0.
 
-[Télécharger la version 0.1.1](https://github.com/Lorzo595/DeckEdge/releases/tag/v0.1.1)
+[Télécharger la version 0.1.2](https://github.com/Lorzo595/DeckEdge/releases/tag/v0.1.2)
 · [Signaler un problème](https://github.com/Lorzo595/DeckEdge/issues)
 · [Guide de démarrage](docs/QUICKSTART.md)
 
@@ -39,13 +39,13 @@ Le logiciel ne nécessite aucun abonnement et son code est disponible sous MIT.
 
 ## Télécharger
 
-Dans la [Release 0.1.1](https://github.com/Lorzo595/DeckEdge/releases/tag/v0.1.1), choisir :
+Dans la [Release 0.1.2](https://github.com/Lorzo595/DeckEdge/releases/tag/v0.1.2), choisir :
 
 | Fichier | Usage |
 | --- | --- |
-| `DeckEdge-0.1.1-Setup-x64.exe` | Installation classique, raccourcis et désinstallation Windows |
-| `DeckEdge-0.1.1-Portable-x64.zip` | Décompresser, puis lancer `DeckEdge/DeckEdge.exe` ; tout reste dans ce dossier |
-| `DeckEdge-0.1.1-Source.zip` | Sources propres à publier, étudier ou modifier |
+| `DeckEdge-0.1.2-Setup-x64.exe` | Installation classique, raccourcis et désinstallation Windows |
+| `DeckEdge-0.1.2-Portable-x64.zip` | Décompresser, puis lancer `DeckEdge/DeckEdge.exe` ; tout reste dans ce dossier |
+| `DeckEdge-0.1.2-Source.zip` | Sources propres à publier, étudier ou modifier |
 | `SHA256SUMS.txt` | Empreintes des fichiers de cette version |
 
 Python et le moteur LibreHardwareMonitor sont inclus. Il n’est pas nécessaire
@@ -58,7 +58,7 @@ l’accès matériel complet est refusé.
 
 ### Installation classique
 
-1. Télécharger `DeckEdge-0.1.1-Setup-x64.exe` depuis la Release.
+1. Télécharger `DeckEdge-0.1.2-Setup-x64.exe` depuis la Release.
 2. Suivre l’assistant. L’installation se fait pour l’utilisateur courant, avec
    un raccourci dans le menu Démarrer et un raccourci Bureau facultatif.
 3. Ouvrir DeckEdge. Accepter l’installation de WebView2 s’il manque et choisir
@@ -68,7 +68,7 @@ l’accès matériel complet est refusé.
 
 ### Version portable
 
-1. Télécharger `DeckEdge-0.1.1-Portable-x64.zip` et extraire **toute** l’archive.
+1. Télécharger `DeckEdge-0.1.2-Portable-x64.zip` et extraire **toute** l’archive.
 2. Ouvrir le dossier `DeckEdge`, puis lancer `DeckEdge.exe`.
 3. Conserver ensemble `runtime`, les bibliothèques et `portable.flag`. Les données
    sont créées dans `data` ; déplacer le dossier entier pour emporter le Deck.
@@ -202,3 +202,10 @@ ou un extrait de journal. Ne jamais publier le dossier de données complet.
 
 Les contributions sont les bienvenues : voir [CONTRIBUTING.md](CONTRIBUTING.md).
 Pour un problème de sécurité, suivre [SECURITY.md](SECURITY.md).
+
+## Contributeurs
+
+- [Lorzo595](https://github.com/Lorzo595) — création et développement de DeckEdge.
+- [xavco63](https://github.com/xavco63) — fiabilisation de la configuration, de l’audio et des états du pupitre ([PR #2](https://github.com/Lorzo595/DeckEdge/pull/2)).
+
+Développé avec l’aide de **ChatGPT**. Merci aux projets libres utilisés par DeckEdge, notamment LibreHardwareMonitor et QRCoder ; leurs licences sont incluses dans les distributions.

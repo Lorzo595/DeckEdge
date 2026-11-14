@@ -22,6 +22,7 @@ import subprocess
 import tempfile
 import threading
 import time
+import weakref
 from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, TypeVar
 import sys
 from monitoring import MonitoringState, DEFAULT_WIDGETS
@@ -283,7 +284,16 @@ def _write_json_atomic(path: Path, payload: Dict[str, Any]) -> None:
             f.write(text)
             f.flush()
             os.fsync(f.fileno())
-        os.replace(tmp_name, path)
+        # Windows scanners can briefly hold a handle without delete sharing.
+        # Keep the completed temporary file and retry only permission failures.
+        for attempt in range(5):
+            try:
+                os.replace(tmp_name, path)
+                break
+            except PermissionError:
+                if os.name != "nt" or attempt == 4:
+                    raise
+                time.sleep(.02 * (attempt + 1))
     except BaseException:
         try:
             os.unlink(tmp_name)
@@ -847,9 +857,12 @@ def get_audio_sessions_list() -> List[str]:
 def adjust_audio_volume(target_spec: str) -> bool:
     if ":" not in target_spec:
         return False
-    app_name, action = target_spec.split(":", 1)
+    app_name, action = target_spec.rsplit(":", 1)
     app_name = app_name.strip().lower()
     action = action.strip().lower()
+
+    if not app_name or app_name in ("app:", "device:"):
+        return False
 
     if action == "mute":
         return toggle_audio_target_mute(app_name)
@@ -1286,37 +1299,47 @@ def bring_window_to_front_by_keyword(keyword: str) -> bool:
         return force_foreground_window(targets[0])
     return False
 
+_button_click_locks = weakref.WeakValueDictionary()
+
+
 async def handle_button_click(btn_id: str) -> None:
-    """Traite le clic d'un bouton avec une mise à jour atomique de la configuration."""
-    def toggle_button(config: DeckConfig):
-        target_btn: Optional[ButtonConfig] = None
-        for page in config.pages:
-            for btn in page.buttons:
-                if btn.id == btn_id:
-                    target_btn = btn
-                    break
-            if target_btn:
-                break
+    """Execute first; a failed or slow save must not suppress the command."""
+    lock = _button_click_locks.setdefault(btn_id, asyncio.Lock())
+    async with lock:
+        target_btn = await asyncio.to_thread(config_store.get_button, btn_id)
         if target_btn is None:
-            return None, False
+            logger.warning("Bouton introuvable : %s", btn_id)
+            return
+
+        logger.info("Clic reçu [%s] '%s'", target_btn.id, target_btn.label)
+        await asyncio.to_thread(_execute_action, target_btn.type, target_btn.target)
+        # Mute commands return the new mute state: False also means a successful
+        # unmute. Keep the existing optimistic toggle; telemetry reconciles it.
         if not target_btn.is_toggle:
-            return target_btn.model_copy(deep=True), False
-        target_btn.state = not target_btn.state
-        return target_btn.model_copy(deep=True), True
+            return
 
-    target_btn = await asyncio.to_thread(config_store.update, toggle_button)
+        expected_state = not target_btn.state
 
-    if target_btn is None:
-        logger.warning(f"Bouton introuvable : {btn_id}")
-        return
+        def apply_state(config: DeckConfig):
+            for page in config.pages:
+                for button in page.buttons:
+                    if button.id != btn_id:
+                        continue
+                    # A Studio edit made during the command must not be overwritten.
+                    if not button.is_toggle or (button.type, button.target) != (target_btn.type, target_btn.target):
+                        return None, False
+                    changed = button.state != expected_state
+                    button.state = expected_state
+                    return button.model_copy(deep=True), changed
+            return None, False
 
-    logger.info(f"Clic reçu [{target_btn.id}] '{target_btn.label}' -> Exécution de [{target_btn.type}] : '{target_btn.target}'")
-
-    if target_btn.is_toggle:
-        await manager.broadcast(button_state_payload(target_btn))
-
-    # Exécution de l'action Win32 immédiatement
-    await asyncio.to_thread(_execute_action, target_btn.type, target_btn.target)
+        try:
+            updated = await asyncio.to_thread(config_store.update, apply_state)
+        except OSError:
+            logger.exception("Action exécutée, mais son état n'a pas pu être sauvegardé")
+            return
+        if updated is not None:
+            await manager.broadcast(button_state_payload(updated))
 
 
 def launch_win32_target(target: str) -> bool:
