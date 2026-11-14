@@ -532,8 +532,10 @@ class ConfigStore:
             try:
                 self.create_backup()
             except Exception as e:
-                logger.warning("Sauvegarde de l'état courant avant restauration impossible: %s", e)
-            self._write_locked(config)
+                raise RuntimeError(
+                    "Restauration annulée : impossible de sauvegarder la configuration actuelle."
+                ) from e
+            self.save(config)
             return config.model_copy(deep=True)
 
 

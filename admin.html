@@ -1374,7 +1374,7 @@
     }
 
     async function saveData() {
-      if (studioSaving || !studioReady) return;
+      if (studioSaving || studioRestoringBackup || !studioReady) return;
       if (config.monitoring.some(widget => !widget.label.trim())) {
         studioNotify('Donnez un nom à chaque indicateur de monitoring.'); return;
       }
@@ -1793,8 +1793,17 @@
       }
     }
 
+    let studioRestoringBackup = false;
+
     async function restoreBackup(name) {
+      if (studioSaving) {
+        studioNotify('Attendez la fin de l’enregistrement avant de restaurer une sauvegarde.');
+        return;
+      }
+      if (studioRestoringBackup) return;
       if (!confirm('Remplacer la configuration actuelle par cette sauvegarde ?')) return;
+      studioRestoringBackup = true;
+      studioUpdateStatus();
       try {
         const res = await fetch('/api/config/restore', {
           method: 'POST',
@@ -1812,6 +1821,9 @@
         studioNotify('Sauvegarde restaurée.');
       } catch (e) {
         studioNotify('Restauration impossible : ' + e.message);
+      } finally {
+        studioRestoringBackup = false;
+        studioUpdateStatus();
       }
     }
 
