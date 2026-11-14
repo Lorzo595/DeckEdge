@@ -77,6 +77,7 @@ pyautogui.FAILSAFE = False
 ActionType = Literal["hotkey", "key", "launch", "volume_app", "slider"]
 
 _IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+_BACKUP_NAME_RE = re.compile(r"^deckedge-\d{8}-\d{6}-\d{3}\.json$")
 
 
 def _sanitize_identifier(value: Any, prefix: str, index: int, used: set[str]) -> str:
@@ -317,6 +318,7 @@ class ConfigStore:
     def __init__(self, path: Path = CONFIG_PATH, backup_path: Path = CONFIG_BAK_PATH, debounce: float = 0.15, retry_delay: float = 0.5) -> None:
         self.path = path
         self.backup_path = backup_path
+        self.backup_dir = path.parent / "backups"
         self.debounce = max(0.0, debounce)
         self.retry_delay = max(0.01, retry_delay)
         self._lock = threading.RLock()
@@ -454,6 +456,87 @@ class ConfigStore:
                     if button.id == btn_id:
                         return button.model_copy(deep=True)
         return None
+
+    def _backup_path_locked(self, name: str) -> Optional[Path]:
+        if not isinstance(name, str) or not _BACKUP_NAME_RE.fullmatch(name):
+            return None
+        path = self.backup_dir / name
+        return path if path.parent == self.backup_dir else None
+
+    @staticmethod
+    def _backup_metadata(path: Path) -> Dict[str, Any]:
+        stat = path.stat()
+        return {
+            "name": path.name,
+            "size": stat.st_size,
+            "modified": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(stat.st_mtime)),
+        }
+
+    def _prune_backups_locked(self, limit: int = 20) -> None:
+        if not self.backup_dir.exists():
+            return
+        backups = sorted(
+            (path for path in self.backup_dir.glob("deckedge-*.json") if _BACKUP_NAME_RE.fullmatch(path.name)),
+            key=lambda path: path.name,
+            reverse=True,
+        )
+        for path in backups[limit:]:
+            try:
+                path.unlink()
+            except OSError as e:
+                logger.warning("Impossible de supprimer l'ancienne sauvegarde %s: %s", path.name, e)
+
+    def create_backup(self) -> Dict[str, Any]:
+        """Crée une sauvegarde horodatée de la configuration courante."""
+        with self._lock:
+            config = self._read_locked()
+            self.backup_dir.mkdir(parents=True, exist_ok=True)
+            stamp = time.strftime("%Y%m%d-%H%M%S")
+            milliseconds = int(time.time() * 1000) % 1000
+            path = None
+            for attempt in range(1000):
+                candidate = self.backup_dir / f"deckedge-{stamp}-{(milliseconds + attempt) % 1000:03d}.json"
+                if not candidate.exists():
+                    path = candidate
+                    break
+            if path is None:
+                raise RuntimeError("Impossible de créer un nom de sauvegarde unique")
+            _write_json_atomic(path, config.model_dump(mode="json"))
+            self._prune_backups_locked()
+            return self._backup_metadata(path)
+
+    def list_backups(self) -> List[Dict[str, Any]]:
+        with self._lock:
+            if not self.backup_dir.exists():
+                return []
+            entries = []
+            for path in sorted(
+                (item for item in self.backup_dir.glob("deckedge-*.json") if _BACKUP_NAME_RE.fullmatch(item.name)),
+                key=lambda item: item.name,
+                reverse=True,
+            ):
+                try:
+                    entries.append(self._backup_metadata(path))
+                except OSError:
+                    continue
+            return entries[:50]
+
+    def restore_backup(self, name: str) -> DeckConfig:
+        """Restaure une sauvegarde validée, après avoir sauvegardé l'état courant."""
+        with self._lock:
+            path = self._backup_path_locked(name)
+            if path is None or not path.exists():
+                raise FileNotFoundError(name)
+            raw = json.loads(path.read_text(encoding="utf-8"))
+            config = DeckConfig.model_validate(raw)
+            try:
+                self.create_backup()
+            except Exception as e:
+                raise RuntimeError(
+                    "Restauration annulée : impossible de sauvegarder la configuration actuelle."
+                ) from e
+            self.save(config)
+            return config.model_copy(deep=True)
 
 
 config_store = ConfigStore()
@@ -1182,7 +1265,7 @@ async def protect_desktop_and_pair_phone(request: Request, call_next):
         return JSONResponse({"detail": "Origine non autorisée"}, status_code=403)
     if not local and not is_paired(request, PHONE_KEY):
         return HTMLResponse('''<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Connecter DeckEdge</title><body style="margin:0;background:#191b22;color:#eef1fc;font:17px/1.65 system-ui;padding:28px"><main style="max-width:480px;margin:12vh auto"><h1>Retrouver votre Deck</h1><p>Cette adresse n’est pas encore associée à votre téléphone.</p><ol><li>Sur le PC, ouvrez DeckEdge.</li><li>Cliquez sur <b>Connecter le téléphone</b>.</li><li>Scannez le QR code avec l’appareil photo.</li></ol><p>Ajoutez ensuite le Deck à votre écran d’accueil pour le retrouver aux prochains démarrages.</p></main></body></html>''', status_code=401)
-    desktop_only = request.url.path in {"/admin", "/api/apps", "/api/diagnostics", "/api/monitoring/sensors", "/api/discord/connect", "/api/discord/disconnect"} or (request.url.path == "/api/config" and request.method != "GET")
+    desktop_only = request.url.path in {"/admin", "/api/apps", "/api/diagnostics", "/api/monitoring/sensors", "/api/discord/connect", "/api/discord/disconnect", "/api/config/validate", "/api/config/restore", "/api/config/backups"} or (request.url.path == "/api/config" and request.method != "GET")
     if desktop_only and not local:
         return JSONResponse({"detail": "Ce réglage se modifie dans le Studio sur le PC."}, status_code=403)
     response = await call_next(request)
@@ -1621,6 +1704,50 @@ async def save_config_endpoint(config: DeckConfig):
     except Exception as e:
         logger.error(f"Échec enregistrement configuration: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+class BackupNamePayload(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+
+
+@app.post("/api/config/validate")
+async def validate_config_endpoint(config: DeckConfig):
+    """Valide et normalise un profil importé sans l'enregistrer."""
+    return {"status": "ok", "config": config.model_dump(mode="json")}
+
+
+@app.get("/api/config/backups")
+async def list_config_backups():
+    return {"backups": await asyncio.to_thread(config_store.list_backups)}
+
+
+@app.post("/api/config/backups")
+async def create_config_backup_endpoint():
+    try:
+        backup = await asyncio.to_thread(config_store.create_backup)
+    except Exception as e:
+        logger.exception("Création de sauvegarde impossible")
+        raise HTTPException(status_code=500, detail=str(e))
+    return {
+        "status": "ok",
+        "backup": backup,
+        "backups": await asyncio.to_thread(config_store.list_backups),
+    }
+
+
+@app.post("/api/config/restore")
+async def restore_config_backup_endpoint(payload: BackupNamePayload):
+    try:
+        config = await asyncio.to_thread(config_store.restore_backup, payload.name)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Sauvegarde introuvable")
+    except (json.JSONDecodeError, ValidationError):
+        raise HTTPException(status_code=400, detail="Sauvegarde invalide")
+    except Exception as e:
+        logger.exception("Restauration de sauvegarde impossible")
+        raise HTTPException(status_code=500, detail=str(e))
+    await manager.broadcast({"type": "reload_config"})
+    return {"status": "ok", "config": config.model_dump(mode="json")}
 
 
 @app.get("/api/audio/sessions")

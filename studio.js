@@ -107,7 +107,7 @@ function studioUpdateStatus() {
   status.dataset.dirty = String(dirty);
   document.getElementById('studio-undo').disabled = studioHistoryIndex <= 0;
   document.getElementById('studio-redo').disabled = studioHistoryIndex >= studioHistory.length - 1;
-  document.getElementById('studio-save').disabled = studioSaving || !studioReady;
+  document.getElementById('studio-save').disabled = studioSaving || studioRestoringBackup || !studioReady;
   if (dirty !== studioLastDirty) {
     studioLastDirty = dirty;
     window.chrome?.webview?.postMessage({type:'editorDirty', dirty});
@@ -345,7 +345,7 @@ function setupStudioErgonomics() {
       }
     }
     if (modal) {
-      if (event.key === 'Escape') { closeAppPickerModal(); closeDiscordModal(); closeDiagnosticsModal(); }
+      if (event.key === 'Escape') { closeAppPickerModal(); closeDiscordModal(); closeDiagnosticsModal(); closeBackupsModal(); }
       return;
     }
     if (ctrl && event.key.toLowerCase() === 's') { event.preventDefault(); saveData(); return; }

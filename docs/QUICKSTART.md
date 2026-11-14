@@ -61,4 +61,5 @@ actualiser les sorties et applications dans les réglages d’un curseur de volu
 - Studio blanc : installer/réparer Microsoft WebView2 Runtime depuis Microsoft.
 - Logs : menu DeckEdge → Voir le journal / Ouvrir les données.
 - Avant un signalement : bouton **Diagnostic** dans le Studio, puis copier le rapport masqué.
+- Avant une modification importante : menu **Profils** → **Sauvegardes locales**. L’export/import JSON permet aussi de conserver les profils hors du PC.
 - Quitter complètement avant de déplacer ou remplacer une version portable.

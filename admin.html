@@ -265,6 +265,18 @@
       max-width: 650px;
       box-shadow: 0 10px 40px rgba(0,0,0,0.8);
     }
+    .backup-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #0b0f19;
+    }
+    .backup-row strong { font-size: 13px; }
+    .backup-row small { display: block; color: var(--text-muted); font-size: 11px; margin-top: 3px; }
     .cat-pill {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -519,6 +531,7 @@
         <span id="discord-status-text">Discord</span>
       </button>
       <button class="btn btn-secondary" onclick="loadData()" title="Recharge la configuration enregistrée" style="font-size: 13px;">Recharger</button>
+      <button class="btn btn-secondary" id="profiles-button" onclick="openProfilesMenu(event)" title="Importer, exporter ou restaurer des profils" style="font-size: 13px;">Profils</button>
       <button class="btn btn-secondary" id="diagnostics-button" onclick="openDiagnosticsModal()" title="Créer un rapport de diagnostic local" style="font-size: 13px;">Diagnostic</button>
       <button class="btn btn-secondary" id="studio-undo" onclick="undoStudio()" title="Annuler (Ctrl+Z)" aria-label="Annuler la modification" disabled>↶</button>
       <button class="btn btn-secondary" id="studio-redo" onclick="redoStudio()" title="Rétablir (Ctrl+Y)" aria-label="Rétablir la modification" disabled>↷</button>
@@ -1361,7 +1374,7 @@
     }
 
     async function saveData() {
-      if (studioSaving || !studioReady) return;
+      if (studioSaving || studioRestoringBackup || !studioReady) return;
       if (config.monitoring.some(widget => !widget.label.trim())) {
         studioNotify('Donnez un nom à chaque indicateur de monitoring.'); return;
       }
@@ -1663,6 +1676,157 @@
       }
     }
 
+    function openProfilesMenu(event) {
+      studioMenu(event, 'Profils', [
+        {label: 'Exporter les profils…', action: exportProfiles},
+        {label: 'Importer des profils…', action: () => document.getElementById('import-config-file').click()},
+        {label: 'Sauvegardes locales…', action: openBackupsModal}
+      ]);
+    }
+
+    function exportProfiles() {
+      const payload = {
+        format: 'deckedge-profiles',
+        version: 1,
+        exported_at: new Date().toISOString(),
+        config
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], {type: 'application/json;charset=utf-8'});
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `deckedge-profils-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      studioNotify('Profils exportés.');
+    }
+
+    async function importProfilesFile(event) {
+      const file = event.target.files && event.target.files[0];
+      event.target.value = '';
+      if (!file) return;
+      if (file.size > 2 * 1024 * 1024) { studioNotify('Fichier trop volumineux (2 Mo maximum).'); return; }
+      if (!confirm('Remplacer la configuration actuelle par ce fichier ? Vous pourrez annuler avant d’enregistrer.')) return;
+      try {
+        const parsed = JSON.parse(await file.text());
+        const candidate = parsed && parsed.format === 'deckedge-profiles' ? parsed.config : parsed;
+        if (!candidate || typeof candidate !== 'object') throw new Error('format de fichier non reconnu');
+        const res = await fetch('/api/config/validate', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(candidate)
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.detail ? JSON.stringify(data.detail) : ('HTTP ' + res.status));
+        config = data.config;
+        currentActivePageId = (config.pages.find(page => page.id === 'page_main') || config.pages[0]).id;
+        selectedIndex = 0; studioLastGroup = null;
+        renderPagesBar(); renderMonitoringEditor(); renderGrid(); selectButton(0);
+        studioCheckpoint();
+        studioNotify('Profils importés. Cliquez sur « Enregistrer » pour les appliquer.');
+      } catch (e) {
+        studioNotify('Import impossible : ' + e.message);
+      }
+    }
+
+    async function openBackupsModal() {
+      document.getElementById('backups-modal').style.display = 'flex';
+      await refreshBackups();
+    }
+
+    function closeBackupsModal() {
+      const modal = document.getElementById('backups-modal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function closeBackupsOnOverlay(event) {
+      if (event.target.id === 'backups-modal') closeBackupsModal();
+    }
+
+    async function refreshBackups() {
+      const list = document.getElementById('backups-list');
+      list.replaceChildren();
+      const loading = document.createElement('p');
+      loading.textContent = 'Chargement…'; loading.style.color = 'var(--text-muted)'; list.append(loading);
+      try {
+        const res = await fetch('/api/config/backups');
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || ('HTTP ' + res.status));
+        list.replaceChildren();
+        const backups = data.backups || [];
+        if (!backups.length) {
+          const empty = document.createElement('p');
+          empty.textContent = 'Aucune sauvegarde locale pour le moment.';
+          empty.style.color = 'var(--text-muted)'; list.append(empty); return;
+        }
+        backups.forEach(backup => {
+          const row = document.createElement('div'); row.className = 'backup-row';
+          const info = document.createElement('div');
+          const title = document.createElement('strong'); title.textContent = backup.modified;
+          const details = document.createElement('small');
+          details.textContent = `${backup.name} · ${(backup.size / 1024).toFixed(1)} Ko`;
+          info.append(title, details);
+          const restore = document.createElement('button');
+          restore.type = 'button'; restore.className = 'btn btn-secondary'; restore.textContent = 'Restaurer';
+          restore.onclick = () => restoreBackup(backup.name);
+          row.append(info, restore); list.append(row);
+        });
+      } catch (e) {
+        list.replaceChildren();
+        const error = document.createElement('p');
+        error.textContent = 'Impossible de charger les sauvegardes : ' + e.message;
+        error.style.color = 'var(--danger)'; list.append(error);
+      }
+    }
+
+    async function createBackup() {
+      try {
+        const res = await fetch('/api/config/backups', {method: 'POST'});
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || ('HTTP ' + res.status));
+        await refreshBackups();
+        studioNotify('Sauvegarde créée.');
+      } catch (e) {
+        studioNotify('Sauvegarde impossible : ' + e.message);
+      }
+    }
+
+    let studioRestoringBackup = false;
+
+    async function restoreBackup(name) {
+      if (studioSaving) {
+        studioNotify('Attendez la fin de l’enregistrement avant de restaurer une sauvegarde.');
+        return;
+      }
+      if (studioRestoringBackup) return;
+      if (!confirm('Remplacer la configuration actuelle par cette sauvegarde ?')) return;
+      studioRestoringBackup = true;
+      studioUpdateStatus();
+      try {
+        const res = await fetch('/api/config/restore', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({name})
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || ('HTTP ' + res.status));
+        config = data.config;
+        currentActivePageId = (config.pages.find(page => page.id === 'page_main') || config.pages[0]).id;
+        selectedIndex = 0; studioLastGroup = null;
+        renderPagesBar(); renderMonitoringEditor(); renderGrid(); selectButton(0);
+        studioResetHistory();
+        closeBackupsModal();
+        studioNotify('Sauvegarde restaurée.');
+      } catch (e) {
+        studioNotify('Restauration impossible : ' + e.message);
+      } finally {
+        studioRestoringBackup = false;
+        studioUpdateStatus();
+      }
+    }
+
     let diagnosticsText = '';
 
     async function openDiagnosticsModal() {
@@ -1835,6 +1999,26 @@
       </div>
     </div>
   </div>
+  <input type="file" id="import-config-file" accept=".json,application/json" hidden onchange="importProfilesFile(event)">
+
+  <!-- MODAL SAUVEGARDES -->
+  <div id="backups-modal" class="modal-overlay" style="display: none;" onclick="closeBackupsOnOverlay(event)">
+    <div class="modal-content" style="max-width: 760px; max-height: 90vh; display: flex; flex-direction: column;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 14px;">
+        <div>
+          <h2 style="font-size: 18px; margin: 0;">Sauvegardes des profils</h2>
+          <p style="font-size: 12px; color: var(--text-muted); margin-top: 5px; line-height: 1.5;">Les 20 dernières sauvegardes locales sont conservées. Une sauvegarde est aussi créée avant chaque restauration.</p>
+        </div>
+        <button type="button" class="btn btn-secondary" style="padding: 4px 10px; font-size: 14px;" onclick="closeBackupsModal()" aria-label="Fermer les sauvegardes">✕</button>
+      </div>
+      <div id="backups-list" style="flex: 1; min-height: 180px; max-height: 55vh; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px;"></div>
+      <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 12px; flex-wrap: wrap;">
+        <button type="button" class="btn btn-save" onclick="createBackup()">Créer une sauvegarde</button>
+        <button type="button" class="btn btn-secondary" onclick="closeBackupsModal()">Fermer</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL DIAGNOSTIC -->
   <div id="diagnostics-modal" class="modal-overlay" style="display: none;" onclick="closeDiagnosticsOnOverlay(event)">
     <div class="modal-content" style="max-width: 900px; max-height: 90vh; display: flex; flex-direction: column;">
