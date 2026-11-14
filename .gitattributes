@@ -1,0 +1,16 @@
+# Normaliser les fins de ligne dans l'index Git.
+# Les fichiers texte sont stockés en LF et extraits selon la configuration
+# native de chaque poste (CRLF sous Windows avec core.autocrlf=true).
+* text=auto
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.zip binary
+*.exe binary
+*.dll binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
