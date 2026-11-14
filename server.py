@@ -314,10 +314,11 @@ class ConfigStore:
     précédemment validée, jamais un fichier corrompu.
     """
 
-    def __init__(self, path: Path = CONFIG_PATH, backup_path: Path = CONFIG_BAK_PATH, debounce: float = 0.15) -> None:
+    def __init__(self, path: Path = CONFIG_PATH, backup_path: Path = CONFIG_BAK_PATH, debounce: float = 0.15, retry_delay: float = 0.5) -> None:
         self.path = path
         self.backup_path = backup_path
         self.debounce = max(0.0, debounce)
+        self.retry_delay = max(0.01, retry_delay)
         self._lock = threading.RLock()
         self._config: Optional[DeckConfig] = None
         self._written_config: Optional[DeckConfig] = None
@@ -400,7 +401,10 @@ class ConfigStore:
                 self.flush()
             except Exception:
                 logger.exception("Échec de la sauvegarde différée de la configuration; nouvelle tentative")
-                time.sleep(0.5)
+                # flush() laisse _dirty à True. Réarmer le réveil, sinon le writer
+                # attendrait indéfiniment une nouvelle modification.
+                self._wake.set()
+                time.sleep(self.retry_delay)
 
     def flush(self) -> None:
         """Écrit immédiatement les modifications en attente."""
@@ -1125,6 +1129,12 @@ PHONE_KEY = pairing_key()
 _PRIVATE_IP_RE = re.compile(r"\b((?:10|127|192\.168|172\.(?:1[6-9]|2\d|3[01]))\.\d{1,3})\.\d{1,3}\b")
 
 
+def _path_pattern(path: str) -> str:
+    """Regex Windows/Linux insensible à la casse et aux séparateurs."""
+    parts = [part for part in re.split(r"[\\/]+", path) if part]
+    return r"[\\/]+".join(re.escape(part) for part in parts)
+
+
 def _redact_text(value: Any) -> str:
     """Masque les chemins personnels, la clé du téléphone et les IP privées."""
     text = "" if value is None else str(value)
@@ -1133,19 +1143,20 @@ def _redact_text(value: Any) -> str:
         (str(BASE_DIR), "<installation>"),
         (str(Path.home()), "<utilisateur>"),
     ):
-        if path:
-            text = text.replace(path, replacement)
+        pattern = _path_pattern(path)
+        if pattern:
+            text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
     for name in {os.environ.get("USERNAME"), os.environ.get("USER")}:
         if name:
-            text = text.replace(name, "<utilisateur>")
-    text = text.replace(PHONE_KEY, "<clé téléphone>")
+            text = re.sub(re.escape(name), "<utilisateur>", text, flags=re.IGNORECASE)
+    text = re.sub(re.escape(PHONE_KEY), "<clé téléphone>", text, flags=re.IGNORECASE)
     for secret in (
         getattr(discord_rpc, "access_token", ""),
         getattr(discord_rpc, "refresh_token", ""),
         getattr(discord_rpc, "client_secret", ""),
     ):
         if secret:
-            text = text.replace(secret, "<secret>")
+            text = re.sub(re.escape(secret), "<secret>", text, flags=re.IGNORECASE)
     return _PRIVATE_IP_RE.sub(r"\1.x", text)
 
 

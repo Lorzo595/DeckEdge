@@ -1,3 +1,4 @@
+import os
 import unittest
 from unittest.mock import patch
 
@@ -30,6 +31,14 @@ class DiagnosticsTests(unittest.TestCase):
         self.assertIn("system", report)
         self.assertIn("logs", report)
         self.assertEqual(report["audio"]["apps"][0]["name"], "Spotify")
+
+    def test_redaction_handles_case_and_separator_variants(self):
+        self.assertEqual(_redact_text(str(DATA_DIR).upper()), "<données>")
+        self.assertEqual(_redact_text(str(DATA_DIR).replace("\\", "/")), "<données>")
+        self.assertEqual(_redact_text(PHONE_KEY.upper()), "<clé téléphone>")
+        username = os.environ.get("USERNAME") or os.environ.get("USER")
+        if username:
+            self.assertEqual(_redact_text(username.upper()), "<utilisateur>")
 
     def test_remote_diagnostics_are_desktop_only_even_when_paired(self):
         client = TestClient(app, base_url="http://" + HOSTNAME + ":5000", client=("192.168.1.100", 1000))

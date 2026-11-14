@@ -2,8 +2,9 @@ param([int]$Port = 5011, [string]$DataDirectory = '.build/ui-test-data')
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location -LiteralPath $root
+. (Join-Path $PSScriptRoot 'test-output-path.ps1')
 
-$data = Join-Path $root $DataDirectory
+$data = Resolve-TestOutputPath -Root $root -Path $DataDirectory
 Remove-Item -LiteralPath $data -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Path $data -Force | Out-Null
 

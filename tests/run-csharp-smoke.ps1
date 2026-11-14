@@ -2,11 +2,12 @@ param([string]$OutputDirectory = '.build/csharp-smoke')
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location -LiteralPath $root
+. (Join-Path $PSScriptRoot 'test-output-path.ps1')
 
 $csc = Join-Path $env:WINDIR 'Microsoft.NET/Framework64/v4.0.30319/csc.exe'
 if (-not (Test-Path -LiteralPath $csc)) { throw 'Compilateur C# .NET Framework introuvable.' }
 
-$output = Join-Path $root $OutputDirectory
+$output = Resolve-TestOutputPath -Root $root -Path $OutputDirectory
 Remove-Item -LiteralPath $output -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Path $output -Force | Out-Null
 $exe = Join-Path $output 'SettingsSmoke.exe'

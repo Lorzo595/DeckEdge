@@ -5,6 +5,8 @@
 - Panneau **Diagnostic** dans le Studio avec rapport local copiable et téléchargeable, chemins, clé et IP privées masqués.
 - Port du serveur configurable via `DECKEDGE_PORT` ; si le port 5000 est occupé par un autre logiciel, DeckEdge choisit automatiquement le suivant et le QR code utilise le bon port.
 - Sauvegarde de configuration différée et regroupée, avec écriture forcée à l’arrêt et à l’enregistrement manuel.
+- Reprise effective des écritures après une erreur temporaire, port serveur mémorisé dans les préférences et garde-fou sur les dossiers de test.
+- Masquage du diagnostic insensible à la casse et aux séparateurs Windows/Linux.
 - Tests Playwright Studio/mobile et test C# des préférences exécutés dans GitHub Actions ; script local `tests/run-ui-tests.ps1`.
 
 ## 0.1.2 — Fiabilité et contributions

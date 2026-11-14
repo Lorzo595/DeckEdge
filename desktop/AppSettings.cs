@@ -31,9 +31,10 @@ namespace DeckEdgeDesktop
         public int WindowWidth { get; set; }
         public int WindowHeight { get; set; }
         public bool WindowMaximized { get; set; }
+        public int ServerPort { get; set; }
         public AppPreferences() {
             StartupInTray = true; CloseToTray = true; KeepAwake = true; FullSensorAccess = true;
-            WindowWidth = 1360; WindowHeight = 920;
+            WindowWidth = 1360; WindowHeight = 920; ServerPort = 5000;
         }
     }
 

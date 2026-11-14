@@ -109,8 +109,8 @@ La section **À propos de DeckEdge** y affiche la version, le développeur, la
 licence et les crédits des principaux composants, avec accès au texte de licence.
 Une seule copie de DeckEdge doit utiliser un port donné à la fois. Si le port
 5000 est occupé par un autre logiciel, DeckEdge choisit automatiquement le port
-suivant. Si une autre copie de DeckEdge tourne déjà, quittez-la avant d’ouvrir
-la version installée ou portable.
+suivant et le mémorise pour les prochains lancements. Si une autre copie de
+DeckEdge tourne déjà, quittez-la avant d’ouvrir la version installée ou portable.
 
 [Guide de démarrage](docs/QUICKSTART.md) · [Construction](docs/BUILD.md) ·
 [Publication GitHub](docs/RELEASE.md) · [Sécurité](SECURITY.md)

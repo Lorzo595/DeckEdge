@@ -82,8 +82,9 @@ powershell -ExecutionPolicy Bypass -File tests\run-ui-tests.ps1
 
 Les tests couverts sont `studio-shell`, `studio-ergonomics`, `studio-colors`,
 `mobile-preview`, `mobile-gestures`, `startup-profile` et `diagnostics`. Le script
-accepte `-Port` et `-DataDirectory` pour isoler les données. Pour lancer un test
-manuel, définir `DECKEDGE_TEST_URL` vers le serveur de test.
+accepte `-Port` et `-DataDirectory` pour isoler les données ; le dossier de données
+doit rester sous `.build`. Pour lancer un test manuel, définir `DECKEDGE_TEST_URL`
+vers le serveur de test.
 
 Les tests du Studio interceptent les profils et les sauvegardes ; ils ne doivent
 pas modifier les profils réels. Ne jamais activer une commande réelle pour tester

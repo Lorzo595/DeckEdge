@@ -172,7 +172,7 @@ namespace DeckEdgeDesktop
         StreamWriter backendInput;
         SensorBridge sensorBridge;
         readonly object backendInputLock = new object();
-        bool quitting, cleaning, starting, polling, notified;
+        bool quitting, cleaning, starting, polling, notified, portNoticeShown;
         string phoneUrl;
 
         [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr window);
@@ -327,7 +327,24 @@ namespace DeckEdgeDesktop
                 await EnsureWebViewRuntime();
                 if (backend == null || backend.HasExited)
                 {
-                    Program.Port = Program.SelectPort(Program.Port);
+                    bool explicitPort = !String.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("DECKEDGE_PORT"));
+                    int preferred = Program.Port;
+                    if (!explicitPort && preferences.ServerPort >= 1 && preferences.ServerPort <= 65535)
+                        preferred = preferences.ServerPort;
+                    Program.Port = Program.SelectPort(preferred);
+                    if (!explicitPort && preferences.ServerPort != Program.Port)
+                    {
+                        bool changed = preferences.ServerPort >= 1;
+                        preferences.ServerPort = Program.Port;
+                        try { PreferencesStore.Save(preferences, false); } catch (Exception ex) { Program.Log("Port: " + ex.Message); }
+                        if (changed && !portNoticeShown)
+                        {
+                            portNoticeShown = true;
+                            tray.ShowBalloonTip(6000, "DeckEdge — port du téléphone",
+                                "Le port " + Program.Port + " est utilisé pour cette session. Rouvrez « Connecter le téléphone » et rescannez le QR code si votre raccourci ne répond plus.",
+                                ToolTipIcon.Info);
+                        }
+                    }
                     phoneUrl = FindPhoneUrl();
                 }
                 var health = await GetHealth();
