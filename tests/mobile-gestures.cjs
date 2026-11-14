@@ -1,6 +1,7 @@
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
 const path=require('node:path');
+const base=require('./ui-base.cjs');
 (async()=>{
  const browser=await chromium.launch({channel:'msedge',headless:true});
  try {
@@ -27,7 +28,7 @@ const path=require('node:path');
    await cdp.send('Input.dispatchTouchEvent',{type:cancel?'touchCancel':'touchEnd',touchPoints:[]});
    await page.waitForTimeout(150);
   }
-  async function fresh(){await page.goto('http://127.0.0.1:5000/');await page.locator('#btn-dom-slider').waitFor();await page.waitForFunction(()=>ws?.readyState===WebSocket.OPEN);messages=[];}
+  async function fresh(){await page.goto(base+'/');await page.locator('#btn-dom-slider').waitFor();await page.waitForFunction(()=>ws?.readyState===WebSocket.OPEN);messages=[];}
   await fresh();
   let rect=await page.locator('#btn-dom-tap').boundingBox();
   await gesture(rect.x+rect.width/2,rect.y+rect.height/2,0,-120);
@@ -73,7 +74,7 @@ const path=require('node:path');
   await desktop.route('**/api/config',route=>route.fulfill({json:fixture}));
   const desktopMessages=[];
   await desktop.routeWebSocket(/\/ws$/,socket=>socket.onMessage(message=>desktopMessages.push(message)));
-  await desktop.goto('http://127.0.0.1:5000/');
+  await desktop.goto(base+'/');
   await desktop.locator('#btn-dom-slider').waitFor();
   const desktopSlider=await desktop.locator('#btn-dom-slider').boundingBox();
   await desktop.mouse.move(desktopSlider.x+desktopSlider.width*.3,desktopSlider.y+desktopSlider.height/2);

@@ -1,6 +1,7 @@
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
 const path=require('node:path');
+const base=require('./ui-base.cjs');
 (async()=>{
  const browser=await chromium.launch({channel:'msedge',headless:true});
  try {
@@ -22,7 +23,7 @@ const path=require('node:path');
    if(route.request().method()==='POST'){unexpectedPosts.push(route.request().url());return route.abort()}
    return route.continue();
   });
-  await page.goto('http://127.0.0.1:5000/admin');await page.waitForFunction(()=>studioReady);
+  await page.goto(base+'/admin');await page.waitForFunction(()=>studioReady);
   await page.waitForFunction(()=>document.getElementById('phone-screen').offsetWidth===390);
   assert.equal(await page.evaluate(()=>studioDirty()),false);
   const measure=selector=>{
@@ -36,7 +37,7 @@ const path=require('node:path');
   const sent=[];await actual.routeWebSocket(/\/ws$/,socket=>socket.onMessage(m=>sent.push(m)));
   async function compare(width,height){
    current=await page.evaluate(()=>studioClone(config));
-   await actual.setViewportSize({width,height});await actual.goto('http://127.0.0.1:5000/');await actual.locator('.deck-layout-tile').first().waitFor();
+   await actual.setViewportSize({width,height});await actual.goto(base+'/');await actual.locator('.deck-layout-tile').first().waitFor();
    const preview=await page.evaluate(measure,'#grid-preview'),live=await actual.evaluate(measure,'#deck-grid');
    assert.equal(preview.length,live.length);
    preview.forEach((tile,i)=>{for(const key of ['x','y','width','height'])assert.ok(Math.abs(tile[key]-live[i][key])<1.1,`Aperçu différent du téléphone : widget ${i} ${key}, ${tile[key]} / ${live[i][key]}`)});

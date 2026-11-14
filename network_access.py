@@ -1,6 +1,7 @@
 """LAN pairing and localhost-only administration; no secrets in logs."""
 import hmac
 import ipaddress
+import os
 import secrets
 from urllib.parse import urlsplit
 from app_paths import DATA_DIR
@@ -17,7 +18,16 @@ def pairing_key():
     except FileNotFoundError:
         pass
     value = secrets.token_hex(32)
-    KEY_FILE.write_text(value, encoding='ascii')
+    temp = KEY_FILE.with_name(KEY_FILE.name + f'.{os.getpid()}.tmp')
+    try:
+        temp.write_text(value, encoding='ascii')
+        os.replace(temp, KEY_FILE)
+    except OSError:
+        try:
+            temp.unlink()
+        except OSError:
+            pass
+        KEY_FILE.write_text(value, encoding='ascii')
     return value
 
 

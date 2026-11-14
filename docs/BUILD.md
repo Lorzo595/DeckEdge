@@ -48,7 +48,7 @@ vérifiez l’origine, mettez à jour le manifeste et testez avant une nouvelle 
 
 ```powershell
 packaging\check-release.ps1
-.venv\Scripts\python.exe -m unittest discover -s tests -p "test_*.py"
+.venv\Scripts\python.exe -m unittest discover -s tests -t . -p "test_*.py"
 ```
 
 Les tests réseau vérifient l’association par clé, le cookie privé, le refus
@@ -74,6 +74,14 @@ node tests/studio-colors.cjs
 node tests/mobile-preview.cjs
 node tests/mobile-gestures.cjs
 node tests/startup-profile.cjs
+```
+
+Si le port 5000 est déjà utilisé par une autre copie de DeckEdge, lancer le
+serveur de test sur un autre port et pointer les tests dessus :
+
+```powershell
+.venv\Scripts\python.exe -m uvicorn server:app --host 127.0.0.1 --port 5001
+$env:DECKEDGE_TEST_URL = 'http://127.0.0.1:5001'
 ```
 
 Les tests du Studio interceptent les profils et les sauvegardes ; ils ne doivent

@@ -1011,23 +1011,6 @@
       switchPage(currentActivePageId);
     }
 
-    function getSmartActiveIcon(btn) {
-      if (btn.active_icon) return btn.active_icon;
-      if (btn.icon === '🎙️' || btn.icon === '🔊') return '🔇';
-      if (btn.icon === '⏯️') return '⏸️';
-      if (btn.icon === '🔴') return '⏹️';
-      return btn.icon || '⚡';
-    }
-
-    function getSmartActiveLabel(btn) {
-      if (btn.active_label) return btn.active_label;
-      const lb = (btn.label || '').toLowerCase();
-      if (lb.includes('micro') || lb.includes('mute')) return 'MUTÉ';
-      if (lb.includes('rec') || lb.includes('obs')) return 'REC EN COURS';
-      if (lb.includes('pause') || lb.includes('play')) return 'EN PAUSE';
-      return btn.label || '';
-    }
-
     function renderGrid() {
       const grid = document.getElementById('grid-preview');
       grid.innerHTML = '';
@@ -1047,8 +1030,9 @@
 
         const isAct = btn.is_toggle && btn.state;
         const btnBg = isAct ? (btn.active_color || '#991b1b') : (btn.color || '#161c2e');
-        const icon = studioEscape(isAct ? (btn.active_icon || getSmartActiveIcon(btn)) : (btn.icon || '⚡'));
-        const label = studioEscape(isAct ? (btn.active_label || getSmartActiveLabel(btn)) : (btn.label || 'Sans nom'));
+        const display = isAct ? DeckLayout.activeDisplay(btn) : {icon: btn.icon || '⚡', label: btn.label || 'Sans nom'};
+        const icon = studioEscape(display.icon);
+        const label = studioEscape(display.label);
 
         el.style.backgroundColor = btn.type === 'slider' ? '#1c201b' : (btnBg.toLowerCase() === '#161c2e' ? '#2b2e27' : btnBg);
         el.style.borderColor = btnBg.toLowerCase() === '#161c2e' ? '#454a3d' : btnBg;
@@ -1490,13 +1474,13 @@
         const badgeClass = app.category === 'Jeux' ? 'game' : (app.category === 'Applications' ? 'app' : '');
         card.innerHTML = `
           <div class="app-card-left">
-            <span class="app-card-icon">${app.icon || '⚡'}</span>
+            <span class="app-card-icon">${studioEscape(app.icon || '⚡')}</span>
             <div>
-              <div class="app-card-name">${app.name}</div>
-              <div style="font-size: 11px; color: var(--text-muted); max-width: 380px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${app.target}</div>
+              <div class="app-card-name">${studioEscape(app.name)}</div>
+              <div style="font-size: 11px; color: var(--text-muted); max-width: 380px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${studioEscape(app.target)}</div>
             </div>
           </div>
-          <span class="app-card-badge ${badgeClass}">${app.category || 'APP'}</span>
+          <span class="app-card-badge ${badgeClass}">${studioEscape(app.category || 'APP')}</span>
         `;
         card.onclick = () => selectAppItem(app);
         container.appendChild(card);
@@ -1638,15 +1622,15 @@
         });
         const data = await res.json();
         if (data.success) {
-          feedback.innerHTML = `<span style="color: #22c55e; font-weight: 700;">✅ ${data.message}</span>`;
+          feedback.innerHTML = `<span style="color: #22c55e; font-weight: 700;">✅ ${studioEscape(data.message)}</span>`;
           setTimeout(() => {
             checkDiscordStatus();
           }, 1000);
         } else {
-          feedback.innerHTML = `<span style="color: #ef4444; font-weight: 600;">❌ ${data.error || 'Erreur lors de la liaison'}</span>`;
+          feedback.innerHTML = `<span style="color: #ef4444; font-weight: 600;">❌ ${studioEscape(data.error || 'Erreur lors de la liaison')}</span>`;
         }
       } catch (e) {
-        feedback.innerHTML = `<span style="color: #ef4444;">Erreur réseau: ${e.message}</span>`;
+        feedback.innerHTML = `<span style="color: #ef4444;">Erreur réseau: ${studioEscape(e.message)}</span>`;
       }
     }
 

@@ -9,7 +9,10 @@ class NetworkAccessTests(unittest.TestCase):
         return TestClient(app, base_url=f'http://{host}', client=(address, 12345))
 
     def test_local_admin_works_without_pairing(self):
-        self.assertEqual(self.client().get('/admin').status_code, 200)
+        response = self.client().get('/admin')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers['x-frame-options'], 'DENY')
+        self.assertIn("frame-ancestors 'none'", response.headers['content-security-policy'])
 
     def test_external_origin_and_rebinding_are_rejected(self):
         self.assertEqual(self.client().get('/api/config', headers={'Origin': 'https://example.org'}).status_code, 403)

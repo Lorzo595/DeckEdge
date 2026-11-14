@@ -78,7 +78,21 @@ namespace DeckEdgeDesktop
 
         internal static void Log(string message)
         {
-            try { lock (LogLock) File.AppendAllText(Path.Combine(DataDirectory, "desktop.log"), DateTime.Now.ToString("s") + " " + message + Environment.NewLine, Encoding.UTF8); }
+            try
+            {
+                lock (LogLock)
+                {
+                    string path = Path.Combine(DataDirectory, "desktop.log");
+                    var info = new FileInfo(path);
+                    if (info.Exists && info.Length > 2000000)
+                    {
+                        string previous = path + ".1";
+                        if (File.Exists(previous)) File.Delete(previous);
+                        File.Move(path, previous);
+                    }
+                    File.AppendAllText(path, DateTime.Now.ToString("s") + " " + message + Environment.NewLine, Encoding.UTF8);
+                }
+            }
             catch { }
         }
     }
@@ -107,7 +121,6 @@ namespace DeckEdgeDesktop
         bool quitting, cleaning, starting, polling, notified;
         string phoneUrl;
 
-        [DllImport("kernel32.dll")] static extern uint SetThreadExecutionState(uint flags);
         [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr window);
         [DllImport("dwmapi.dll")] static extern int DwmSetWindowAttribute(IntPtr window, int attribute, ref int value, int size);
 
@@ -169,6 +182,7 @@ namespace DeckEdgeDesktop
             timer.Tick += async delegate {
                 if (stopEvent.WaitOne(0)) { RequestQuit(); return; }
                 if (showEvent.WaitOne(0)) RestoreStudio();
+                if (keepAwake.Checked) ApplyKeepAwake();
                 if (!starting && !quitting) await RefreshHealth();
             };
             Shown += async delegate {
@@ -199,7 +213,11 @@ namespace DeckEdgeDesktop
             })) dialog.ShowDialog(this);
         }
 
-        void ApplyKeepAwake() { SetThreadExecutionState(keepAwake.Checked ? 0x80000001u : 0x80000000u); }
+        void ApplyKeepAwake()
+        {
+            if (!KeepAwakeController.Apply(keepAwake.Checked))
+                Program.Log("Windows a refusé la demande de maintien en éveil.");
+        }
 
         void RestoreStudio()
         {
@@ -516,7 +534,7 @@ namespace DeckEdgeDesktop
             if (cleaning) return;
             SaveWindowPreferences();
             e.Cancel = true; cleaning = true; timer.Stop(); Enabled = false;
-            SetThreadExecutionState(0x80000000u);
+            KeepAwakeController.Apply(false);
             if (sensorBridge != null) sensorBridge.Dispose();
             try {
                 if (backend != null && !backend.HasExited) {
