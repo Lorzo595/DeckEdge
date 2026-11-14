@@ -1,31 +1,42 @@
-# DeckEdge 0.1.2 — Fiabilité, démarrage Windows et contributeurs
+# DeckEdge 0.1.3 — Profils, sauvegardes et diagnostic
 
-Préversion de test Windows x64, développée par **Lorzo595**, avec l’aide de **ChatGPT**. Merci à **xavco63** pour sa contribution dans la PR #2.
+Préversion Windows x64 développée par **Lorzo595**, avec l’aide de **ChatGPT**. Merci à **xavco63** pour les contributions intégrées dans les PR #4 et #5.
 
-## Nouveautés
+## Nouveautés depuis 0.1.2
 
-- Sauvegardes sérialisées et récupération des profils depuis leur sauvegarde valide.
-- Validation des identifiants et messages du téléphone, affichage des états harmonisé, journaux limités en taille.
-- Corrections du verrouillage Discord, des commandes avant sauvegarde et du volume relatif des périphériques.
-- Reprises courtes des écritures lorsque Windows bloque temporairement un fichier.
-- Démarrage Windows via un raccourci vérifié et détection d’une désactivation système.
-- Option pour maintenir le PC et son écran éveillés pendant que DeckEdge reste ouvert.
-- Contributeurs dans À propos et dans le README. Le QR code et l’adresse permanente du PC sont conservés.
+- Menu **Profils** : export JSON, import validé et annulable avant enregistrement.
+- **Sauvegardes locales** horodatées : conservation des 20 dernières et restauration depuis le Studio.
+- Sauvegarde de sécurité avant restauration ; si elle échoue, la restauration est annulée et la configuration actuelle est conservée.
+- Protection contre un enregistrement et une restauration simultanés.
+- Panneau **Diagnostic** avec rapport copiable ou téléchargeable et masquage des chemins personnels, clés et jetons connus.
+- Port configurable et choix automatique en cas de conflit, mémorisé entre les lancements et conservé lors de l’application des paramètres. Le QR code et mDNS utilisent le port choisi.
+- Écritures de configuration regroupées avec reprise après une erreur temporaire.
+- Tests navigateur et C# intégrés aux contrôles GitHub ; normalisation des fins de ligne des sources.
 
-## Télécharger et mettre à jour
+Le QR code, l’adresse permanente du PC, le démarrage Windows et le maintien en éveil du PC et de son écran sont conservés.
 
-- **DeckEdge-0.1.2-Setup-x64.exe** : installation classique.
-- **DeckEdge-0.1.2-Portable-x64.zip** : extraire le dossier et lancer DeckEdge.exe.
-- **DeckEdge-0.1.2-Source.zip** : sources publiques ; **SHA256SUMS.txt** : empreintes.
+## Télécharger
 
-Quitter l’ancienne version depuis son icône près de l’horloge avant la mise à jour. En portable, copier l’ancien dossier `data` dans le nouveau dossier pour conserver profils et association du téléphone. L’installation classique conserve ses données dans `%LOCALAPPDATA%\DeckEdge`.
+- **DeckEdge-0.1.3-Setup-x64.exe** : installation Windows classique.
+- **DeckEdge-0.1.3-Portable-x64.zip** : extraire tout le dossier puis lancer DeckEdge.exe.
+- **DeckEdge-0.1.3-Source.zip** : sources publiques nettoyées.
+- **SHA256SUMS.txt** : empreintes des téléchargements.
 
-Le démarrage discret place DeckEdge près de l’horloge. L’option anti-veille concerne l’inactivité ; elle ne remplace pas une veille demandée manuellement. Pour le téléphone, PC et mobile doivent rester sur le même réseau privé ; scanner le QR puis conserver le raccourci. Ne pas partager la clé du QR.
+Windows 10 build 19041+ / Windows 11 **x64**. Python et LibreHardwareMonitor sont inclus. WebView2 est proposé s’il manque ; Internet est alors nécessaire. L’accès complet aux capteurs reste facultatif et peut demander une autorisation administrateur.
+
+## Mise à jour
+
+1. Quitter complètement l’ancienne version depuis son icône près de l’horloge.
+2. Installer la 0.1.3, ou extraire le nouveau portable dans un nouveau dossier.
+3. En portable, recopier l’ancien dossier `data` dans le nouveau pour conserver profils, sauvegardes et clé du téléphone. L’installation classique conserve ses données dans `%LOCALAPPDATA%\DeckEdge`.
+4. Si un conflit impose un changement de port et que le raccourci mobile ne répond plus, rouvrir **Connecter le téléphone** et scanner le nouveau QR. Le port choisi est ensuite mémorisé.
+
+Les exports de profils peuvent contenir vos chemins et cibles d’actions : les relire avant partage. Relire également le diagnostic avant de le publier. Ne jamais partager le QR ou sa clé privée. PC et téléphone doivent rester sur le même réseau privé.
 
 ## Validation et limites
 
-53 tests Python et six tests Edge automatisés réussis ; compilation native et demandes Windows de maintien en éveil vérifiées. Les tests de commandes utilisent des simulations : la validation réelle Discord/audio sur plusieurs machines reste à compléter, ainsi que le lancement après une nouvelle ouverture de session Windows et l’installation sur Windows vierge.
+68 tests Python, huit tests Edge et test C# réussis sur les fonctionnalités fusionnées. Les contrôles GitHub compilent également les paquets Windows et vérifient les distributions. Les cas d’échec de sauvegarde et d’opérations concurrentes sont couverts par des tests de régression.
 
-Cette version reste une **préversion**, pas la 1.0.0. Exécutables non signés : SmartScreen peut afficher un avertissement. Ne pas exposer le serveur HTTP local sur Internet.
+Cette version reste une **préversion**, pas la 1.0.0. Les exécutables sont non signés (avertissement SmartScreen possible). La validation sur plusieurs matériels, sur Windows vierge et après redémarrage complet de Windows reste à compléter. Les tests automatisés de commandes utilisent des simulations. Ne pas exposer le serveur HTTP sur Internet.
 
-[Documentation](https://github.com/Lorzo595/DeckEdge#readme) · [Contribuer](https://github.com/Lorzo595/DeckEdge/blob/main/CONTRIBUTING.md) · [Signaler un problème](https://github.com/Lorzo595/DeckEdge/issues)
+[Documentation](https://github.com/Lorzo595/DeckEdge#readme) · [Contributeurs](https://github.com/Lorzo595/DeckEdge#contributeurs) · [Signaler un problème](https://github.com/Lorzo595/DeckEdge/issues)
