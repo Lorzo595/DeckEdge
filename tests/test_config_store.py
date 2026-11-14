@@ -122,7 +122,9 @@ class ConfigStoreTests(unittest.TestCase):
 
             store.update(rename)
             deadline = time.time() + 3
-            while time.time() < deadline and len(attempts) < 2:
+            while time.time() < deadline:
+                if len(attempts) >= 2 and not store._dirty:
+                    break
                 time.sleep(0.02)
             self.assertGreaterEqual(len(attempts), 2)
             self.assertFalse(store._dirty)
