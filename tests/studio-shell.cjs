@@ -1,7 +1,7 @@
 const {chromium}=require('playwright');const assert=require('node:assert/strict');
 const base=require('./ui-base.cjs');
 (async()=>{const browser=await chromium.launch({channel:'msedge',headless:true});try{
-const page=await browser.newPage({viewport:{width:1200,height:900}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+const page=await browser.newPage({locale:'fr-FR',viewport:{width:1200,height:900}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
 const fixture={active_page_id:'page_main',pages:[{id:'page_main',name:'Principal',icon:'⌘',buttons:[{id:'a',label:'Musique',icon:'♫',type:'key',target:'playpause',color:'#161c2e'}]},{id:'games',name:'Jeux',icon:'▣',buttons:[]}],monitoring:[{label:'CPU',sensor_id:'cpu_load',secondary_sensor_id:''}]};
 let posts=0;await page.route('**/api/config',r=>{if(r.request().method()!=='GET')posts++;return r.fulfill({json:fixture})});
 await page.goto(base+'/admin');await page.waitForFunction(()=>studioReady);assert.equal(await page.evaluate(()=>studioDirty()),false);

@@ -8,7 +8,7 @@ const base=require('./ui-base.cjs');
   const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
   const fixture={active_page_id:'page_main',pages:[{id:'page_main',name:'Principal',icon:'⌘',buttons:[{id:'a',label:'A',icon:'⌘',type:'key',target:'playpause'}]}],monitoring:[{label:'CPU',sensor_id:'cpu_load',secondary_sensor_id:''}]};
   await page.route('**/api/config',route=>route.fulfill({json:fixture}));
-  await page.goto(base+'/');await page.locator('#phone-language').waitFor();
+  await page.goto(base+'/?lang=en');await page.locator('#phone-language').waitFor();
   assert.equal(await page.evaluate(()=>I18n.lang),'en');
   assert.equal(await page.locator('#phone-shortcut summary').innerText(),'Keep this Deck on your phone');
   assert.equal(await page.locator('#phone-language').innerText(),'FR');

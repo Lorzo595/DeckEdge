@@ -8,7 +8,7 @@ const base=require('./ui-base.cjs');
   const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
   const fixture={active_page_id:'page_main',pages:[{id:'page_main',name:'Principal',icon:'⌘',buttons:[{id:'a',label:'Ma touche',icon:'⌘',type:'key',target:'playpause',color:'#161c2e'}]}],monitoring:[{label:'CPU',sensor_id:'cpu_load',secondary_sensor_id:''}]};
   await page.route('**/api/config',route=>route.fulfill({json:fixture}));
-  await page.goto(base+'/admin');await page.waitForFunction(()=>studioReady && typeof I18n!=='undefined');
+  await page.goto(base+'/admin?lang=en');await page.waitForFunction(()=>studioReady && typeof I18n!=='undefined');
   await page.waitForFunction(()=>document.body.innerText.includes('Reload'));
   assert.equal(await page.evaluate(()=>I18n.lang),'en');
   assert.equal(await page.locator('#studio-language').inputValue(),'en');

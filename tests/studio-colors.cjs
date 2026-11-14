@@ -4,7 +4,7 @@ const base=require('./ui-base.cjs');
 (async()=>{
  const browser=await chromium.launch({channel:'msedge',headless:true});
  try {
-  const page=await browser.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  const page=await browser.newPage({locale:'fr-FR'});const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(()=>{
    window.colorMessages=[];window.nativeCallbacks=[];window.chrome ||= {};
    window.chrome.webview={postMessage:message=>colorMessages.push(message),addEventListener:(kind,listener)=>{if(kind==='message')nativeCallbacks.push(listener)}};

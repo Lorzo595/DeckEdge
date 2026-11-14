@@ -4,7 +4,7 @@ const base=require('./ui-base.cjs');
 (async()=>{
  const browser=await chromium.launch({channel:'msedge',headless:true});
  try {
-  const page=await browser.newPage({viewport:{width:1200,height:900}});
+  const page=await browser.newPage({locale:'fr-FR',viewport:{width:1200,height:900}});
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   const fixture={active_page_id:'page_main',pages:[{id:'page_main',name:'Principal',icon:'⌘',buttons:[{
    id:'seq',label:'Ma séquence',icon:'🔗',type:'sequence',target:'',color:'#161c2e',is_toggle:false,state:false,
