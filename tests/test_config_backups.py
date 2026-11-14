@@ -39,6 +39,19 @@ class ConfigBackupTests(unittest.TestCase):
             with self.subTest(name=name), self.assertRaises(FileNotFoundError):
                 self.store.restore_backup(name)
 
+    def test_restore_aborts_when_safety_backup_fails(self):
+        self.store.save(make_config("Ancien"))
+        backup = self.store.create_backup()
+        self.store.save(make_config("Actuel à conserver"))
+        before = self.store.path.read_bytes()
+        for error in (PermissionError("read-only backup folder"), FileNotFoundError("backup folder unavailable")):
+            with self.subTest(error=type(error).__name__):
+                with patch.object(self.store, "create_backup", side_effect=error):
+                    with self.assertRaisesRegex(RuntimeError, "Restauration annulée"):
+                        self.store.restore_backup(backup["name"])
+                self.assertEqual(self.store.path.read_bytes(), before)
+                self.assertEqual(self.store.load().pages[0].name, "Actuel à conserver")
+
     def test_old_backups_are_pruned(self):
         self.store.save(make_config())
         for _ in range(23):
@@ -89,6 +102,16 @@ class ConfigBackupEndpointTests(unittest.TestCase):
         )
         self.assertEqual(client.get("/api/config/backups", params={"key": server.PHONE_KEY}).status_code, 403)
         self.assertEqual(client.post("/api/config/validate", params={"key": server.PHONE_KEY}, json={}).status_code, 403)
+
+    def test_restore_endpoint_reports_safety_failure_without_replacing_config(self):
+        backup = self.store.create_backup()
+        self.store.save(make_config("À conserver"))
+        before = self.store.path.read_bytes()
+        with patch.object(self.store, "create_backup", side_effect=FileNotFoundError("backup unavailable")):
+            response = self.client.post("/api/config/restore", json={"name": backup["name"]})
+        self.assertEqual(response.status_code, 500)
+        self.assertIn("Restauration annulée", response.json()["detail"])
+        self.assertEqual(self.store.path.read_bytes(), before)
 
 
 if __name__ == "__main__":
