@@ -201,13 +201,28 @@ namespace DeckEdgeDesktop
             actions.Controls.Add(save); actions.Controls.Add(cancel); Controls.Add(actions);
             AcceptButton = save; CancelButton = cancel;
             save.Click += delegate {
-                Result = new AppPreferences {
-                    StartWithWindows = startup.Checked, StartupInTray = startupTray.Checked, CloseToTray = closeTray.Checked,
-                    KeepAwake = awake.Checked, FullSensorAccess = fullSensors.Checked,
-                    WindowWidth = original.WindowWidth, WindowHeight = original.WindowHeight, WindowMaximized = original.WindowMaximized
-                };
+                Result = BuildResult(
+                    original, startup.Checked, startupTray.Checked, closeTray.Checked, awake.Checked, fullSensors.Checked
+                );
                 try { PreferencesStore.Save(Result, true); DialogResult = DialogResult.OK; Close(); }
                 catch (Exception ex) { MessageBox.Show(this, "Impossible d'appliquer ces paramètres.\n\n" + ex.Message, "DeckEdge", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            };
+        }
+
+        internal static AppPreferences BuildResult(
+            AppPreferences original, bool startWithWindows, bool startupInTray, bool closeToTray,
+            bool keepAwake, bool fullSensorAccess)
+        {
+            return new AppPreferences {
+                StartWithWindows = startWithWindows,
+                StartupInTray = startupInTray,
+                CloseToTray = closeToTray,
+                KeepAwake = keepAwake,
+                FullSensorAccess = fullSensorAccess,
+                WindowWidth = original.WindowWidth,
+                WindowHeight = original.WindowHeight,
+                WindowMaximized = original.WindowMaximized,
+                ServerPort = original.ServerPort
             };
         }
 

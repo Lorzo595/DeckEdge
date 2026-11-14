@@ -36,6 +36,9 @@ namespace DeckEdgeDesktop
             var restored = PreferencesStore.Load();
             if (restored.CloseToTray || restored.KeepAwake || restored.FullSensorAccess || restored.WindowWidth != 1024 || restored.ServerPort != 5012)
                 throw new Exception("Préférences non restaurées.");
+            var applied = SettingsForm.BuildResult(restored, false, false, false, false, false);
+            if (applied.ServerPort != 5012)
+                throw new Exception("Le port serveur n'est pas conservé après « Appliquer ».");
             restored.WindowMaximized = true; PreferencesStore.Save(restored, false);
             if (!PreferencesStore.Load().WindowMaximized || File.Exists(Path.Combine(Project,"app-settings.json.tmp")))
                 throw new Exception("Écriture atomique incorrecte.");
