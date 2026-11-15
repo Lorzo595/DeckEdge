@@ -6,6 +6,10 @@
 - Pairing page and server error messages in French or English.
 - Windows interface (icon, settings, dialogs and notifications) in French or English, with the choice remembered on the PC.
 - Repository documentation, issue templates and code comments in English.
+- Action test in the Studio: validate a key, application or audio target without executing it.
+- Sequence step conditions: button state, running application, muted or live microphone.
+- Searchable icon library with categories and recent icons.
+- Phone accessibility: pinch zoom, `aria-pressed` on toggle keys and the mute button.
 
 ## 0.1.3 — Profiles, backups and diagnostics
 

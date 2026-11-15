@@ -16,6 +16,14 @@ const base=require('./ui-base.cjs');
   assert.equal(await page.locator('.workspace-heading h2').innerText(),'Your Deck');
   assert.match(await page.locator('#editor-title').innerText(),/Customize$/);
   assert.equal(await page.getByRole('heading',{name:'Actions',exact:true}).innerText(),'Actions');
+  assert.equal(await page.locator('#action-test-button').innerText(),'▶ Test');
+
+  await page.getByRole('button',{name:'Library',exact:true}).click();
+  await page.waitForFunction(()=>document.getElementById('icon-library-modal').style.display==='flex');
+  assert.equal(await page.locator('#icon-library-title').innerText(),'Icon library');
+  assert.equal(await page.getByRole('button',{name:'All',exact:true}).innerText(),'All');
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(()=>document.getElementById('icon-library-modal').style.display==='none');
 
   await page.locator('#profiles-button').click();
   await page.getByRole('menuitem',{name:'Export profiles…'}).waitFor();
@@ -27,6 +35,8 @@ const base=require('./ui-base.cjs');
   assert.equal(await page.locator('#studio-save').innerText(),'Enregistrer');
   assert.equal(await page.locator('.workspace-heading h2').innerText(),'Votre Deck');
   assert.match(await page.locator('#editor-title').innerText(),/Personnaliser$/);
+  assert.equal(await page.locator('#action-test-button').innerText(),'▶ Tester');
+  assert.equal(await page.getByRole('button',{name:'Bibliothèque',exact:true}).innerText(),'Bibliothèque');
 
   await page.reload();await page.waitForFunction(()=>studioReady && document.body.innerText.includes('Recharger'));
   assert.equal(await page.evaluate(()=>I18n.lang),'fr');

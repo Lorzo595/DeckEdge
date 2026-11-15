@@ -207,10 +207,26 @@ function moveStudioButton(pageId) {
   studioNotify(`Touche déplacée vers « ${destination.name} ».`, 'Voir', () => switchPage(destination.id));
 }
 
+function remapClonedButtons(pages) {
+  const ids = new Map();
+  pages.forEach(page => (page.buttons || []).forEach(button => {
+    const id = studioId('b');
+    ids.set(button.id, id);
+    button.id = id;
+    button.state = false;
+  }));
+  pages.forEach(page => (page.buttons || []).forEach(button => {
+    (button.steps || []).forEach(step => {
+      if (['button_on', 'button_off'].includes(step.condition) && ids.has(step.condition_target))
+        step.condition_target = ids.get(step.condition_target);
+    });
+  }));
+}
+
 function duplicateStudioPage(pageId) {
   const source = config.pages.find(p => p.id === pageId); if (!source) return;
   const copy = studioClone(source); copy.id = studioId('page'); copy.name = source.name.slice(0,42) + ' (copie)';
-  copy.buttons.forEach(button => { button.id = studioId('b'); button.state = false; });
+  remapClonedButtons([copy]);
   config.pages.splice(config.pages.indexOf(source) + 1, 0, copy); switchPage(copy.id);
   studioNotify('Profil dupliqué.');
 }
@@ -348,7 +364,7 @@ function setupStudioErgonomics() {
       }
     }
     if (modal) {
-      if (event.key === 'Escape') { closeAppPickerModal(); closeDiscordModal(); closeDiagnosticsModal(); closeBackupsModal(); }
+      if (event.key === 'Escape') { closeAppPickerModal(); closeDiscordModal(); closeDiagnosticsModal(); closeBackupsModal(); closeIconLibrary(); }
       return;
     }
     if (ctrl && event.key.toLowerCase() === 's') { event.preventDefault(); saveData(); return; }
@@ -384,4 +400,167 @@ function setupStudioErgonomics() {
   });
   window.addEventListener('beforeunload', event => { if (studioDirty()) { event.preventDefault(); event.returnValue = ''; } });
   if (window.chrome?.webview) document.getElementById('app-settings-button').hidden = false;
+}
+
+const STUDIO_ICON_CATEGORIES = ['all', 'audio', 'media', 'apps', 'system', 'gaming', 'symbols'];
+const STUDIO_ICONS = [
+  {icon:'🔊', cat:'audio', keywords:'sound volume son haut-parleur speaker loud'},
+  {icon:'🔉', cat:'audio', keywords:'sound volume son moyen medium'},
+  {icon:'🔈', cat:'audio', keywords:'sound volume son bas low quiet'},
+  {icon:'🔇', cat:'audio', keywords:'mute muet silence couper'},
+  {icon:'🎧', cat:'audio', keywords:'headset casque headphones écouteurs'},
+  {icon:'🎙️', cat:'audio', keywords:'microphone micro studio'},
+  {icon:'🎵', cat:'audio', keywords:'music musique note chanson'},
+  {icon:'🎶', cat:'audio', keywords:'music musique notes chanson'},
+  {icon:'🎚️', cat:'audio', keywords:'slider mixer volume curseur réglage'},
+  {icon:'📻', cat:'audio', keywords:'radio station station'},
+  {icon:'⏯️', cat:'media', keywords:'play pause lecture pause'},
+  {icon:'▶️', cat:'media', keywords:'play lecture démarrer'},
+  {icon:'⏸️', cat:'media', keywords:'pause lecture'},
+  {icon:'⏹️', cat:'media', keywords:'stop arrêter'},
+  {icon:'⏭️', cat:'media', keywords:'next suivant piste'},
+  {icon:'⏮️', cat:'media', keywords:'previous précédent retour piste'},
+  {icon:'⏺️', cat:'media', keywords:'record enregistrer rec'},
+  {icon:'⏩', cat:'media', keywords:'forward avance rapide'},
+  {icon:'⏪', cat:'media', keywords:'rewind retour arrière'},
+  {icon:'🔴', cat:'media', keywords:'live direct rec rouge'},
+  {icon:'💬', cat:'apps', keywords:'chat discussion discord message'},
+  {icon:'🌐', cat:'apps', keywords:'web browser navigateur internet site'},
+  {icon:'📺', cat:'apps', keywords:'tv stream télévision'},
+  {icon:'🎬', cat:'apps', keywords:'movie film cinéma vidéo'},
+  {icon:'📷', cat:'apps', keywords:'camera photo appareil'},
+  {icon:'💻', cat:'apps', keywords:'laptop pc ordinateur portable'},
+  {icon:'🖥️', cat:'apps', keywords:'desktop écran pc monitor'},
+  {icon:'📱', cat:'apps', keywords:'phone téléphone mobile'},
+  {icon:'🧩', cat:'apps', keywords:'plugin extension module'},
+  {icon:'📧', cat:'apps', keywords:'mail email courriel message'},
+  {icon:'⚙️', cat:'system', keywords:'settings paramètres réglages gear'},
+  {icon:'🖱️', cat:'system', keywords:'mouse souris'},
+  {icon:'⌨️', cat:'system', keywords:'keyboard clavier'},
+  {icon:'🖨️', cat:'system', keywords:'printer imprimante'},
+  {icon:'📁', cat:'system', keywords:'folder dossier répertoire'},
+  {icon:'📂', cat:'system', keywords:'folder open dossier ouvert'},
+  {icon:'🗂️', cat:'system', keywords:'files fichiers classement'},
+  {icon:'🔒', cat:'system', keywords:'lock verrou sécurité'},
+  {icon:'🔓', cat:'system', keywords:'unlock déverrouiller'},
+  {icon:'🧹', cat:'system', keywords:'clean nettoyer purge'},
+  {icon:'🎮', cat:'gaming', keywords:'game jeu manette controller'},
+  {icon:'🕹️', cat:'gaming', keywords:'joystick arcade manette'},
+  {icon:'🏆', cat:'gaming', keywords:'trophy trophée victoire'},
+  {icon:'🎯', cat:'gaming', keywords:'target cible objectif'},
+  {icon:'🚀', cat:'gaming', keywords:'rocket fusée boost lancement'},
+  {icon:'⚔️', cat:'gaming', keywords:'sword épée combat'},
+  {icon:'🛡️', cat:'gaming', keywords:'shield bouclier défense'},
+  {icon:'🔥', cat:'gaming', keywords:'fire feu flamme'},
+  {icon:'💥', cat:'gaming', keywords:'boom explosion impact'},
+  {icon:'🎲', cat:'gaming', keywords:'dice dé hasard'},
+  {icon:'⚡', cat:'symbols', keywords:'power bolt éclair énergie'},
+  {icon:'✅', cat:'symbols', keywords:'check ok validé oui'},
+  {icon:'❌', cat:'symbols', keywords:'cross non erreur'},
+  {icon:'⭐', cat:'symbols', keywords:'star étoile favori'},
+  {icon:'❤️', cat:'symbols', keywords:'heart coeur amour'},
+  {icon:'🔔', cat:'symbols', keywords:'bell cloche notification'},
+  {icon:'🔕', cat:'symbols', keywords:'bell mute cloche muette'},
+  {icon:'💡', cat:'symbols', keywords:'idea idée ampoule'},
+  {icon:'📌', cat:'symbols', keywords:'pin épingle'},
+  {icon:'🏠', cat:'symbols', keywords:'home maison accueil'},
+];
+const STUDIO_RECENT_ICONS_KEY = 'deckedge.recentIcons';
+let studioIconCategory = 'all';
+let studioIconReturnFocus = null;
+
+function studioIconSearchText(value) {
+  return String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function studioRecentIcons() {
+  try {
+    const value = JSON.parse(localStorage.getItem(STUDIO_RECENT_ICONS_KEY) || '[]');
+    return Array.isArray(value) ? value.filter(icon => typeof icon === 'string').slice(0, 12) : [];
+  } catch { return []; }
+}
+
+function studioRememberIcon(icon) {
+  try {
+    const next = [icon, ...studioRecentIcons().filter(item => item !== icon)].slice(0, 12);
+    localStorage.setItem(STUDIO_RECENT_ICONS_KEY, JSON.stringify(next));
+  } catch {}
+}
+
+function studioIconButton(icon, label) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'icon-library-item';
+  button.textContent = icon;
+  button.setAttribute('aria-label', label || icon);
+  button.onclick = () => setIconFromLibrary(icon);
+  return button;
+}
+
+function renderIconLibrary() {
+  const modal = document.getElementById('icon-library-modal');
+  if (!modal || modal.style.display === 'none') return;
+  const search = document.getElementById('icon-library-search');
+  const query = studioIconSearchText(search ? search.value : '');
+  const categories = document.getElementById('icon-library-categories');
+  const grid = document.getElementById('icon-library-grid');
+  const recents = document.getElementById('icon-library-recents');
+  const recentsWrap = document.getElementById('icon-library-recents-wrap');
+  const empty = document.getElementById('icon-library-empty');
+  if (!categories || !grid || !recents || !recentsWrap || !empty) return;
+
+  categories.replaceChildren();
+  STUDIO_ICON_CATEGORIES.forEach(category => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'icon-library-category' + (category === studioIconCategory ? ' active' : '');
+    button.textContent = I18n.t('studio.icons.category.' + category);
+    button.onclick = () => { studioIconCategory = category; renderIconLibrary(); };
+    categories.append(button);
+  });
+
+  const recentIcons = studioRecentIcons().filter(icon => {
+    const entry = STUDIO_ICONS.find(item => item.icon === icon);
+    return !query || (entry && studioIconSearchText(entry.keywords).includes(query));
+  });
+  recents.replaceChildren();
+  recentsWrap.hidden = recentIcons.length === 0;
+  recentIcons.forEach(icon => recents.append(studioIconButton(icon, I18n.t('studio.icons.insert', {icon}))));
+
+  const matches = STUDIO_ICONS.filter(entry =>
+    (studioIconCategory === 'all' || entry.cat === studioIconCategory) &&
+    (!query || studioIconSearchText(entry.keywords).includes(query))
+  );
+  grid.replaceChildren();
+  matches.forEach(entry => grid.append(studioIconButton(entry.icon, I18n.t('studio.icons.insert', {icon: entry.icon}))));
+  empty.hidden = matches.length > 0;
+}
+
+function openIconLibrary() {
+  const modal = document.getElementById('icon-library-modal');
+  if (!modal) return;
+  studioIconReturnFocus = document.activeElement;
+  modal.style.display = 'flex';
+  const search = document.getElementById('icon-library-search');
+  if (search) search.value = '';
+  renderIconLibrary();
+  search?.focus();
+}
+
+function closeIconLibrary() {
+  const modal = document.getElementById('icon-library-modal');
+  if (!modal) return;
+  modal.style.display = 'none';
+  if (studioIconReturnFocus && typeof studioIconReturnFocus.focus === 'function') studioIconReturnFocus.focus();
+  studioIconReturnFocus = null;
+}
+
+function closeIconLibraryOnOverlay(event) {
+  if (event.target === document.getElementById('icon-library-modal')) closeIconLibrary();
+}
+
+function setIconFromLibrary(icon) {
+  setEmoji(icon);
+  studioRememberIcon(icon);
+  closeIconLibrary();
 }

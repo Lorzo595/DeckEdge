@@ -19,7 +19,7 @@ const base=require('./ui-base.cjs');
   await page.locator('.preview-btn').first().click();
   await page.waitForFunction(()=>document.getElementById('box-sequence-setup').style.display==='flex');
   assert.equal(await page.locator('#sequence-steps .sequence-step').count(),2);
-  assert.equal(await page.locator('#sequence-steps .sequence-step').nth(0).locator('select').inputValue(),'hotkey');
+  assert.equal(await page.locator('#sequence-steps .sequence-step').nth(0).locator('select').first().inputValue(),'hotkey');
   assert.equal(await page.locator('#sequence-steps .sequence-step').nth(0).locator('input[type=text]').inputValue(),'ctrl,shift,m');
   assert.equal(await page.locator('#sequence-steps .sequence-step').nth(0).locator('input[type=number]').inputValue(),'0.2');
 
@@ -27,7 +27,7 @@ const base=require('./ui-base.cjs');
   await page.getByRole('button',{name:'+ Ajouter une étape'}).click();
   await page.waitForFunction(()=>document.querySelectorAll('#sequence-steps .sequence-step').length===3);
   const third=page.locator('#sequence-steps .sequence-step').nth(2);
-  await third.locator('select').selectOption('launch');
+  await third.locator('select').first().selectOption('launch');
   await third.locator('input[type=text]').fill('calc.exe');
   await third.locator('input[type=number]').fill('0.5');
   await page.locator('#studio-save').click();

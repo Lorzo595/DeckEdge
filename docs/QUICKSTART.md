@@ -20,6 +20,7 @@ Choose a profile on the left. Add an action from the library on the right,
 by clicking or dragging it onto the preview. Click a key in the preview to
 edit its settings below. **Size and behavior** sets the width, the height and the toggle mode. Technical options stay collapsed.
 A keyboard shortcut can be recorded by pressing the keys together.
+The Test button validates the command and its targets without running it.
 In Settings, the About DeckEdge section shows the installed version,
 the developer, the MIT license and the main components.
 

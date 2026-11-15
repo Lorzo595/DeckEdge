@@ -235,6 +235,68 @@
       font-size: 12px;
     }
     .sequence-step .btn { padding: 6px 8px; }
+    .sequence-condition {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: 190px minmax(0, 1fr);
+      gap: 6px;
+      align-items: center;
+      padding: 2px 0 4px;
+    }
+    .sequence-condition-empty {
+      font-size: 11px;
+      color: var(--text-muted);
+      padding-left: 2px;
+    }
+    .action-test-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0 0 14px;
+      flex-wrap: wrap;
+    }
+    .action-test-status {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .action-test-status.ok { color: #70da9e; }
+    .action-test-status.failed { color: #ef8f86; }
+    .action-test-result {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      margin: 0 0 14px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #0b0f19;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .action-test-check { display: flex; gap: 7px; align-items: flex-start; }
+    .action-test-check .mark { flex-shrink: 0; font-weight: 700; }
+    .action-test-check.ok .mark { color: #70da9e; }
+    .action-test-check.failed .mark { color: #ef8f86; }
+    .action-test-check.info .mark { color: #e2b978; }
+    .icon-library { max-width: 720px; width: 94%; max-height: 88dvh; display: flex; flex-direction: column; gap: 12px; }
+    .icon-library-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .icon-library-head h3 { font-size: 17px; font-weight: 700; color: var(--primary); }
+    .icon-library-search { width: 100%; }
+    .icon-library-categories { display: flex; flex-wrap: wrap; gap: 6px; }
+    .icon-library-category {
+      border: 1px solid var(--border); background: transparent; color: var(--text-muted);
+      border-radius: 999px; padding: 5px 11px; font-size: 12px; cursor: pointer; font-family: inherit;
+    }
+    .icon-library-category.active { border-color: var(--primary); color: var(--primary); background: #1a1f2e; }
+    .icon-library-subtitle { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 5px; }
+    .icon-library-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(42px, 1fr)); gap: 5px; }
+    .icon-library-item {
+      border: 1px solid var(--border); background: #0b0f19; border-radius: 7px;
+      font-size: 22px; line-height: 1; padding: 8px 0; cursor: pointer;
+    }
+    .icon-library-item:hover, .icon-library-item:focus-visible { border-color: var(--primary); background: #1a1f2e; }
+    .icon-library-scroll { overflow-y: auto; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+    .icon-library-empty { font-size: 12px; color: var(--text-muted); padding: 10px 0; }
     .toggle-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
     .switch-label { font-size: 13px; font-weight: 600; color: #fff; }
 
@@ -632,6 +694,11 @@
     <!-- Right column: button edit form -->
     <div class="editor-panel" id="editor-panel">
       <div class="section-title" id="editor-title" data-i18n="studio.editor.initial">Édition de l'élément</div>
+      <div class="action-test-row">
+        <button type="button" class="btn btn-secondary" id="action-test-button" onclick="testCurrentAction()" data-i18n="studio.test.button" style="font-size: 12px; padding: 7px 12px;">▶ Tester</button>
+        <span class="action-test-status" id="action-test-status" role="status" aria-live="polite"></span>
+      </div>
+      <div class="action-test-result" id="action-test-result" hidden></div>
 
       <div class="field-group">
         <label>Type d'élément</label>
@@ -686,7 +753,7 @@
           <button type="button" class="btn btn-secondary" style="font-size: 12px; padding: 6px 10px;" onclick="addSequenceStep()">+ Ajouter une étape</button>
           <span style="font-size: 11px; color: var(--text-muted);">10 étapes max · pause max 5 s</span>
         </div>
-        <p style="font-size: 11px; color: var(--text-muted); line-height: 1.6;">Les étapes s’exécutent dans l’ordre. La pause est appliquée après l’étape. Une étape en échec arrête la séquence.</p>
+        <p style="font-size: 11px; color: var(--text-muted); line-height: 1.6;">Les étapes s’exécutent dans l’ordre. La pause est appliquée après l’étape. Une étape dont la condition n’est pas remplie est ignorée. Une étape en échec arrête la séquence.</p>
       </div>
 
       <div class="field-group">
@@ -709,6 +776,7 @@
             <span class="emoji-chip" onclick="setEmoji('🖥️')">🖥️</span>
             <span class="emoji-chip" onclick="setEmoji('📸')">📸</span>
           </div>
+          <button type="button" class="btn btn-secondary" onclick="openIconLibrary()" data-i18n="studio.icons.open" style="font-size: 11px; padding: 5px 9px;">Bibliothèque</button>
         </div>
       </div>
 
@@ -783,6 +851,25 @@
       </div>
     </div>
 
+  </div>
+
+  <div id="icon-library-modal" class="modal-overlay" style="display: none;" onclick="closeIconLibraryOnOverlay(event)">
+    <div class="modal-content icon-library" role="dialog" aria-modal="true" aria-labelledby="icon-library-title">
+      <div class="icon-library-head">
+        <h3 id="icon-library-title" data-i18n="studio.icons.title">Bibliothèque d’icônes</h3>
+        <button type="button" class="btn btn-secondary" style="padding: 4px 10px; font-size: 14px;" onclick="closeIconLibrary()" data-i18n-aria-label="studio.icons.close" aria-label="Fermer">✕</button>
+      </div>
+      <input type="search" id="icon-library-search" class="icon-library-search" data-i18n-placeholder="studio.icons.search" placeholder="Rechercher une icône…" oninput="renderIconLibrary()">
+      <div id="icon-library-categories" class="icon-library-categories"></div>
+      <div class="icon-library-scroll">
+        <div id="icon-library-recents-wrap">
+          <div class="icon-library-subtitle" data-i18n="studio.icons.recent">Récentes</div>
+          <div id="icon-library-recents" class="icon-library-grid"></div>
+        </div>
+        <div id="icon-library-grid" class="icon-library-grid"></div>
+        <p id="icon-library-empty" class="icon-library-empty" data-i18n="studio.icons.empty" hidden>Aucune icône trouvée.</p>
+      </div>
+    </div>
   </div>
 
   <div id="studio-menu" role="menu" aria-label="Actions rapides" hidden></div>
@@ -1163,6 +1250,10 @@
       const page = getCurrentPage();
       if (!page.buttons || page.buttons.length === 0) { setEditorAvailability(false); return; }
       setEditorAvailability(true);
+      const testStatus = document.getElementById('action-test-status');
+      if (testStatus) { testStatus.textContent = ''; testStatus.className = 'action-test-status'; }
+      const testResult = document.getElementById('action-test-result');
+      if (testResult) { testResult.hidden = true; testResult.replaceChildren(); }
 
       if (idx < 0 || idx >= page.buttons.length) idx = 0;
       selectedIndex = idx;
@@ -1238,6 +1329,71 @@
       }[type] || 'Commande';
     }
 
+    function sequenceConditionLabel(value) {
+      return I18n.t('studio.sequence.condition.' + (value || 'always'));
+    }
+
+    function renderSequenceCondition(row, step, currentButton) {
+      const wrap = document.createElement('div');
+      wrap.className = 'sequence-condition';
+      const condition = document.createElement('select');
+      condition.setAttribute('aria-label', I18n.t('studio.sequence.condition.label'));
+      for (const value of ['always', 'button_on', 'button_off', 'app_running', 'mic_muted', 'mic_unmuted']) {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = sequenceConditionLabel(value);
+        condition.append(option);
+      }
+      condition.value = step.condition || 'always';
+      const targetWrap = document.createElement('div');
+
+      const renderTarget = () => {
+        targetWrap.replaceChildren();
+        const value = condition.value;
+        if (value === 'button_on' || value === 'button_off') {
+          const select = document.createElement('select');
+          select.setAttribute('aria-label', I18n.t('studio.sequence.condition.button'));
+          const placeholder = document.createElement('option');
+          placeholder.value = '';
+          placeholder.textContent = I18n.t('studio.sequence.condition.chooseButton');
+          select.append(placeholder);
+          (config.pages || []).forEach(page => (page.buttons || []).forEach(button => {
+            if (button.id === currentButton.id || !button.is_toggle) return;
+            const option = document.createElement('option');
+            option.value = button.id;
+            option.textContent = button.label || button.id;
+            select.append(option);
+          }));
+          select.value = step.condition_target || '';
+          select.onchange = () => { step.condition_target = select.value; studioScheduleCheckpoint(); };
+          targetWrap.append(select);
+        } else if (value === 'app_running') {
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.value = step.condition_target || '';
+          input.placeholder = I18n.t('studio.sequence.condition.appPlaceholder');
+          input.setAttribute('aria-label', I18n.t('studio.sequence.condition.app'));
+          input.oninput = () => { step.condition_target = input.value; studioScheduleCheckpoint(); };
+          targetWrap.append(input);
+        } else {
+          const empty = document.createElement('span');
+          empty.className = 'sequence-condition-empty';
+          empty.textContent = I18n.t('studio.sequence.condition.none');
+          targetWrap.append(empty);
+        }
+      };
+
+      condition.onchange = () => {
+        step.condition = condition.value;
+        if (!['button_on', 'button_off', 'app_running'].includes(condition.value)) step.condition_target = '';
+        renderTarget();
+        studioScheduleCheckpoint();
+      };
+      renderTarget();
+      wrap.append(condition, targetWrap);
+      row.append(wrap);
+    }
+
     function renderSequenceEditor() {
       const container = document.getElementById('sequence-steps');
       if (!container) return;
@@ -1278,6 +1434,7 @@
           renderSequenceEditor(); renderGrid(); studioScheduleCheckpoint();
         };
         row.append(type, target, delay, remove);
+        renderSequenceCondition(row, step, btn);
         container.append(row);
       });
     }
@@ -1288,7 +1445,7 @@
       if (!btn || btn.type !== 'sequence') return;
       if (!Array.isArray(btn.steps)) btn.steps = [];
       if (btn.steps.length >= 10) { studioNotify('Une séquence est limitée à 10 étapes.'); return; }
-      btn.steps.push({type: 'key', target: '', delay: 0});
+      btn.steps.push({type: 'key', target: '', delay: 0, condition: 'always', condition_target: ''});
       renderSequenceEditor(); renderGrid(); studioScheduleCheckpoint();
       document.querySelector('#sequence-steps .sequence-step:last-child input[type=text]')?.focus();
     }
@@ -1637,6 +1794,65 @@
       const b = page.buttons[selectedIndex];
       b.state = !b.state;
       renderGrid();
+    }
+
+    function actionTestMessage(check) {
+      const message = I18n.t('studio.test.code.' + check.code, {detail: check.detail || ''});
+      return check.step ? I18n.t('studio.test.step', {step: check.step, message}) : message;
+    }
+
+    function renderActionResult(data) {
+      const status = document.getElementById('action-test-status');
+      const result = document.getElementById('action-test-result');
+      if (!status || !result) return;
+      status.textContent = data.ok ? I18n.t('studio.test.ok') : I18n.t('studio.test.failed');
+      status.className = 'action-test-status ' + (data.ok ? 'ok' : 'failed');
+      result.replaceChildren();
+      result.hidden = false;
+      (data.checks || []).forEach(check => {
+        const row = document.createElement('div');
+        const info = check.ok && (check.code === 'action.condition.app_idle' || check.code === 'action.launch.uri');
+        row.className = 'action-test-check ' + (check.ok ? (info ? 'info' : 'ok') : 'failed');
+        const mark = document.createElement('span');
+        mark.className = 'mark';
+        mark.textContent = check.ok ? (info ? '!' : '✓') : '✗';
+        const text = document.createElement('span');
+        text.textContent = actionTestMessage(check);
+        row.append(mark, text);
+        result.append(row);
+      });
+    }
+
+    async function testCurrentAction() {
+      const page = getCurrentPage();
+      const button = page?.buttons?.[selectedIndex];
+      if (!button) return;
+      const testButton = document.getElementById('action-test-button');
+      const status = document.getElementById('action-test-status');
+      const result = document.getElementById('action-test-result');
+      if (status) { status.textContent = I18n.t('studio.test.running'); status.className = 'action-test-status'; }
+      if (result) { result.hidden = true; result.replaceChildren(); }
+      if (testButton) testButton.disabled = true;
+      try {
+        const response = await fetch('/api/actions/test', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({button, config})
+        });
+        if (!response.ok) {
+          let detail = response.status;
+          try { detail = (await response.json()).detail || detail; } catch {}
+          throw new Error(detail);
+        }
+        renderActionResult(await response.json());
+      } catch (error) {
+        if (status) {
+          status.textContent = I18n.t('studio.test.error', {detail: error.message});
+          status.className = 'action-test-status failed';
+        }
+      } finally {
+        if (testButton) testButton.disabled = false;
+      }
     }
 
     // =========================================================================
@@ -1999,6 +2215,7 @@
     document.getElementById('studio-language').value = I18n.lang;
     I18n.onChange(() => {
       document.getElementById('studio-language').value = I18n.lang;
+      renderIconLibrary();
       const page = getCurrentPage();
       if (page?.buttons?.[selectedIndex]) selectButton(selectedIndex);
     });

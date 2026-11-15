@@ -32,6 +32,7 @@ class NetworkAccessTests(unittest.TestCase):
         self.assertEqual(phone.post('/api/config', json={}).status_code, 403)
         self.assertEqual(phone.post('/api/discord/connect', json={}).status_code, 403)
         self.assertEqual(phone.get('/api/apps').status_code, 403)
+        self.assertEqual(phone.post('/api/actions/test', json={'button': {'id': 'a', 'type': 'key', 'target': 'playpause'}}).status_code, 403)
 
     def test_server_messages_follow_language(self):
         phone = self.client('192.168.1.100', '192.168.1.50:5000')

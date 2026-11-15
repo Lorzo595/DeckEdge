@@ -20,6 +20,7 @@ import os
 from pathlib import Path
 import platform
 import re
+import shutil
 import subprocess
 import tempfile
 import threading
@@ -40,6 +41,7 @@ import comtypes
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 import pyautogui
+import psutil
 from pydantic import BaseModel, Field, ValidationError, model_validator
 from pycaw.pycaw import AudioUtilities, ISimpleAudioVolume, IAudioSessionControl2
 from pycaw.utils import AudioSession
@@ -76,6 +78,7 @@ pyautogui.FAILSAFE = False
 
 ActionType = Literal["hotkey", "key", "launch", "volume_app", "slider", "sequence"]
 StepType = Literal["hotkey", "key", "launch", "volume_app"]
+ConditionType = Literal["always", "button_on", "button_off", "app_running", "mic_muted", "mic_unmuted"]
 
 _IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 _BACKUP_NAME_RE = re.compile(r"^deckedge-\d{8}-\d{6}-\d{3}\.json$")
@@ -85,6 +88,8 @@ class ActionStep(BaseModel):
     type: StepType = Field(default="hotkey", description="Type de l'étape")
     target: str = Field(default="", max_length=255, description="Touche, application ou cible audio")
     delay: float = Field(default=0.0, ge=0.0, le=5.0, description="Pause après l'étape, en secondes")
+    condition: ConditionType = Field(default="always", description="Condition required to run the step")
+    condition_target: str = Field(default="", max_length=64, description="Button or application used by the condition")
 
 
 def _sanitize_identifier(value: Any, prefix: str, index: int, used: set[str]) -> str:
@@ -1330,7 +1335,7 @@ async def protect_desktop_and_pair_phone(request: Request, call_next):
         return JSONResponse({"detail": server_text(language, "origin")}, status_code=403)
     if not local and not is_paired(request, PHONE_KEY):
         return HTMLResponse(pairing_page(language), status_code=401)
-    desktop_only = request.url.path in {"/admin", "/api/apps", "/api/diagnostics", "/api/monitoring/sensors", "/api/discord/connect", "/api/discord/disconnect", "/api/config/validate", "/api/config/restore", "/api/config/backups"} or (request.url.path == "/api/config" and request.method != "GET")
+    desktop_only = request.url.path in {"/admin", "/api/apps", "/api/diagnostics", "/api/monitoring/sensors", "/api/discord/connect", "/api/discord/disconnect", "/api/config/validate", "/api/config/restore", "/api/config/backups", "/api/actions/test"} or (request.url.path == "/api/config" and request.method != "GET")
     if desktop_only and not local:
         return JSONResponse({"detail": server_text(language, "desktop_only")}, status_code=403)
     response = await call_next(request)
@@ -1661,6 +1666,54 @@ def launch_win32_target(target: str) -> bool:
     return False
 
 
+def _find_config_button(config: Optional[DeckConfig], button_id: str) -> Optional[ButtonConfig]:
+    if config is None or not button_id:
+        return None
+    for page in config.pages:
+        for button in page.buttons:
+            if button.id == button_id:
+                return button
+    return None
+
+
+def _is_app_running(name: str) -> bool:
+    needle = (name or "").strip().lower()
+    if not needle:
+        return False
+    if needle.endswith(".exe"):
+        needle = needle[:-4]
+    try:
+        for process in psutil.process_iter(["name"]):
+            pname = (process.info.get("name") or "").lower()
+            if pname.endswith(".exe"):
+                pname = pname[:-4]
+            if pname == needle or needle in pname:
+                return True
+    except Exception:
+        logger.debug("Application lookup failed for %s", needle, exc_info=True)
+    return False
+
+
+def _condition_met(step: ActionStep, config: Optional[DeckConfig] = None) -> bool:
+    condition = step.condition or "always"
+    target = (step.condition_target or "").strip()
+    if condition == "always":
+        return True
+    if condition in ("button_on", "button_off"):
+        # Execution reads live state for every step; explicit configs are used
+        # by isolated callers. Validation separately uses the unsaved Studio config.
+        button = _find_config_button(config, target) if config is not None else config_store.get_button(target)
+        if button is None or not button.is_toggle:
+            return False
+        return bool(button.state) if condition == "button_on" else not bool(button.state)
+    if condition == "app_running":
+        return _is_app_running(target)
+    if condition in ("mic_muted", "mic_unmuted"):
+        muted = bool(audio_engine.get_system_states().get("mic_muted"))
+        return muted if condition == "mic_muted" else not muted
+    return True
+
+
 def _execute_action(b_type: str, target: str) -> bool:
     ensure_default_desktop()
     target = target.strip()
@@ -1693,10 +1746,13 @@ def _execute_action(b_type: str, target: str) -> bool:
         return False
 
 
-def _execute_sequence(steps: List[ActionStep]) -> bool:
+def _execute_sequence(steps: List[ActionStep], config: Optional[DeckConfig] = None) -> bool:
     if not steps:
         return False
     for index, step in enumerate(steps):
+        if not _condition_met(step, config):
+            logger.info("Step %s skipped: condition %s not met", index + 1, step.condition)
+            continue
         if not _execute_action(step.type, step.target):
             return False
         if step.delay > 0 and index < len(steps) - 1:
@@ -1704,10 +1760,160 @@ def _execute_sequence(steps: List[ActionStep]) -> bool:
     return True
 
 
-def _execute_button(button: ButtonConfig) -> bool:
+def _execute_button(button: ButtonConfig, config: Optional[DeckConfig] = None) -> bool:
     if button.type == "sequence":
-        return _execute_sequence(button.steps)
+        return _execute_sequence(button.steps, config)
     return _execute_action(button.type, button.target)
+
+
+def _test_check(code: str, ok: bool, detail: str = "") -> Dict[str, Any]:
+    return {"code": code, "ok": bool(ok), "detail": detail}
+
+
+def _valid_key_token(token: str) -> bool:
+    key = (token or "").strip().lower()
+    return bool(key) and (key in VK_MAP or (len(key) == 1 and key.isalnum()) or key in pyautogui.KEYBOARD_KEYS)
+
+
+def _clean_launch_target(target: str) -> str:
+    value = (target or "").strip()
+    if value.lower().startswith("start "):
+        value = value[6:].strip()
+        if value.startswith('""') or value.startswith("''"):
+            value = value[2:].strip()
+    if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
+        value = value[1:-1].strip()
+    return value
+
+
+def _audio_app_present(name: str) -> bool:
+    needle = (name or "").strip().lower()
+    if needle.startswith("app:"):
+        needle = needle[4:]
+    if needle.endswith(".exe"):
+        needle = needle[:-4]
+    if not needle:
+        return False
+    for app in get_audio_targets().get("apps", []):
+        if (needle in (app.get("name") or "").lower()
+                or needle in (app.get("process") or "").lower()
+                or needle == (app.get("target") or "").lower()[4:]):
+            return True
+    return False
+
+
+def _audio_device_present(name: str) -> bool:
+    needle = (name or "").strip().lower()
+    if needle.startswith("device:"):
+        needle = needle[7:]
+    if not needle:
+        return False
+    for device in get_audio_targets().get("devices", []):
+        if needle in (device.get("name") or "").lower() or needle in (device.get("target") or "").lower():
+            return True
+    return False
+
+
+def _test_audio_target(b_type: str, target: str) -> List[Dict[str, Any]]:
+    value = (target or "").strip().lower()
+    if not value:
+        return [_test_check("action.target.required", False)]
+
+    if b_type == "slider":
+        if value in ("master", "general", "windows"):
+            return [_test_check("action.audio.ready", True, target)]
+        if value.startswith("app:"):
+            present = _audio_app_present(value)
+            return [_test_check("action.audio.ready" if present else "action.audio.inactive", present, target)]
+        if value.startswith("device:"):
+            present = _audio_device_present(value)
+            return [_test_check("action.audio.ready" if present else "action.audio.inactive", present, target)]
+        present = _audio_app_present(value)
+        return [_test_check("action.audio.ready" if present else "action.audio.inactive", present, target)]
+
+    if value in ("discord:mute", "discord:deaf", "discord:deafen", "mic:mute", "mic", "windows:mic",
+                 "master:mute", "master", "windows:master"):
+        return [_test_check("action.audio.ready", True, target)]
+
+    if ":" not in value:
+        return [_test_check("action.audio.action_invalid", False, target)]
+
+    app_name, action = value.rsplit(":", 1)
+    action = action.strip()
+    if action != "mute" and not re.fullmatch(r"[+-]\d+(?:\.\d+)?", action):
+        return [_test_check("action.audio.action_invalid", False, target)]
+    if app_name.strip().lower() in ("master", "general", "windows"):
+        return [_test_check("action.audio.ready", True, target)]
+    present = _audio_device_present(app_name) if app_name.startswith("device:") else _audio_app_present(app_name)
+    return [_test_check("action.audio.ready" if present else "action.audio.inactive", present, target)]
+
+
+def _test_condition(step: ActionStep, config: Optional[DeckConfig]) -> List[Dict[str, Any]]:
+    condition = step.condition or "always"
+    target = (step.condition_target or "").strip()
+    if condition == "always":
+        return []
+    if condition in ("button_on", "button_off"):
+        button = _find_config_button(config, target)
+        if button is None or not button.is_toggle:
+            return [_test_check("action.condition.button_missing", False, target)]
+        return [_test_check("action.condition.ready", True, target)]
+    if condition == "app_running":
+        if not target:
+            return [_test_check("action.condition.app_required", False)]
+        if _is_app_running(target):
+            return [_test_check("action.condition.ready", True, target)]
+        return [_test_check("action.condition.app_idle", True, target)]
+    return [_test_check("action.condition.ready", True)]
+
+
+def _test_action(b_type: str, target: str) -> List[Dict[str, Any]]:
+    value = (target or "").strip()
+    if b_type in ("key", "hotkey"):
+        if not value:
+            return [_test_check("action.target.required", False)]
+        tokens = [token.strip().lower() for token in value.split(",") if token.strip()]
+        invalid = [token for token in tokens if not _valid_key_token(token)]
+        if not tokens or invalid:
+            return [_test_check("action.hotkey.unknown" if b_type == "hotkey" else "action.key.unknown",
+                                False, ", ".join(invalid) or value)]
+        return [_test_check("action.hotkey.ready" if b_type == "hotkey" else "action.key.ready", True, value)]
+    if b_type == "launch":
+        if not value:
+            return [_test_check("action.target.required", False)]
+        cleaned = _clean_launch_target(value)
+        if not cleaned:
+            return [_test_check("action.target.required", False)]
+        if re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:", cleaned) and not re.match(r"^[a-zA-Z]:[\\/]", cleaned):
+            return [_test_check("action.launch.uri", True, cleaned)]
+        expanded = os.path.expandvars(os.path.expanduser(cleaned))
+        if os.path.exists(expanded) or shutil.which(expanded):
+            return [_test_check("action.launch.ready", True, cleaned)]
+        return [_test_check("action.launch.missing", False, cleaned)]
+    if b_type in ("slider", "volume_app"):
+        return _test_audio_target(b_type, value)
+    return [_test_check("action.type.unknown", False, b_type)]
+
+
+def _test_action_request(button: ButtonConfig, config: Optional[DeckConfig]) -> Dict[str, Any]:
+    checks: List[Dict[str, Any]] = []
+    if button.type == "sequence":
+        if not button.steps:
+            checks.append(_test_check("action.sequence.empty", False))
+        else:
+            checks.append(_test_check("action.sequence.ready", True, str(len(button.steps))))
+            for index, step in enumerate(button.steps, start=1):
+                condition_checks = _test_condition(step, config)
+                action_checks = _test_action(step.type, step.target)
+                checks.extend(condition_checks)
+                checks.extend(action_checks)
+                for check in condition_checks + action_checks:
+                    check["step"] = index
+    else:
+        checks.extend(_test_action(button.type, button.target))
+    if button.is_toggle:
+        checks.append(_test_check("action.toggle.ready", True))
+    return {"ok": all(check["ok"] for check in checks), "checks": checks}
 
 
 # ============================================================================
@@ -1802,6 +2008,18 @@ class BackupNamePayload(BaseModel):
 async def validate_config_endpoint(config: DeckConfig):
     """Validate and normalize an imported profile without saving it."""
     return {"status": "ok", "config": config.model_dump(mode="json")}
+
+
+class ActionTestPayload(BaseModel):
+    button: ButtonConfig
+    config: Optional[DeckConfig] = None
+
+
+@app.post("/api/actions/test")
+async def test_action_endpoint(payload: ActionTestPayload):
+    """Validate an action and its targets without executing it."""
+    config = payload.config or await asyncio.to_thread(config_store.load)
+    return await asyncio.to_thread(_test_action_request, payload.button, config)
 
 
 @app.get("/api/config/backups")

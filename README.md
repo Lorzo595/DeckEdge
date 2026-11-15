@@ -26,10 +26,12 @@ Built by **Lorzo595**, with help from **ChatGPT**.
 | PC connection | First pairing by local QR code, key kept and a permanent address specific to the PC for later visits |
 | Profiles | Multiple command pages, add, rename, duplicate and move keys |
 | Organization | Phone preview, drag and drop, and widgets with adjustable width and height |
-| Actions | Keyboard shortcuts, media keys, launching apps, files and websites |
+| Actions | Keyboard shortcuts, media keys, launching apps, files and websites, plus multi-step sequences with conditions |
+| Testing | Validate a key, application or audio target from the Studio without running the action |
 | Audio | Windows volume, audio outputs and apps with an active audio session, with sliders and mute |
 | Monitoring | Built-in LibreHardwareMonitor engine and a choice of 1 to 6 sensors, with an optional secondary reading |
-| Customization | Name, icon, colors, eyedropper and active/inactive states for toggle keys |
+| Customization | Name, searchable icon library, colors, eyedropper and active/inactive states for toggle keys |
+| Accessibility | Phone pinch zoom, `aria-pressed` toggle states and reduced-motion support |
 | Languages | Deck, Studio and Windows app interface in French or English, with the choice remembered |
 | Editing | Library with search, right-click, duplication, undo/redo and keyboard shortcuts |
 | Profiles | JSON export/import and local backups with restore |
