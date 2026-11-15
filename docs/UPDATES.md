@@ -69,3 +69,4 @@ to verify installed/portable replacement and restart with the original data fold
 `tests/run-update-ui-smoke.ps1` renders both language versions and checks that the
 action buttons fit in the window. Fixtures stay under `.build`; the developer's
 profiles and Windows startup registration are not modified.
+The GitHub test job runs all three scripts before the browser tests.

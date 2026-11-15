@@ -31,6 +31,12 @@ jobs:
       - name: In-app updater smoke test
         shell: pwsh
         run: ./tests/run-update-smoke.ps1
+      - name: In-app updater end-to-end test
+        shell: pwsh
+        run: ./tests/run-update-e2e.ps1
+      - name: In-app updater UI smoke test
+        shell: pwsh
+        run: ./tests/run-update-ui-smoke.ps1
       - name: Install Playwright
         shell: pwsh
         run: |
