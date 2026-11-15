@@ -1,5 +1,10 @@
 # Building DeckEdge on Windows
 
+All tracked text files use LF in both the Git index and the working tree, even
+on Windows. `.gitattributes` enforces checkout/staging and `.editorconfig` sets
+editor defaults. Run `python tests/check_line_endings.py` before publishing;
+CI checks it too. Upload LF files only when bypassing `git add` through a web UI.
+
 ## Environment
 
 Windows x64, .NET Framework 4.8, PowerShell 5.1 or 7, HTTPS access to Python.org,
