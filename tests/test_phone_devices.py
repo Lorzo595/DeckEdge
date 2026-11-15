@@ -2,6 +2,8 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from http.cookies import SimpleCookie
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
@@ -88,6 +90,51 @@ class PhoneAccessTests(unittest.TestCase):
                 self.assertEqual(len(registry.list()), 1)
                 self.assertNotEqual(phone.cookies.get(network_access.COOKIE), PHONE_KEY)
 
+    def test_forbidden_request_does_not_create_an_orphan_phone(self):
+        with tempfile.TemporaryDirectory() as folder:
+            registry = network_access.PhoneRegistry(Path(folder) / '.phones.json')
+            with patch.object(server, 'phones', registry):
+                response = self.remote().get('/api/phones', params={'key': server.PHONE_KEY})
+                self.assertEqual(response.status_code, 403)
+                self.assertEqual(registry.count(), 0)
+
+    def test_rotation_failure_keeps_devices_authorized(self):
+        with tempfile.TemporaryDirectory() as folder:
+            registry = network_access.PhoneRegistry(Path(folder) / '.phones.json')
+            phone, token = registry.pair()
+            with patch.object(server, 'phones', registry), patch.object(server, 'rotate_pairing_key', side_effect=PermissionError('locked')):
+                local = TestClient(app, base_url='http://127.0.0.1:5000', client=('127.0.0.1', 1000), raise_server_exceptions=False)
+                for method, url in [('delete', '/api/phones/' + phone['id']), ('post', '/api/phones/revoke-all')]:
+                    self.assertEqual(getattr(local, method)(url).status_code, 500)
+                    self.assertIsNotNone(registry.authenticate(token))
+
+    def test_legacy_socket_migrates_and_is_bound_to_a_device(self):
+        with tempfile.TemporaryDirectory() as folder:
+            registry = network_access.PhoneRegistry(Path(folder) / '.phones.json')
+            manager = server.ConnectionManager()
+            with patch.object(server, 'phones', registry), patch.object(server, 'manager', manager), \
+                 patch.object(server, 'get_audio_targets', return_value={}):
+                with self.remote().websocket_connect('ws://' + HOSTNAME + ':5000/ws', headers={'cookie': network_access.COOKIE + '=' + server.PHONE_KEY}) as ws:
+                    cookie = SimpleCookie()
+                    for key, value in ws.extra_headers:
+                        if key == b'set-cookie':
+                            cookie.load(value.decode('ascii'))
+                    token = cookie[network_access.COOKIE].value
+                    self.assertNotEqual(token, server.PHONE_KEY)
+                    phone = registry.authenticate(token)
+                    self.assertIsNotNone(phone)
+                    self.assertIn(phone['id'], manager._devices.values())
+
+    def test_failed_atomic_key_write_preserves_previous_key(self):
+        with tempfile.TemporaryDirectory() as folder:
+            key = Path(folder) / '.phone-key'
+            key.write_text('a' * 64, encoding='ascii')
+            with patch.object(network_access, 'KEY_FILE', key), patch.object(network_access.os, 'replace', side_effect=PermissionError('locked')):
+                with self.assertRaises(PermissionError):
+                    network_access.rotate_pairing_key()
+            self.assertEqual(key.read_text(encoding='ascii'), 'a' * 64)
+            self.assertEqual(list(Path(folder).glob('*.tmp')), [])
+
     def test_local_phone_management_api(self):
         with tempfile.TemporaryDirectory() as folder:
             registry = network_access.PhoneRegistry(Path(folder) / '.phones.json')
@@ -146,6 +193,37 @@ class PhoneSocketTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(await manager.disconnect_device('phone-1'), 1)
         self.assertEqual(socket.closed, 1008)
         self.assertEqual(manager.client_count, 0)
+
+    async def test_revoke_during_accept_or_receive_cannot_execute_a_command(self):
+        for phase in ('accept', 'receive'):
+            with self.subTest(phase=phase), tempfile.TemporaryDirectory() as folder:
+                registry = network_access.PhoneRegistry(Path(folder) / '.phones.json')
+                phone, token = registry.pair()
+                class Socket:
+                    client = SimpleNamespace(host='192.168.1.70')
+                    url = SimpleNamespace(hostname=HOSTNAME)
+                    headers = {'host': HOSTNAME + ':5000'}
+                    cookies = {network_access.COOKIE: token}
+                    closed = None
+                    async def accept(self, headers=None):
+                        if phase == 'accept':
+                            registry.revoke(phone['id'])
+                    async def send_json(self, value):
+                        pass
+                    async def close(self, code=1000):
+                        self.closed = code
+                    async def receive_text(self):
+                        registry.revoke(phone['id'])
+                        return '{"action":"set_volume","target":"master","value":50}'
+                socket = Socket()
+                manager = server.ConnectionManager()
+                with patch.object(server, 'phones', registry), patch.object(server, 'manager', manager), \
+                     patch.object(server, 'get_audio_targets', return_value={}), \
+                     patch.object(server, 'set_audio_target_volume') as volume:
+                    await server.websocket_endpoint(socket)
+                    volume.assert_not_called()
+                self.assertEqual(socket.closed, 1008)
+                self.assertEqual(manager.client_count, 0)
 
 
 if __name__ == '__main__':
