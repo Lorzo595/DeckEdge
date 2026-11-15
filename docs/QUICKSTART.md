@@ -48,6 +48,9 @@ on each open. Changing the GitHub nickname and restarting the PC change
 neither its permanent address nor its key.
 
 The QR code and the link contain a private key: do not share them publicly.
+Use the Studio **Phones** panel to rename or revoke a paired phone; revocation
+disconnects it immediately, renews the pairing link and requires a new scan for
+future devices. Other paired phones keep their session.
 If the network blocks local `.local` discovery, select the backup
 Wi-Fi/Ethernet address on the QR screen. On that address, a change of IP
 may require creating the shortcut again. The direct connection must stay on a

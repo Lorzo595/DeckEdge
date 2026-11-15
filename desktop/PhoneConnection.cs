@@ -107,6 +107,7 @@ namespace DeckEdgeDesktop
         {
             string previous = (network.SelectedItem as PhoneAddress) == null ? null : ((PhoneAddress)network.SelectedItem).Url;
             try {
+                Program.RefreshPhoneKey();
                 var addresses = PhoneConnection.Addresses(Program.PhoneKey);
                 permanentShown = Program.PhoneDiscoveryReady && !String.IsNullOrEmpty(Program.PhoneHost);
                 network.Items.Clear(); network.Items.AddRange(addresses);

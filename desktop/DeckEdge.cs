@@ -105,6 +105,18 @@ namespace DeckEdgeDesktop
             return Int32.TryParse(raw, out port) && port >= 1 && port <= 65535 ? port : 5000;
         }
 
+        internal static void RefreshPhoneKey()
+        {
+            try
+            {
+                string keyFile = Path.Combine(DataDirectory, ".phone-key");
+                if (!File.Exists(keyFile)) return;
+                string value = File.ReadAllText(keyFile).Trim();
+                if (System.Text.RegularExpressions.Regex.IsMatch(value, "^[a-f0-9]{64}$")) PhoneKey = value;
+            }
+            catch (Exception ex) { Log("Lecture clé téléphone: " + ex.Message); }
+        }
+
         internal static int SelectPort(int preferred)
         {
             int configured;
@@ -260,11 +272,12 @@ namespace DeckEdgeDesktop
             return PhoneConnection.Addresses(Program.PhoneKey).Select(a => a.Url).ToArray();
         }
 
-        static string FindPhoneUrl() { return PhoneUrls().FirstOrDefault() ?? ("http://localhost:" + Program.Port); }
+        static string FindPhoneUrl() { Program.RefreshPhoneKey(); return PhoneUrls().FirstOrDefault() ?? ("http://localhost:" + Program.Port); }
 
         void OpenPhoneConnection()
         {
             RestoreStudio();
+            Program.RefreshPhoneKey();
             using (var dialog = new PhoneConnectionForm(async delegate {
                 var health = await GetHealth();
                 return health == null ? -1 : Convert.ToInt32(health["clients_connected"]);

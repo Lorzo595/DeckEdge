@@ -20,7 +20,8 @@ files remain unchanged. The app asks before downloading and restarting.
 
 - The current folder and installed/portable mode. The portable marker is never
   introduced into an installed edition or overwritten in portable mode.
-- Profiles, settings, backups, Discord configuration and the phone pairing key.
+- Profiles, settings, backups, Discord configuration, the phone pairing key and
+  the paired-device registry.
 - A custom `DECKEDGE_DATA_DIR`, including when restarting the app.
 - Startup shortcuts: the executable path stays the same. The installed edition's
   uninstall display version is refreshed only if its registered path matches.

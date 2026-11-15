@@ -9,6 +9,8 @@ app-settings.json
 app-settings.json.*
 .phone-key
 .phone-key.*
+.phones.json
+.phones.json.*
 .device-id
 .integrated-monitoring
 .desktop-profile/

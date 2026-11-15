@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Per-phone pairing sessions: list, rename and revoke connected phones from the Studio. Revoking renews the pairing link.
+- Normalize text file line endings in the Git index.
+- Run updater end-to-end and UI checks in CI.
+
 ## 0.1.5 — In-app updates
 
 - Manual update check from Settings and the tray menu, with release notes and optional pre-release inclusion.

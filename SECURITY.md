@@ -6,9 +6,12 @@ or placed behind a port forward. Local transport is HTTP, without TLS.
 
 The Studio and configuration changes are only accessible from the PC.
 The phone must use the full link provided in "Connect phone":
-that link contains a private access key. Do not publish it. The browser remembers
-the pairing in a cookie. To revoke all phones, quit DeckEdge,
-delete `.phone-key` in the data folder and restart, then reconnect them.
+that link contains a private pairing key. Do not publish it. Each browser receives
+its own device token, stored only as a hash in the DeckEdge data folder. The Studio
+**Phones** panel lists paired devices and can revoke one device or all of them.
+Revocation closes the active session immediately and renews the pairing link; other
+paired devices keep their own tokens. Deleting `.phone-key` and restarting rotates the
+pairing link but does not revoke existing device tokens, so revoke phones in the Studio first.
 An external web origin cannot use the server or its WebSockets.
 
 The permanent `.local` name is derived from a PC identifier, without publishing that

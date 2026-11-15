@@ -1,6 +1,7 @@
 import unittest
 from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
+import network_access
 from server import app, PHONE_KEY
 
 
@@ -27,6 +28,7 @@ class NetworkAccessTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn('HttpOnly', response.headers['set-cookie'])
         self.assertIn('SameSite=strict', response.headers['set-cookie'])
+        self.assertNotEqual(phone.cookies.get(network_access.COOKIE), PHONE_KEY)
         self.assertEqual(phone.get('/deck-layout.css').status_code, 200)
         self.assertEqual(phone.get('/admin').status_code, 403)
         self.assertEqual(phone.post('/api/config', json={}).status_code, 403)

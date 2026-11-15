@@ -410,7 +410,7 @@ function setupStudioErgonomics() {
       }
     }
     if (modal) {
-      if (event.key === 'Escape') { closeAppPickerModal(); closeDiscordModal(); closeDiagnosticsModal(); closeBackupsModal(); closeIconLibrary(); }
+      if (event.key === 'Escape') { closeAppPickerModal(); closeDiscordModal(); closeDiagnosticsModal(); closeBackupsModal(); closeIconLibrary(); closePhonesModal(); }
       return;
     }
     if (ctrl && event.key.toLowerCase() === 's') { event.preventDefault(); saveData(); return; }
@@ -609,4 +609,148 @@ function setIconFromLibrary(icon) {
   setEmoji(icon);
   studioRememberIcon(icon);
   closeIconLibrary();
+}
+
+let studioPhones = [];
+
+function phoneDate(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString(I18n.lang === 'en' ? 'en-US' : 'fr-FR');
+}
+
+function setPhonesStatus(text, failed = false) {
+  const status = document.getElementById('phones-status');
+  if (!status) return;
+  status.textContent = text || '';
+  status.className = 'phone-library-status' + (failed ? ' failed' : '');
+}
+
+function renderPhones() {
+  const list = document.getElementById('phones-list');
+  if (!list) return;
+  list.replaceChildren();
+  if (!studioPhones.length) {
+    const empty = document.createElement('p');
+    empty.className = 'phone-library-empty';
+    empty.textContent = I18n.t('studio.phones.empty');
+    list.append(empty);
+    return;
+  }
+  studioPhones.forEach(phone => {
+    const row = document.createElement('div');
+    row.className = 'phone-library-row';
+    const info = document.createElement('div');
+    info.className = 'phone-library-info';
+    const name = document.createElement('span');
+    name.className = 'phone-library-name';
+    name.textContent = phone.name || phone.id;
+    const last = document.createElement('span');
+    last.className = 'phone-library-meta';
+    last.textContent = I18n.t('studio.phones.lastSeen', {date: phoneDate(phone.last_seen)});
+    info.append(name, last);
+    if (phone.last_ip) {
+      const ip = document.createElement('span');
+      ip.className = 'phone-library-meta';
+      ip.textContent = I18n.t('studio.phones.ip', {ip: phone.last_ip});
+      info.append(ip);
+    }
+    const actions = document.createElement('div');
+    actions.className = 'phone-library-actions';
+    const rename = document.createElement('button');
+    rename.type = 'button';
+    rename.className = 'btn btn-secondary';
+    rename.textContent = I18n.t('studio.phones.rename');
+    rename.onclick = () => renamePhone(phone.id);
+    const revoke = document.createElement('button');
+    revoke.type = 'button';
+    revoke.className = 'btn btn-delete';
+    revoke.textContent = I18n.t('studio.phones.revoke');
+    revoke.onclick = () => revokePhone(phone.id);
+    actions.append(rename, revoke);
+    row.append(info, actions);
+    list.append(row);
+  });
+}
+
+async function loadPhones() {
+  const modal = document.getElementById('phones-modal');
+  if (!modal || modal.style.display === 'none') return;
+  setPhonesStatus(I18n.t('studio.phones.loading'));
+  try {
+    const response = await fetch('/api/phones');
+    if (!response.ok) throw new Error(response.status);
+    const data = await response.json();
+    studioPhones = Array.isArray(data.phones) ? data.phones : [];
+    renderPhones();
+    setPhonesStatus('');
+  } catch (error) {
+    setPhonesStatus(I18n.t('studio.phones.error'), true);
+  }
+}
+
+function openPhonesModal() {
+  const modal = document.getElementById('phones-modal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  studioPhones = [];
+  renderPhones();
+  loadPhones();
+}
+
+function closePhonesModal() {
+  const modal = document.getElementById('phones-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function closePhonesModalOnOverlay(event) {
+  if (event.target === document.getElementById('phones-modal')) closePhonesModal();
+}
+
+async function revokePhone(phoneId) {
+  const phone = studioPhones.find(item => item.id === phoneId);
+  if (!phone) return;
+  if (!confirm(I18n.t('studio.phones.revokeConfirm', {name: phone.name || phone.id}))) return;
+  try {
+    const response = await fetch('/api/phones/' + encodeURIComponent(phoneId), {method: 'DELETE'});
+    if (!response.ok) throw new Error(response.status);
+    await loadPhones();
+    setPhonesStatus(I18n.t('studio.phones.revoked'));
+  } catch (error) {
+    setPhonesStatus(I18n.t('studio.phones.error'), true);
+  }
+}
+
+async function renamePhone(phoneId) {
+  const phone = studioPhones.find(item => item.id === phoneId);
+  if (!phone) return;
+  const name = prompt(I18n.t('studio.phones.renamePrompt'), phone.name || '');
+  if (!name?.trim()) return;
+  try {
+    const response = await fetch('/api/phones/' + encodeURIComponent(phoneId), {
+      method: 'PATCH',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({name: name.trim()})
+    });
+    if (!response.ok) throw new Error(response.status);
+    await loadPhones();
+    setPhonesStatus(I18n.t('studio.phones.renamed'));
+  } catch (error) {
+    setPhonesStatus(I18n.t('studio.phones.error'), true);
+  }
+}
+
+async function revokeAllPhones() {
+  if (!studioPhones.length) return;
+  if (!confirm(I18n.t('studio.phones.revokeAllConfirm'))) return;
+  try {
+    const response = await fetch('/api/phones/revoke-all', {method: 'POST'});
+    if (!response.ok) throw new Error(response.status);
+    const data = await response.json();
+    await loadPhones();
+    setPhonesStatus(I18n.t('studio.phones.revokedAll', {count: data.revoked ?? 0}));
+  } catch (error) {
+    setPhonesStatus(I18n.t('studio.phones.error'), true);
+  }
 }

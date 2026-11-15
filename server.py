@@ -14,6 +14,7 @@ from collections import deque
 from contextlib import asynccontextmanager
 import ctypes
 from ctypes import wintypes
+import hmac
 import json
 import logging
 import os
@@ -47,7 +48,7 @@ from pycaw.pycaw import AudioUtilities, ISimpleAudioVolume, IAudioSessionControl
 from pycaw.utils import AudioSession
 from discord_rpc import discord_rpc
 from app_paths import DATA_DIR, PORT
-from network_access import COOKIE, pairing_key, is_local, allowed_origin, is_paired
+from network_access import COOKIE, pairing_key, rotate_pairing_key, is_local, allowed_origin, PhoneRegistry
 from local_discovery import discovery, HOSTNAME
 
 # Logging configuration
@@ -1065,18 +1066,52 @@ class ConnectionManager:
 
     def __init__(self) -> None:
         self._active: set[WebSocket] = set()
+        self._devices: Dict[WebSocket, Optional[str]] = {}
         self._lock = asyncio.Lock()
 
-    async def connect(self, ws: WebSocket) -> None:
+    async def connect(self, ws: WebSocket, device_id: Optional[str] = None) -> None:
         await ws.accept()
         async with self._lock:
             self._active.add(ws)
+            self._devices[ws] = device_id
         logger.info(f"Nouveau client connecté. Total: {len(self._active)}")
 
     async def disconnect(self, ws: WebSocket) -> None:
         async with self._lock:
             self._active.discard(ws)
+            self._devices.pop(ws, None)
         logger.info(f"Client déconnecté. Total: {len(self._active)}")
+
+    async def disconnect_device(self, device_id: str) -> int:
+        async with self._lock:
+            sockets = [ws for ws, owner in self._devices.items() if owner == device_id]
+        for ws in sockets:
+            try:
+                await ws.close(code=1008)
+            except Exception:
+                pass
+        if sockets:
+            async with self._lock:
+                for ws in sockets:
+                    self._active.discard(ws)
+                    self._devices.pop(ws, None)
+            logger.info("Téléphone révoqué : %s session(s) fermée(s).", len(sockets))
+        return len(sockets)
+
+    async def disconnect_phones(self) -> int:
+        async with self._lock:
+            sockets = list(self._active)
+        for ws in sockets:
+            try:
+                await ws.close(code=1008)
+            except Exception:
+                pass
+        if sockets:
+            async with self._lock:
+                for ws in sockets:
+                    self._active.discard(ws)
+                    self._devices.pop(ws, None)
+        return len(sockets)
 
     @property
     def client_count(self) -> int:
@@ -1247,11 +1282,17 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="DeckEdge Server", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
 PHONE_KEY = pairing_key()
+phones = PhoneRegistry()
+
+
+def _matches_master_key(value) -> bool:
+    return isinstance(value, str) and value.isascii() and hmac.compare_digest(value, PHONE_KEY)
 
 _SERVER_TEXTS = {
     "fr": {
         "origin": "Origine non autorisée",
         "desktop_only": "Ce réglage se modifie dans le Studio sur le PC.",
+        "phone_missing": "Téléphone introuvable",
         "backup_missing": "Sauvegarde introuvable",
         "backup_invalid": "Sauvegarde invalide",
         "pairing_title": "Connecter DeckEdge",
@@ -1265,6 +1306,7 @@ _SERVER_TEXTS = {
     "en": {
         "origin": "Origin not allowed",
         "desktop_only": "This setting can only be changed in the Studio on the PC.",
+        "phone_missing": "Phone not found",
         "backup_missing": "Backup not found",
         "backup_invalid": "Invalid backup",
         "pairing_title": "Connect DeckEdge",
@@ -1353,14 +1395,25 @@ async def protect_desktop_and_pair_phone(request: Request, call_next):
     language = request_language(request)
     if not allowed_origin(request):
         return JSONResponse({"detail": server_text(language, "origin")}, status_code=403)
-    if not local and not is_paired(request, PHONE_KEY):
-        return HTMLResponse(pairing_page(language), status_code=401)
-    desktop_only = request.url.path in {"/admin", "/api/apps", "/api/diagnostics", "/api/monitoring/sensors", "/api/discord/connect", "/api/discord/disconnect", "/api/config/validate", "/api/config/restore", "/api/config/backups", "/api/actions/test"} or (request.url.path == "/api/config" and request.method != "GET")
+    issued_token = None
+    if not local:
+        ip = request.client.host if request.client else ""
+        user_agent = request.headers.get("user-agent", "")
+        cookie = request.cookies.get(COOKIE, "")
+        device = phones.authenticate(cookie, ip)
+        supplied = request.query_params.get("key")
+        if device is None and cookie and _matches_master_key(cookie):
+            device, issued_token = phones.pair(user_agent, ip)
+        if device is None and supplied and _matches_master_key(supplied):
+            device, issued_token = phones.pair(user_agent, ip)
+        if device is None:
+            return HTMLResponse(pairing_page(language), status_code=401)
+    desktop_only = request.url.path in {"/admin", "/api/apps", "/api/diagnostics", "/api/monitoring/sensors", "/api/discord/connect", "/api/discord/disconnect", "/api/config/validate", "/api/config/restore", "/api/config/backups", "/api/actions/test"} or request.url.path.startswith("/api/phones") or (request.url.path == "/api/config" and request.method != "GET")
     if desktop_only and not local:
         return JSONResponse({"detail": server_text(language, "desktop_only")}, status_code=403)
     response = await call_next(request)
-    if not local and request.query_params.get("key"):
-        response.set_cookie(COOKIE, PHONE_KEY, httponly=True, samesite="strict", max_age=31536000)
+    if issued_token:
+        response.set_cookie(COOKIE, issued_token, httponly=True, samesite="strict", max_age=31536000, path="/")
     if request.url.path in ('/', '/manifest.webmanifest'):
         response.headers['Cache-Control'] = 'no-store'
     response.headers["Content-Language"] = language
@@ -1957,7 +2010,7 @@ async def get_admin():
 @app.get('/manifest.webmanifest', include_in_schema=False)
 async def phone_manifest():
     return JSONResponse({'id': '/', 'name': 'DeckEdge', 'short_name': 'DeckEdge',
-                         'start_url': '/?key=' + PHONE_KEY, 'scope': '/',
+                         'start_url': '/', 'scope': '/',
                          'display': 'standalone', 'background_color': '#191b22',
                          'theme_color': '#191b22', 'icons': [{'src': '/phone-icon.svg', 'sizes': 'any', 'type': 'image/svg+xml'}]},
                         media_type='application/manifest+json', headers={'Cache-Control': 'no-store'})
@@ -2040,6 +2093,43 @@ async def test_action_endpoint(payload: ActionTestPayload):
     """Validate an action and its targets without executing it."""
     config = payload.config or await asyncio.to_thread(config_store.load)
     return await asyncio.to_thread(_test_action_request, payload.button, config)
+
+
+class PhoneRenamePayload(BaseModel):
+    name: str = Field(..., min_length=1, max_length=40)
+
+
+@app.get("/api/phones")
+async def list_phones_endpoint():
+    return {"phones": phones.list()}
+
+
+@app.delete("/api/phones/{phone_id}")
+async def revoke_phone_endpoint(phone_id: str, request: Request):
+    global PHONE_KEY
+    if not phones.revoke(phone_id):
+        raise HTTPException(status_code=404, detail=server_text(request_language(request), "phone_missing"))
+    PHONE_KEY = rotate_pairing_key()
+    closed = await manager.disconnect_device(phone_id)
+    logger.info("Phone %s revoked; pairing link renewed; %s session(s) closed", phone_id, closed)
+    return {"status": "ok", "closed_sessions": closed, "pairing_key_rotated": True}
+
+
+@app.patch("/api/phones/{phone_id}")
+async def rename_phone_endpoint(phone_id: str, payload: PhoneRenamePayload, request: Request):
+    if not phones.rename(phone_id, payload.name):
+        raise HTTPException(status_code=404, detail=server_text(request_language(request), "phone_missing"))
+    return {"status": "ok"}
+
+
+@app.post("/api/phones/revoke-all")
+async def revoke_all_phones_endpoint():
+    global PHONE_KEY
+    revoked = phones.revoke_all()
+    PHONE_KEY = rotate_pairing_key()
+    closed = await manager.disconnect_phones()
+    logger.info("All phones revoked (%s); pairing link renewed; %s session(s) closed", revoked, closed)
+    return {"status": "ok", "revoked": revoked, "closed_sessions": closed, "pairing_key_rotated": True}
 
 
 @app.get("/api/config/backups")
@@ -2286,6 +2376,7 @@ async def get_diagnostics(request: Request):
             "port": request.url.port or PORT,
             "discovery_available": discovery.available,
             "clients_connected": manager.client_count,
+            "phones_paired": phones.count(),
             "phone_key_present": (DATA_DIR / ".phone-key").exists(),
         },
         "audio": {
@@ -2325,6 +2416,7 @@ async def healthcheck():
         "status": "healthy",
         "timestamp": time.time(),
         "clients_connected": manager.client_count,
+        "phones_paired": phones.count(),
         "phone": {"hostname": HOSTNAME, "discovery_available": discovery.available},
         "pages_count": len(config.pages),
         "discord": discord_rpc.get_status(),
@@ -2396,10 +2488,13 @@ async def toggle_discord_deaf_endpoint():
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     local = is_local(websocket.client.host) if websocket.client else False
-    if not allowed_origin(websocket) or (not local and not is_paired(websocket, PHONE_KEY)):
+    ip = websocket.client.host if websocket.client else ""
+    device = None if local else phones.authenticate(websocket.cookies.get(COOKIE, ""), ip)
+    legacy = (not local and device is None and _matches_master_key(websocket.cookies.get(COOKIE, "")))
+    if not allowed_origin(websocket) or (not local and device is None and not legacy):
         await websocket.close(code=1008)
         return
-    await manager.connect(websocket)
+    await manager.connect(websocket, device["id"] if device else None)
 
     # On client connection, send the initial state of the audio devices/apps and buttons
     try:
