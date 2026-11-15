@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.4 — Folders, conditional actions and bilingual interfaces
 
 - Mobile deck and Studio in French or English, with the choice remembered per device.
 - Pairing page and server error messages in French or English.
@@ -11,6 +11,10 @@
 - Searchable icon library with categories and recent icons.
 - Folders and sub-pages: group pages into one-level folders, with sub-tabs on the phone and in the Studio.
 - Phone accessibility: pinch zoom, `aria-pressed` on toggle keys and the mute button.
+
+- Duplicated profiles and folders remap internal condition links, including links across sub-pages.
+- Sequence button conditions read the live state before each step.
+- Action validation recognizes device volume steps and the general output alias.
 
 ## 0.1.3 — Profiles, backups and diagnostics
 

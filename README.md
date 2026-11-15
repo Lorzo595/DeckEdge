@@ -5,15 +5,15 @@ per-app volume and hardware monitoring. The Windows Studio lets you organize
 everything with a mobile preview, an action library and simple settings.
 No physical Stream Deck required.
 
-**Windows 10 (2004+) / Windows 11 · x64 · version 0.1.3 · MIT license**
+**Windows 10 (2004+) / Windows 11 · x64 · version 0.1.4 · MIT license**
 
-Built by **Lorzo595**, with help from **ChatGPT**.
+Built by **Lorzo595**.
 
-> **Public test version.** DeckEdge 0.1.3 works and has been tested
+> **Public test version.** DeckEdge 0.1.4 works and has been tested
 > on the development machine, but validation across multiple PCs and user
 > feedback are still needed before a 1.0.0 release.
 
-[Download version 0.1.3](https://github.com/Lorzo595/DeckEdge/releases/tag/v0.1.3)
+[Download version 0.1.4](https://github.com/Lorzo595/DeckEdge/releases/tag/v0.1.4)
 · [Report an issue](https://github.com/Lorzo595/DeckEdge/issues)
 · [Quick start guide](docs/QUICKSTART.md)
 
@@ -44,13 +44,13 @@ is available under MIT.
 
 ## Download
 
-In the [0.1.3 Release](https://github.com/Lorzo595/DeckEdge/releases/tag/v0.1.3), choose:
+In the [0.1.4 Release](https://github.com/Lorzo595/DeckEdge/releases/tag/v0.1.4), choose:
 
 | File | Purpose |
 | --- | --- |
-| `DeckEdge-0.1.3-Setup-x64.exe` | Standard installation, shortcuts and Windows uninstall |
-| `DeckEdge-0.1.3-Portable-x64.zip` | Unzip, then run `DeckEdge/DeckEdge.exe`; everything stays in that folder |
-| `DeckEdge-0.1.3-Source.zip` | Clean sources to publish, study or modify |
+| `DeckEdge-0.1.4-Setup-x64.exe` | Standard installation, shortcuts and Windows uninstall |
+| `DeckEdge-0.1.4-Portable-x64.zip` | Unzip, then run `DeckEdge/DeckEdge.exe`; everything stays in that folder |
+| `DeckEdge-0.1.4-Source.zip` | Clean sources to publish, study or modify |
 | `SHA256SUMS.txt` | Checksums for the files in this version |
 
 Python and the LibreHardwareMonitor engine are included. You do not need
@@ -63,7 +63,7 @@ full hardware access is refused.
 
 ### Standard installation
 
-1. Download `DeckEdge-0.1.3-Setup-x64.exe` from the Release.
+1. Download `DeckEdge-0.1.4-Setup-x64.exe` from the Release.
 2. Follow the wizard. Installation is for the current user, with
    a Start menu shortcut and an optional Desktop shortcut.
 3. Open DeckEdge. Accept the WebView2 installation if it is missing and choose
@@ -73,7 +73,7 @@ full hardware access is refused.
 
 ### Portable version
 
-1. Download `DeckEdge-0.1.3-Portable-x64.zip` and extract the **entire** archive.
+1. Download `DeckEdge-0.1.4-Portable-x64.zip` and extract the **entire** archive.
 2. Open the `DeckEdge` folder, then run `DeckEdge.exe`.
 3. Keep `runtime`, the libraries and `portable.flag` together. Data
    is created in `data`; move the whole folder to take the deck with you.
@@ -223,6 +223,6 @@ For a security issue, follow [SECURITY.md](SECURITY.md).
 ## Contributors
 
 - [Lorzo595](https://github.com/Lorzo595) — creation and development of DeckEdge.
-- [xavco63](https://github.com/xavco63) — reliability of configuration and audio, diagnostics, profile import/export and backups ([PR #2](https://github.com/Lorzo595/DeckEdge/pull/2), [#4](https://github.com/Lorzo595/DeckEdge/pull/4), [#5](https://github.com/Lorzo595/DeckEdge/pull/5)).
+- [xavco63](https://github.com/xavco63) — French/English interfaces, action validation, conditional sequences, folders, configuration and audio reliability, diagnostics and backups ([PR #2](https://github.com/Lorzo595/DeckEdge/pull/2), [#4](https://github.com/Lorzo595/DeckEdge/pull/4), [#5](https://github.com/Lorzo595/DeckEdge/pull/5), [#9](https://github.com/Lorzo595/DeckEdge/pull/9), [#10](https://github.com/Lorzo595/DeckEdge/pull/10), [#11](https://github.com/Lorzo595/DeckEdge/pull/11), [#12](https://github.com/Lorzo595/DeckEdge/pull/12)).
 
-Built with help from **ChatGPT**. Thanks to the open-source projects used by DeckEdge, in particular LibreHardwareMonitor and QRCoder; their licenses are included in the distributions.
+Thanks to the open-source projects used by DeckEdge, in particular LibreHardwareMonitor and QRCoder; their licenses are included in the distributions.
