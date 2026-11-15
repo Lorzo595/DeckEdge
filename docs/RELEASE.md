@@ -1,52 +1,52 @@
-﻿# Publier le projet sur GitHub
+﻿# Publishing the project on GitHub
 
-## Première publication
+## First publication
 
-1. Construire avec `packaging/build-release.ps1`, puis lancer `packaging/check-release.ps1`.
-2. Ouvrir `.build/latest-release.json` : le champ `source` désigne un dossier
-   **DeckEdge** contenant uniquement les fichiers publics. Publier ce dossier,
-   ou extraire `dist/DeckEdge-0.1.3-Source.zip` puis publier son contenu.
-3. Créer un dépôt GitHub public, puis y envoyer ces sources. Inclure les fichiers
-   cachés `.gitignore` et `.github`. Ne pas envoyer le dossier de travail complet
-   contenant vos profils, votre cache WebView2, vos logs ou vos identifiants.
-4. Activer Actions. Les pushs et pull requests construisent les paquets Windows.
-5. Mettre à jour le README avec un lien vers les Releases de votre propre dépôt.
+1. Build with `packaging/build-release.ps1`, then run `packaging/check-release.ps1`.
+2. Open `.build/latest-release.json`: the `source` field points to a **DeckEdge**
+   folder containing only the public files. Publish that folder, or extract
+   `dist/DeckEdge-0.1.3-Source.zip` and publish its contents.
+3. Create a public GitHub repository, then push these sources to it. Include the
+   hidden `.gitignore` and `.github` files. Do not push the full working folder
+   containing your profiles, WebView2 cache, logs or credentials.
+4. Enable Actions. Pushes and pull requests build the Windows packages.
+5. Update the README with a link to your own repository's Releases.
 
-Exemple depuis le dossier de sources nettoyées :
+Example from the cleaned source folder:
 
 ```powershell
 git init
 git add .
 git commit -m "Initial public release"
 git branch -M main
-git remote add origin https://github.com/VOTRE-COMPTE/DeckEdge.git
+git remote add origin https://github.com/YOUR-ACCOUNT/DeckEdge.git
 git push -u origin main
 git tag v0.1.3
 git push origin v0.1.3
 ```
 
-Le tag `v0.1.3` doit correspondre à VERSION. Le workflow crée une **Release brouillon**
-avec l’installateur, le portable, les sources et SHA256SUMS.txt. Vérifier les fichiers
-et les notes, puis cliquer sur **Publish release** pour les rendre téléchargeables.
-Les utilisateurs téléchargent les fichiers dans **Releases**, et non le ZIP automatique
-« Code → Download ZIP », qui contient uniquement les sources.
+The `v0.1.3` tag must match VERSION. The workflow creates a **draft Release**
+with the installer, the portable build, the sources and SHA256SUMS.txt. Check the
+files and the notes, then click **Publish release** to make them downloadable.
+Users download the files from **Releases**, not the automatic "Code → Download ZIP"
+archive, which contains only the sources.
 
-Sans Actions : créer manuellement une Release, y joindre les quatre fichiers de
-`dist`, utiliser docs/RELEASE-NOTES.md comme notes, puis publier.
+Without Actions: create a Release manually, attach the four files from `dist`,
+use docs/RELEASE-NOTES.md as the notes, then publish.
 
-## Avant chaque publication
+## Before each publication
 
-- Installer, lancer, quitter et désinstaller dans une VM Windows propre.
-- Tester le portable après déplacement de son dossier, avec un chemin contenant des espaces.
-- Vérifier la connexion d’un téléphone et le maintien des données après mise à jour.
-- Ne jamais reconstruire par simple ZIP du dossier de travail personnel.
-- Examiner les licences, les inventaires et les empreintes des nouveaux composants.
+- Install, launch, quit and uninstall on a clean Windows VM.
+- Test the portable build after moving its folder, with a path containing spaces.
+- Check phone pairing and that data survives an update.
+- Never rebuild by simply zipping your personal working folder.
+- Review the licenses, inventories and hashes of the new components.
 
-Les paquets ne sont pas signés avec un certificat éditeur DeckEdge. Une signature
-Authenticode avec votre propre certificat pourra être ajoutée avant publication.
-Ne stockez jamais ce certificat ou ses secrets dans les sources ; utilisez les
-secrets GitHub Actions pour une future étape de signature.
+The packages are not signed with a DeckEdge publisher certificate. An Authenticode
+signature with your own certificate can be added before publication.
+Never store that certificate or its secrets in the sources; use GitHub Actions
+secrets for a future signing step.
 
-Le workflow demande seulement les permissions de lecture pour construire et
-`contents: write` dans le job qui crée la Release brouillon. Les pull requests
-ne publient pas de Release et ne reçoivent pas de secrets de publication.
+The workflow only requests read permissions to build, and `contents: write` in
+the job that creates the draft Release. Pull requests do not publish a Release
+and do not receive publishing secrets.

@@ -1,12 +1,12 @@
-# Contribuer à DeckEdge
+# Contributing to DeckEdge
 
-Consultez README.md et docs/BUILD.md pour l’architecture, les prérequis et les tests.
-Le code propre au projet est publié sous MIT ; les contributions sont proposées
-sous cette même licence. Conservez les mentions des composants tiers.
+See README.md and docs/BUILD.md for the architecture, prerequisites and tests.
+Project-specific code is released under MIT; contributions are offered
+under the same license. Keep the third-party notices.
 
-Décrivez le problème, le comportement attendu et la validation de votre changement.
-N’incluez jamais config.json, discord_config.json, les journaux, les dossiers de
-données ou une capture affichant des informations personnelles.
+Describe the problem, the expected behavior and how you validated your change.
+Never include config.json, discord_config.json, logs, data folders
+or a screenshot showing personal information.
 
-Avant une pull request : tests Python, vérifications du Studio si concerné,
-et construction Windows pour tout changement natif ou de packaging.
+Before a pull request: Python tests, Studio checks if relevant,
+and a Windows build for any native or packaging change.

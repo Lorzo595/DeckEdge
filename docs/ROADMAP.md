@@ -1,15 +1,15 @@
-# Vers la version 1.0.0
+# Towards version 1.0.0
 
-DeckEdge 0.1.0 est une première version de test publique. Les points suivants
-décrivent les validations souhaitées avant de considérer une version stable,
-sans date de livraison promise.
+DeckEdge 0.1.0 is a first public test release. The following points describe the
+validation we want before considering a version stable, with no promised
+delivery date.
 
-- Installation et portable sur plusieurs PC, dont une machine Windows vierge.
-- Essais sur plusieurs téléphones, navigateurs et formats d’écran.
-- Fiabilité des profils, raccourcis, contrôles audio et capteurs au quotidien.
-- Vérification des mises à jour avec conservation et restauration des données.
-- Retours de nouveaux utilisateurs sur l’installation et la compréhension du Studio.
-- Correction des bugs bloquants ou susceptibles de provoquer une perte de données.
-- Une version candidate testée avant la publication de 1.0.0.
+- Installation and portable build on several PCs, including a clean Windows machine.
+- Testing on several phones, browsers and screen formats.
+- Day-to-day reliability of profiles, shortcuts, audio controls and sensors.
+- Verifying updates with data preservation and restore.
+- Feedback from new users on installation and on understanding the Studio.
+- Fixing blocking bugs or bugs likely to cause data loss.
+- A release candidate tested before the 1.0.0 publication.
 
-Les idées et problèmes peuvent être discutés dans les Issues du dépôt.
+Ideas and issues can be discussed in the repository's Issues.

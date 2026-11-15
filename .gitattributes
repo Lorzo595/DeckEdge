@@ -1,6 +1,6 @@
-# Normaliser les fins de ligne dans l'index Git.
-# Les fichiers texte sont stockés en LF et extraits selon la configuration
-# native de chaque poste (CRLF sous Windows avec core.autocrlf=true).
+# Normalize line endings in the Git index.
+# Text files are stored with LF and checked out according to each
+# machine's native setting (CRLF on Windows with core.autocrlf=true).
 * text=auto
 
 *.png binary
