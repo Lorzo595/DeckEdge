@@ -30,7 +30,7 @@ Développé par **Lorzo595**, avec l’aide de **ChatGPT**.
 | Audio | Volume Windows, sorties audio et applications ayant une session audio active, avec curseurs et sourdine |
 | Monitoring | Moteur LibreHardwareMonitor intégré et choix de 1 à 6 indicateurs, avec une seconde mesure facultative |
 | Personnalisation | Nom, icône, couleurs, pipette et états actif/inactif pour les touches à bascule |
-| Langues | Interface du pupitre et du Studio en français ou anglais, choix mémorisé sur l’appareil |
+| Langues | Interface du pupitre, du Studio et de l’application Windows en français ou anglais, avec mémorisation du choix |
 | Édition | Bibliothèque avec recherche, clic droit, duplication, annuler/rétablir et raccourcis clavier |
 | Profils | Export/import JSON et sauvegardes locales avec restauration |
 | Diagnostic | Rapport local copiable avec chemins, clé et IP privées masqués |

@@ -65,6 +65,7 @@ namespace DeckEdgeDesktop
             };
             FormClosing += delegate { closing = true; Capture = false; };
             Shown += delegate { Activate(); Focus(); };
+            UiText.Translate(this);
         }
 
         internal static Color ReadPixel(Point point)
@@ -73,7 +74,7 @@ namespace DeckEdgeDesktop
             if (dc == IntPtr.Zero) throw new Win32Exception();
             try {
                 uint pixel = GetPixel(dc, point.X, point.Y);
-                if (pixel == UInt32.MaxValue) throw new InvalidOperationException("Le pixel sélectionné n'est pas accessible.");
+                if (pixel == UInt32.MaxValue) throw new InvalidOperationException(UiText.T("Le pixel sélectionné n'est pas accessible."));
                 return Color.FromArgb((int)(pixel & 255), (int)((pixel >> 8) & 255), (int)((pixel >> 16) & 255));
             } finally { ReleaseDC(IntPtr.Zero, dc); }
         }

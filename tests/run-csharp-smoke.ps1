@@ -18,8 +18,9 @@ $references = @(
 ) | ForEach-Object { '/reference:' + $_ }
 
 $appSettings = Join-Path $root 'desktop/AppSettings.cs'
+$uiText = Join-Path $root 'desktop/UiText.cs'
 $settingsSmoke = Join-Path $root 'tests/SettingsSmoke.cs'
-& $csc /nologo /target:exe /platform:x64 /codepage:65001 "/out:$exe" @references $appSettings $settingsSmoke
+& $csc /nologo /target:exe /platform:x64 /codepage:65001 "/out:$exe" @references $appSettings $uiText $settingsSmoke
 if ($LASTEXITCODE -ne 0) { throw 'Compilation du test C# des préférences impossible.' }
 
 & $exe $output

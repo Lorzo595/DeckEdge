@@ -29,7 +29,7 @@ namespace DeckEdgeDesktop
                     .Select(a => new PhoneAddress { Name = n.Name + " · " + a.Address, Url = "http://" + a.Address + ":" + Program.Port + "/?key=" + key }))
                 .GroupBy(a => a.Url).Select(g => g.First()).ToArray();
             if (includePermanent && addresses.Length > 0 && Program.PhoneDiscoveryReady && !String.IsNullOrEmpty(Program.PhoneHost))
-                return new[] { new PhoneAddress { Name = "Ce PC · adresse permanente (recommandée)", Url = "http://" + Program.PhoneHost + ":" + Program.Port + "/?key=" + key } }.Concat(addresses).ToArray();
+                return new[] { new PhoneAddress { Name = UiText.T("Ce PC · adresse permanente (recommandée)"), Url = "http://" + Program.PhoneHost + ":" + Program.Port + "/?key=" + key } }.Concat(addresses).ToArray();
             return addresses;
         }
 
@@ -78,7 +78,7 @@ namespace DeckEdgeDesktop
             content.Controls.Add(connection);
             var buttons = new FlowLayoutPanel { Width = 470, Height = 40, Margin = new Padding(0, 0, 0, 6) };
             copy.Text = "Copier le lien"; copy.AutoSize = true; copy.FlatStyle = FlatStyle.Flat;
-            copy.Click += delegate { var address = network.SelectedItem as PhoneAddress; if (address != null) { try { Clipboard.SetText(address.Url); copy.Text = "Lien copié"; } catch { connection.Text = "Copie indisponible. Vous pouvez afficher le lien manuel."; } } };
+            copy.Click += delegate { var address = network.SelectedItem as PhoneAddress; if (address != null) { try { Clipboard.SetText(address.Url); copy.Text = UiText.T("Lien copié"); } catch { connection.Text = UiText.T("Copie indisponible. Vous pouvez afficher le lien manuel."); } } };
             var refresh = new Button { Text = "Actualiser les réseaux", AutoSize = true, FlatStyle = FlatStyle.Flat };
             refresh.Click += delegate { RefreshAddresses(); };
             buttons.Controls.Add(copy); buttons.Controls.Add(refresh); content.Controls.Add(buttons);
@@ -95,6 +95,7 @@ namespace DeckEdgeDesktop
             timer.Interval = 1500; timer.Tick += async delegate { await RefreshStatus(); };
             Shown += async delegate { RefreshAddresses(); timer.Start(); await RefreshStatus(); };
             FormClosed += delegate { timer.Stop(); timer.Dispose(); if (qr.Image != null) { var image = qr.Image; qr.Image = null; image.Dispose(); } };
+            UiText.Translate(this);
         }
 
         static void AddText(FlowLayoutPanel panel, string text, int size, Color color, int margin)
@@ -111,18 +112,18 @@ namespace DeckEdgeDesktop
                 network.Items.Clear(); network.Items.AddRange(addresses);
                 network.Enabled = addresses.Length > 0;
                 if (addresses.Length > 0) { int selected = selectedByUser ? Array.FindIndex(addresses, a => a.Url == previous) : 0; network.SelectedIndex = Math.Max(0, selected); }
-                else { UpdateQr(); connection.Text = "Aucun réseau local détecté. Connectez le PC au Wi-Fi ou à Ethernet, puis actualisez."; }
-            } catch { UpdateQr(); connection.Text = "Réseaux indisponibles. Vérifiez la connexion du PC et actualisez."; }
+                else { UpdateQr(); connection.Text = UiText.T("Aucun réseau local détecté. Connectez le PC au Wi-Fi ou à Ethernet, puis actualisez."); }
+            } catch { UpdateQr(); connection.Text = UiText.T("Réseaux indisponibles. Vérifiez la connexion du PC et actualisez."); }
         }
 
         void UpdateQr()
         {
             var address = network.SelectedItem as PhoneAddress;
             var old = qr.Image; qr.Image = null; if (old != null) old.Dispose();
-            manual.Text = address == null ? "" : address.Url; copy.Enabled = address != null; copy.Text = "Copier le lien";
+            manual.Text = address == null ? "" : address.Url; copy.Enabled = address != null; copy.Text = UiText.T("Copier le lien");
             if (address != null) {
                 try { qr.Image = PhoneConnection.QrImage(address.Url); }
-                catch { connection.Text = "QR code indisponible. Utilisez le lien manuel."; }
+                catch { connection.Text = UiText.T("QR code indisponible. Utilisez le lien manuel."); }
             }
         }
 
@@ -136,8 +137,8 @@ namespace DeckEdgeDesktop
                 if (permanentShown != Program.PhoneDiscoveryReady) RefreshAddresses();
                 connection.ForeColor = count > 0 ? Color.FromArgb(112, 218, 158) : Color.FromArgb(180, 195, 222);
                 if (network.Items.Count == 0) return;
-                connection.Text = count > 0 ? "Pupitre connecté · vous pouvez utiliser DeckEdge sur votre téléphone." : count < 0 ? "Le serveur ne répond pas encore. Gardez DeckEdge ouvert." : "Serveur prêt · scannez le QR code pour connecter le téléphone.";
-            } catch { if (!IsDisposed && !Disposing) connection.Text = "Vérification du serveur indisponible."; }
+                connection.Text = count > 0 ? UiText.T("Pupitre connecté · vous pouvez utiliser DeckEdge sur votre téléphone.") : count < 0 ? UiText.T("Le serveur ne répond pas encore. Gardez DeckEdge ouvert.") : UiText.T("Serveur prêt · scannez le QR code pour connecter le téléphone.");
+            } catch { if (!IsDisposed && !Disposing) connection.Text = UiText.T("Vérification du serveur indisponible."); }
             finally { polling = false; }
         }
     }
