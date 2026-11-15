@@ -1,6 +1,6 @@
-﻿# Getting started with DeckEdge
+# Getting started with DeckEdge
 
-Developed by Lorzo595, with help from ChatGPT. Source code under the MIT license.
+Developed by Lorzo595. Source code under the MIT license.
 
 ## Installation
 Run Setup-x64.exe, choose the folder and finish the wizard. A shortcut
@@ -17,7 +17,8 @@ cannot be made portable. Without it, some measurements are unavailable.
 
 ## Configuring
 Choose a profile on the left. Add an action from the library on the right,
-by clicking or dragging it onto the preview. Click a key in the preview to
+by clicking or dragging it onto the preview. Pages can be grouped into folders:
+select a folder to see and edit its sub-pages. Click a key in the preview to
 edit its settings below. **Size and behavior** sets the width, the height and the toggle mode. Technical options stay collapsed.
 A keyboard shortcut can be recorded by pressing the keys together.
 The Test button validates the command and its targets without running it.

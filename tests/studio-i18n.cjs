@@ -17,6 +17,8 @@ const base=require('./ui-base.cjs');
   assert.match(await page.locator('#editor-title').innerText(),/Customize$/);
   assert.equal(await page.getByRole('heading',{name:'Actions',exact:true}).innerText(),'Actions');
   assert.equal(await page.locator('#action-test-button').innerText(),'▶ Test');
+  assert.equal(await page.getByRole('button',{name:'+ Folder',exact:true}).innerText(),'+ Folder');
+  assert.equal(await page.locator('label[for="inp-page-parent"]').innerText(),'Folder');
 
   await page.getByRole('button',{name:'Library',exact:true}).click();
   await page.waitForFunction(()=>document.getElementById('icon-library-modal').style.display==='flex');
@@ -36,6 +38,8 @@ const base=require('./ui-base.cjs');
   assert.equal(await page.locator('.workspace-heading h2').innerText(),'Votre Deck');
   assert.match(await page.locator('#editor-title').innerText(),/Personnaliser$/);
   assert.equal(await page.locator('#action-test-button').innerText(),'▶ Tester');
+  assert.equal(await page.getByRole('button',{name:'+ Dossier',exact:true}).innerText(),'+ Dossier');
+  assert.equal(await page.locator('label[for="inp-page-parent"]').innerText(),'Dossier');
   assert.equal(await page.getByRole('button',{name:'Bibliothèque',exact:true}).innerText(),'Bibliothèque');
 
   await page.reload();await page.waitForFunction(()=>studioReady && document.body.innerText.includes('Recharger'));

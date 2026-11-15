@@ -141,6 +141,8 @@ class PageConfig(BaseModel):
     name: str = Field(..., min_length=1, max_length=50, description="Nom affiché de la page")
     icon: str = Field(default="📄", max_length=10, description="Icône de l'onglet")
     buttons: List[ButtonConfig] = Field(default_factory=list, max_length=500, description="Liste ordonnée des boutons")
+    parent_id: Optional[str] = Field(default=None, max_length=64, description="Optional parent folder")
+    is_folder: bool = Field(default=False, description="Navigation folder without buttons")
 
 class MonitoringWidget(BaseModel):
     label: str = Field(default="Indicateur", min_length=1, max_length=24)
@@ -225,18 +227,36 @@ class DeckConfig(BaseModel):
 
             normalized_pages.append(page)
 
+        folder_ids = {page.get("id") for page in normalized_pages if isinstance(page, dict) and page.get("is_folder")}
+        for page in normalized_pages:
+            if not isinstance(page, dict):
+                continue
+            parent = page.get("parent_id")
+            if isinstance(parent, str):
+                parent = page_id_map.get(parent, parent)
+            if page.get("is_folder") or parent not in folder_ids or parent == page.get("id"):
+                parent = None
+            page["parent_id"] = parent
+
         data["pages"] = normalized_pages
 
         # "Principal" is the opening profile; navigation stays local to each interface.
+        page_ids = [page.get("id") for page in normalized_pages if isinstance(page, dict)]
+        content_page_ids = [
+            page.get("id") for page in normalized_pages
+            if isinstance(page, dict) and not page.get("is_folder")
+        ]
         active_page_id = data.get("active_page_id")
         if isinstance(active_page_id, str):
             active_page_id = page_id_map.get(active_page_id, active_page_id)
-        if "page_main" in page_ids:
+        if "page_main" in content_page_ids:
             data["active_page_id"] = "page_main"
-        elif active_page_id not in page_ids:
-            data["active_page_id"] = page_ids[0] if page_ids else "page_main"
-        else:
+        elif active_page_id in content_page_ids:
             data["active_page_id"] = active_page_id
+        elif content_page_ids:
+            data["active_page_id"] = content_page_ids[0]
+        else:
+            data["active_page_id"] = page_ids[0] if page_ids else "page_main"
 
         return data
 

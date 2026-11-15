@@ -1,42 +1,52 @@
-# DeckEdge 0.1.3 — Profiles, backups and diagnostics
+# DeckEdge 0.1.4 — Folders, conditional actions and bilingual interfaces
 
-Windows x64 pre-release developed by **Lorzo595**, with the help of **ChatGPT**. Thanks to **xavco63** for the contributions merged in PR #4 and #5.
+Windows x64 pre-release by **Lorzo595**. Thanks to **xavco63** for the French/English interfaces, action tools and folder navigation.
 
-## What's new since 0.1.2
+## What's new since 0.1.3
 
-- **Profiles** menu: JSON export, validated import that can be cancelled before saving.
-- Local **timestamped backups**: the last 20 are kept and can be restored from the Studio.
-- Safety backup before a restore; if it fails, the restore is cancelled and the current configuration is kept.
-- Protection against a simultaneous save and restore.
-- **Diagnostics** panel with a report you can copy or download, hiding personal paths and known keys and tokens.
-- Configurable port with automatic selection on conflict, remembered between launches and kept when applying settings. The QR code and mDNS use the chosen port.
-- Configuration writes are grouped together with retry after a temporary error.
-- Browser and C# tests included in the GitHub checks; source line ending normalization.
+- **Folders and sub-pages:** organize pages into one-level folders in the Studio and on your phone. Rename, duplicate or delete a folder; deleting a folder keeps its pages at the top level. The phone remembers the last visited sub-page of each folder for the current session.
+- **Action validation:** use **Test** in the Studio to check shortcuts, application targets, audio targets and sequence conditions without executing commands. Validation uses your current unsaved configuration.
+- **Conditional sequences:** run a step only when a toggle is on/off, an application is running, or the microphone is muted/live. Unmet conditions skip the step; an action failure stops the sequence.
+- **Icon library:** search categorized icons and reuse recently selected icons.
+- **French and English:** the Studio, mobile deck, pairing screen and native Windows interface remember your language choice. Repository documentation is now in English.
+- **Mobile accessibility:** pinch zoom is enabled and toggle/mute controls expose their pressed state to assistive technology.
 
-The QR code, the PC's permanent address, Windows startup and keeping the PC and its screen awake are unchanged.
+## Fixes included after review
 
-## Download
+- Copied profiles and folders keep their own internal condition links, including references between sub-pages. References to keys outside the copied group remain unchanged.
+- Sequence button conditions read the latest state before each step instead of using a snapshot from sequence startup. Missing or non-toggle condition keys do not satisfy the condition.
+- Audio validation recognizes relative volume and mute commands for output devices and the `general` output alias.
 
-- **DeckEdge-0.1.3-Setup-x64.exe**: standard Windows installation.
-- **DeckEdge-0.1.3-Portable-x64.zip**: extract the whole folder, then run DeckEdge.exe.
-- **DeckEdge-0.1.3-Source.zip**: cleaned public sources.
-- **SHA256SUMS.txt**: checksums of the downloads.
+QR pairing, the permanent PC address, local backups, diagnostics, Windows startup and the keep-awake option remain available.
 
-Windows 10 build 19041+ / Windows 11 **x64**. Python and LibreHardwareMonitor are included. WebView2 is offered if missing; Internet access is then required. Full sensor access remains optional and may require administrator approval.
+## Downloads and installation
 
-## Updating
+| File | Use |
+| --- | --- |
+| `DeckEdge-0.1.4-Setup-x64.exe` | Standard Windows installation; follow the setup wizard. |
+| `DeckEdge-0.1.4-Portable-x64.zip` | Extract the entire archive and run `DeckEdge/DeckEdge.exe`. |
+| `DeckEdge-0.1.4-Source.zip` | Clean public sources under the MIT license. |
+| `SHA256SUMS.txt` | SHA-256 checksums for the three downloads. |
 
-1. Fully quit the old version from its icon near the clock.
-2. Install 0.1.3, or extract the new portable build into a new folder.
-3. For the portable build, copy the old `data` folder into the new one to keep profiles, backups and the phone key. The standard installation keeps its data in `%LOCALAPPDATA%\DeckEdge`.
-4. If a conflict forces a port change and the mobile shortcut no longer responds, reopen **Connect phone** and scan the new QR code. The chosen port is then remembered.
+Requires **Windows 10 build 19041+ or Windows 11, x64**. Python and LibreHardwareMonitor are bundled. WebView2 is offered if missing and requires Internet for installation. Full hardware sensor access is optional and may request administrator permission.
 
-Profile exports may contain your paths and action targets: read them again before sharing. Also review the diagnostics report before publishing it. Never share the QR code or its private key. The PC and phone must stay on the same private network.
+## Updating from an earlier version
+
+1. Quit the previous version completely using its tray icon near the Windows clock.
+2. Run the new installer, or extract the new portable archive into a new folder.
+3. For portable mode, copy your old `data` folder into the new DeckEdge folder to preserve profiles, backups and the phone pairing key. The installed edition keeps its data in `%LOCALAPPDATA%\DeckEdge`.
+4. Reopen DeckEdge. Your existing flat pages remain supported; folders are optional.
+
+Your phone pairing key is preserved. If a port conflict forces a different server port, open **Connect phone** and scan the updated QR code; the selected port is remembered afterwards.
 
 ## Validation and limitations
 
-68 Python tests, eight Edge tests and the C# test passed on the merged features. The GitHub checks also compile the Windows packages and verify the distributions. Backup failure and concurrent operation cases are covered by regression tests.
+- 90 Python tests, 14 Edge browser test scripts, and the C# preferences smoke test.
+- Regression coverage for live sequence conditions, internal/external copied links, cross-page folder links, and device audio validation without executing commands.
+- Windows installer/portable builds and clean-distribution/SHA-256 checks.
 
-This version remains a **pre-release**, not 1.0.0. The executables are unsigned (SmartScreen warning possible). Validation on multiple hardware configurations, on a clean Windows install and after a full Windows restart is still to be completed. Automated command tests use simulations. Do not expose the HTTP server to the Internet.
+This is still a **pre-release**, not 1.0.0. Executables are unsigned, so Windows SmartScreen may show a warning. Clean Windows installation, a representative range of hardware and full Windows restart scenarios still need broader manual validation. Automated action tests use mocks.
+
+Keep the PC and phone on the same private network. Do not expose the HTTP server to the Internet or share your QR code/pairing key. Review profile exports and diagnostics before sharing them: they may contain personal information.
 
 [Documentation](https://github.com/Lorzo595/DeckEdge#readme) · [Contributors](https://github.com/Lorzo595/DeckEdge#contributors) · [Report an issue](https://github.com/Lorzo595/DeckEdge/issues)

@@ -46,6 +46,7 @@ try {
         'tests/sequences.cjs',
         'tests/studio-actions.cjs',
         'tests/mobile-accessibility.cjs',
+        'tests/folders.cjs',
         'tests/i18n.cjs',
         'tests/studio-i18n.cjs'
     )

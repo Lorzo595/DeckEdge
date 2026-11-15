@@ -77,5 +77,5 @@ jobs:
             Write-Output 'Cette Release existe déjà : ses fichiers sont conservés.'
             exit 0
           }
-          gh release create $env:GITHUB_REF_NAME --verify-tag --draft --prerelease --title "DeckEdge $version — version de test" --notes-file docs/RELEASE-NOTES.md dist/*
+          gh release create $env:GITHUB_REF_NAME --verify-tag --draft --prerelease --title "DeckEdge $version — pre-release" --notes-file docs/RELEASE-NOTES.md dist/*
           if ($LASTEXITCODE -ne 0) { throw 'Création de la Release impossible.' }

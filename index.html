@@ -89,6 +89,11 @@
       color: #38bdf8;
       box-shadow: 0 0 10px rgba(56, 189, 248, 0.25);
     }
+    .subpages-bar { display: flex; gap: 5px; overflow-x: auto; flex-shrink: 0; padding: 0 0 4px; scrollbar-width: none; }
+    .subpages-bar::-webkit-scrollbar { display: none; }
+    .subpages-bar[hidden] { display: none; }
+    .subpages-bar .page-tab { padding: 6px 12px; font-size: 12px; border-radius: 14px; background: #0f1420; }
+    .deck-empty { grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 32px 16px; font-size: 14px; }
     .language-tab {
       margin-left: auto;
       font-weight: 800;
@@ -425,6 +430,7 @@
 
   <!-- PAGE / PROFILE SELECTOR -->
   <div class="pages-bar" id="pages-bar"></div>
+  <div class="subpages-bar" id="subpages-bar" hidden></div>
 
   <!-- RESPONSIVE STREAM DECK GRID -->
   <div class="deck-grid deck-layout-grid" id="deck-grid"></div>
@@ -441,6 +447,7 @@
     let ws = null;
     let configData = null;
     let currentActivePageId = null;
+    const folderMemory = {};
     let reconnectTimeout = null;
     let lastMonitoringReadings = [];
     
@@ -467,7 +474,11 @@
         if (!configData.pages || configData.pages.length === 0) return;
         
         if (!currentActivePageId || !configData.pages.some(p => p.id === currentActivePageId)) {
-          currentActivePageId = configData.pages.find(page => page.id === 'page_main')?.id || configData.active_page_id || configData.pages[0].id;
+          const contentPages = configData.pages.filter(page => !page.is_folder);
+          currentActivePageId = contentPages.find(page => page.id === 'page_main')?.id
+            || (contentPages.some(page => page.id === configData.active_page_id) ? configData.active_page_id : null)
+            || contentPages[0]?.id
+            || configData.pages[0].id;
         }
 
         renderTabs();
@@ -503,18 +514,39 @@
       return String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
     }
 
+    function pageById(pageId) {
+      return (configData?.pages || []).find(page => page.id === pageId) || null;
+    }
+
+    function pageFolder(page) {
+      return page && page.parent_id ? pageById(page.parent_id) : null;
+    }
+
+    function folderChildren(folderId) {
+      return (configData?.pages || []).filter(page => page.parent_id === folderId);
+    }
+
+    function activeFolder() {
+      const page = pageById(currentActivePageId);
+      if (!page) return null;
+      return page.is_folder ? page : pageFolder(page);
+    }
+
     // 2. Tab rendering
     function renderTabs() {
       const bar = document.getElementById('pages-bar');
       bar.innerHTML = '';
 
       if (!configData || !configData.pages) return;
+      const folder = activeFolder();
 
-      configData.pages.forEach(p => {
+      configData.pages.filter(p => !p.parent_id).forEach(p => {
         const tab = document.createElement('div');
-        tab.className = `page-tab ${p.id === currentActivePageId ? 'active' : ''}`;
-        tab.innerHTML = `<span>${deckText(p.icon || '📄')}</span><span>${deckText(p.name)}</span>`;
-        tab.onclick = () => switchPage(p.id);
+        const active = p.is_folder ? (folder && folder.id === p.id) : p.id === currentActivePageId;
+        tab.className = `page-tab ${active ? 'active' : ''} ${p.is_folder ? 'folder-tab' : ''}`;
+        tab.innerHTML = `<span>${deckText(p.icon || (p.is_folder ? '📁' : '📄'))}</span><span>${deckText(p.name)}</span>`;
+        if (active) tab.setAttribute('aria-current', 'page');
+        tab.onclick = () => p.is_folder ? switchFolder(p.id) : switchPage(p.id);
         bar.appendChild(tab);
       });
 
@@ -527,10 +559,42 @@
       language.setAttribute('aria-label', I18n.t('language.switch'));
       language.onclick = () => I18n.toggleLanguage();
       bar.appendChild(language);
+
+      renderSubTabs(folder);
+    }
+
+    function renderSubTabs(folder) {
+      const bar = document.getElementById('subpages-bar');
+      if (!bar) return;
+      bar.innerHTML = '';
+      const children = folder ? folderChildren(folder.id) : [];
+      bar.hidden = children.length === 0;
+      children.forEach(p => {
+        const tab = document.createElement('div');
+        const active = p.id === currentActivePageId;
+        tab.className = `page-tab ${active ? 'active' : ''}`;
+        tab.innerHTML = `<span>${deckText(p.icon || '📄')}</span><span>${deckText(p.name)}</span>`;
+        if (active) tab.setAttribute('aria-current', 'page');
+        tab.onclick = () => switchPage(p.id);
+        bar.appendChild(tab);
+      });
+    }
+
+    function switchFolder(folderId) {
+      const children = folderChildren(folderId);
+      const remembered = folderMemory[folderId];
+      currentActivePageId = children.some(page => page.id === remembered)
+        ? remembered
+        : (children[0]?.id || folderId);
+      if (navigator.vibrate) navigator.vibrate(20);
+      renderTabs();
+      renderActivePage();
     }
 
     function switchPage(pageId) {
       currentActivePageId = pageId;
+      const page = pageById(pageId);
+      if (page?.parent_id) folderMemory[page.parent_id] = pageId;
       if (navigator.vibrate) navigator.vibrate(20);
       renderTabs();
       renderActivePage();
@@ -576,8 +640,13 @@
       grid.innerHTML = '';
 
       if (!configData || !configData.pages) return;
-      const page = configData.pages.find(p => p.id === currentActivePageId) || configData.pages[0];
-      if (!page || !page.buttons) return;
+      const page = pageById(currentActivePageId) || configData.pages[0];
+      if (!page) return;
+      if (page.is_folder) {
+        grid.innerHTML = `<p class="deck-empty">${deckText(I18n.t('deck.folder.empty'))}</p>`;
+        return;
+      }
+      if (!page.buttons) return;
 
       page.buttons.forEach(btn => {
         // A. TOUCH SLIDER (FADER)

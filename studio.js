@@ -30,11 +30,26 @@ function renderPhoneChrome() {
     bar.append(gauge);
   });
   const tabs = document.getElementById('preview-phone-pages'); tabs.replaceChildren();
-  (config.pages || []).forEach(page => {
+  const pages = config.pages || [];
+  const current = getCurrentPage();
+  const folder = current?.is_folder ? current : pages.find(page => page.id === current?.parent_id) || null;
+  pages.filter(page => !page.parent_id).forEach(page => {
     const tab = document.createElement('button'); tab.type = 'button'; tab.className = 'phone-tab';
-    tab.classList.toggle('active',page.id === currentActivePageId); tab.textContent = `${page.icon || '📄'} ${page.name}`;
-    tab.onclick = () => switchPage(page.id); tabs.append(tab);
+    const active = page.is_folder ? (folder && folder.id === page.id) : page.id === currentActivePageId;
+    tab.classList.toggle('active', active); tab.textContent = `${page.icon || (page.is_folder ? '📁' : '📄')} ${page.name}`;
+    tab.onclick = () => page.is_folder ? switchFolder(page.id) : switchPage(page.id); tabs.append(tab);
   });
+  const subpages = document.getElementById('preview-subpages');
+  if (subpages) {
+    subpages.replaceChildren();
+    const children = folder ? pages.filter(page => page.parent_id === folder.id) : [];
+    subpages.hidden = children.length === 0;
+    children.forEach(page => {
+      const tab = document.createElement('button'); tab.type = 'button'; tab.className = 'phone-tab';
+      tab.classList.toggle('active', page.id === currentActivePageId); tab.textContent = `${page.icon || '📄'} ${page.name}`;
+      tab.onclick = () => switchPage(page.id); subpages.append(tab);
+    });
+  }
 }
 
 function updatePhonePreview() {
@@ -181,6 +196,7 @@ function studioFocusLabel() {
 
 function addStudioButton(type = 'hotkey') {
   const page = getCurrentPage();
+  if (page.is_folder) { studioNotify(I18n.t('studio.page.folderNoKey')); return; }
   const slider = type === 'slider';
   const sequence = type === 'sequence';
   page.buttons.push({id:studioId('b'), label:slider ? 'Volume' : (sequence ? 'Séquence' : 'Nouvelle touche'), icon:slider ? '🔊' : (sequence ? '🔗' : '⌘'),
@@ -226,6 +242,22 @@ function remapClonedButtons(pages) {
 function duplicateStudioPage(pageId) {
   const source = config.pages.find(p => p.id === pageId); if (!source) return;
   const copy = studioClone(source); copy.id = studioId('page'); copy.name = source.name.slice(0,42) + ' (copie)';
+  if (source.is_folder) {
+    copy.buttons = [];
+    const children = config.pages.filter(p => p.parent_id === source.id).map(child => {
+      const childCopy = studioClone(child);
+      childCopy.id = studioId('page');
+      childCopy.parent_id = copy.id;
+      return childCopy;
+    });
+    // Remap all children together so cross-page conditions follow the copy.
+    remapClonedButtons(children);
+    const insertAt = config.pages.indexOf(source) + 1;
+    config.pages.splice(insertAt, 0, copy, ...children);
+    switchPage(copy.id);
+    studioNotify(I18n.t('studio.page.folderDuplicated'));
+    return;
+  }
   remapClonedButtons([copy]);
   config.pages.splice(config.pages.indexOf(source) + 1, 0, copy); switchPage(copy.id);
   studioNotify('Profil dupliqué.');
@@ -233,19 +265,26 @@ function duplicateStudioPage(pageId) {
 
 function renameStudioPage(pageId) {
   const page = config.pages.find(p => p.id === pageId); if (!page) return;
-  const name = prompt('Nom du profil :', page.name);
+  const name = prompt(page.is_folder ? I18n.t('studio.page.renameFolder') : I18n.t('studio.page.renamePage'), page.name);
   if (name?.trim()) { page.name = name.trim().slice(0,50); renderPagesBar(); }
 }
 
 function removeStudioPage(pageId) {
   if (config.pages.length <= 1) return;
   const page = config.pages.find(p => p.id === pageId); if (!page) return;
-  if (!confirm(`Supprimer le profil « ${page.name} » et ses touches ? Cette action peut être annulée.`)) return;
+  const message = page.is_folder
+    ? I18n.t('studio.page.deleteFolderConfirm', {name: page.name})
+    : `Supprimer le profil « ${page.name} » et ses touches ? Cette action peut être annulée.`;
+  if (!confirm(message)) return;
+  if (page.is_folder)
+    config.pages.filter(p => p.parent_id === page.id).forEach(child => { child.parent_id = null; });
   config.pages.splice(config.pages.indexOf(page), 1);
-  if (!config.pages.some(p => p.id === config.active_page_id))
-    config.active_page_id = config.pages.find(p => p.id === 'page_main')?.id || config.pages[0].id;
-  if (currentActivePageId === pageId) currentActivePageId = config.pages[0].id;
-  switchPage(currentActivePageId); studioNotify('Profil supprimé.', 'Annuler', undoStudio);
+  const content = config.pages.filter(p => !p.is_folder);
+  if (!content.some(p => p.id === config.active_page_id))
+    config.active_page_id = (content.find(p => p.id === 'page_main') || content[0] || config.pages[0]).id;
+  if (currentActivePageId === pageId || !config.pages.some(p => p.id === currentActivePageId))
+    currentActivePageId = (content.find(p => p.id === 'page_main') || content[0] || config.pages[0]).id;
+  switchPage(currentActivePageId); studioNotify(page.is_folder ? I18n.t('studio.page.folderDeleted') : 'Profil supprimé.', 'Annuler', undoStudio);
 }
 
 function studioCloseMenu(restoreFocus = false) {
@@ -276,6 +315,13 @@ function studioMenu(event, title, items) {
 
 function openAddMenu(event) {
   if (!config?.pages?.length) return;
+  const page = getCurrentPage();
+  if (page?.is_folder) {
+    studioMenu(event, I18n.t('studio.page.addToFolder'), [
+      {label:I18n.t('studio.page.addPageHere'), action:addNewPage}
+    ]);
+    return;
+  }
   const rect = event?.currentTarget?.getBoundingClientRect();
   studioMenu(event?.clientX ? event : {clientX:rect?.left || 20,clientY:rect?.bottom || 100}, 'Ajouter au profil', [
     {label:'Touche / raccourci', key:'Ctrl+N', action:() => addStudioButton('hotkey')},
@@ -299,7 +345,7 @@ function openTileMenu(event, index) {
       {label:'Grand widget',action:() => resizeStudioWidget('full','tall')},
       {label:'Automatique',action:() => resizeStudioWidget('auto','normal')}
     ])},
-    {label:'Déplacer vers un profil…', disabled:config.pages.length < 2, action:() => studioMenu(event, 'Déplacer vers', config.pages.filter(p => p !== page).map(p => ({label:p.name, action:() => moveStudioButton(p.id)})))},
+    {label:'Déplacer vers un profil…', disabled:config.pages.filter(p => p !== page && !p.is_folder).length === 0, action:() => studioMenu(event, 'Déplacer vers', config.pages.filter(p => p !== page && !p.is_folder).map(p => ({label:p.name, action:() => moveStudioButton(p.id)})))},
     null,
     {label:'Ajouter une touche après', action:() => { const before = selectedIndex; addStudioButton(); const added = page.buttons.pop(); page.buttons.splice(before + 1,0,added); renderGrid(); selectButton(before + 1); studioFocusLabel(); }},
     {label:'Ajouter un curseur de volume', action:() => addStudioButton('slider')},
