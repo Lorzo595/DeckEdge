@@ -32,9 +32,10 @@ namespace DeckEdgeDesktop
         public int WindowHeight { get; set; }
         public bool WindowMaximized { get; set; }
         public int ServerPort { get; set; }
+        public string Language { get; set; }
         public AppPreferences() {
             StartupInTray = true; CloseToTray = true; KeepAwake = true; FullSensorAccess = true;
-            WindowWidth = 1360; WindowHeight = 920; ServerPort = 5000;
+            WindowWidth = 1360; WindowHeight = 920; ServerPort = 5000; Language = UiText.DefaultLanguage;
         }
     }
 
@@ -98,21 +99,21 @@ namespace DeckEdgeDesktop
         {
             if (enabled) {
                 if (DisabledByWindows("StartupFolder", "DeckEdge.lnk"))
-                    throw new InvalidOperationException("Windows a désactivé DeckEdge au démarrage. Réactivez-le dans Paramètres Windows > Applications > Démarrage, puis réessayez.");
+                    throw new InvalidOperationException(UiText.T("Windows a désactivé DeckEdge au démarrage. Réactivez-le dans Paramètres Windows > Applications > Démarrage, puis réessayez."));
                 Directory.CreateDirectory(Path.GetDirectoryName(StartupShortcut));
                 object shell = null, shortcut = null;
                 try {
                     shell = Activator.CreateInstance(Type.GetTypeFromProgID("WScript.Shell"));
                     shortcut = shell.GetType().InvokeMember("CreateShortcut", BindingFlags.InvokeMethod, null, shell, new object[] { StartupShortcut });
                     string[] names = { "TargetPath", "Arguments", "WorkingDirectory", "Description" };
-                    string[] values = { Application.ExecutablePath, "--startup", Path.GetDirectoryName(Application.ExecutablePath), "DeckEdge au démarrage de Windows" };
+                    string[] values = { Application.ExecutablePath, "--startup", Path.GetDirectoryName(Application.ExecutablePath), UiText.T("DeckEdge au démarrage de Windows") };
                     for (int i = 0; i < names.Length; i++) shortcut.GetType().InvokeMember(names[i], BindingFlags.SetProperty, null, shortcut, new object[] { values[i] });
                     shortcut.GetType().InvokeMember("Save", BindingFlags.InvokeMethod, null, shortcut, null);
                 } finally {
                     if (shortcut != null) Marshal.FinalReleaseComObject(shortcut);
                     if (shell != null) Marshal.FinalReleaseComObject(shell);
                 }
-                if (!ShortcutMatches()) throw new IOException("Le raccourci de démarrage n'a pas pu être vérifié.");
+                if (!ShortcutMatches()) throw new IOException(UiText.T("Le raccourci de démarrage n'a pas pu être vérifié."));
             } else if (ShortcutMatches()) {
                 File.Delete(StartupShortcut);
             }
@@ -149,6 +150,7 @@ namespace DeckEdgeDesktop
         internal SettingsForm(AppPreferences preferences)
         {
             original = preferences;
+            UiText.SetLanguage(preferences.Language);
             Text = "Paramètres de DeckEdge"; ClientSize = new Size(540, 650);
             FormBorderStyle = FormBorderStyle.FixedDialog; MaximizeBox = false; MinimizeBox = false;
             StartPosition = FormStartPosition.CenterParent; ShowInTaskbar = false;
@@ -157,6 +159,16 @@ namespace DeckEdgeDesktop
             var layout = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, Padding = new Padding(26), AutoScroll = true };
             Controls.Add(layout);
             layout.Controls.Add(new Label { Text = "À votre façon.", Font = new Font("Segoe UI", 19), AutoSize = true, Margin = new Padding(0, 0, 0, 17) });
+            var languageRow = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, WrapContents = false, Margin = new Padding(0, 0, 0, 14) };
+            languageRow.Controls.Add(new Label { Text = "Langue", AutoSize = true, Margin = new Padding(0, 8, 12, 0) });
+            var language = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 180 };
+            language.Items.Add("Français"); language.Items.Add("English");
+            language.SelectedIndex = preferences.Language == "en" ? 1 : 0;
+            language.SelectedIndexChanged += delegate {
+                UiText.SetLanguage(language.SelectedIndex == 1 ? "en" : "fr");
+                UiText.Translate(this);
+            };
+            languageRow.Controls.Add(language); layout.Controls.Add(languageRow);
             startup = Check(layout, "Lancer DeckEdge à l'ouverture de ma session Windows", preferences.StartWithWindows);
             startupTray = Check(layout, "Démarrer discrètement près de l'horloge", preferences.StartupInTray);
             startupTray.Margin = new Padding(24, 3, 0, 12); startupTray.Enabled = startup.Checked;
@@ -184,7 +196,7 @@ namespace DeckEdgeDesktop
             };
             about.Controls.Add(new Label { Text = "À propos de DeckEdge", AutoSize = true, Font = new Font("Segoe UI", 12, FontStyle.Bold), Margin = new Padding(0, 0, 0, 10) });
             about.Controls.Add(new Label { Text = "Version " + assembly.GetName().Version.ToString(3) + " · Windows 64 bits", AutoSize = true, Margin = new Padding(0, 0, 0, 7) });
-            about.Controls.Add(new Label { Text = "Développement : " + (company == null ? "DeckEdge contributors" : company.Company), MaximumSize = new Size(430, 0), AutoSize = true, Margin = new Padding(0, 0, 0, 7) });
+            about.Controls.Add(new Label { Text = UiText.T("Développement : ") + (company == null ? "DeckEdge contributors" : company.Company), MaximumSize = new Size(430, 0), AutoSize = true, Margin = new Padding(0, 0, 0, 7) });
             about.Controls.Add(new Label { Text = "Contributeurs\nLorzo595 · création et développement\nxavco63 · profils, sauvegardes, diagnostic et audio", MaximumSize = new Size(430, 0), AutoSize = true, Font = new Font("Segoe UI", 9), Margin = new Padding(0, 0, 0, 10) });
             about.Controls.Add(new Label { Text = "Avec l’aide de ChatGPT", AutoSize = true, Font = new Font("Segoe UI", 9), ForeColor = Color.FromArgb(173, 179, 195), Margin = new Padding(0, 0, 0, 7) });
             about.Controls.Add(new Label { Text = "Code source ouvert · Licence MIT\nCapteurs : LibreHardwareMonitor · Interface : Microsoft WebView2", MaximumSize = new Size(430, 0), AutoSize = true, Font = new Font("Segoe UI", 9), ForeColor = Color.FromArgb(173, 179, 195), Margin = new Padding(0, 0, 0, 10) });
@@ -192,7 +204,7 @@ namespace DeckEdgeDesktop
             license.Click += delegate {
                 string path = Path.Combine(Program.Project, "LICENSE");
                 if (File.Exists(path)) Process.Start(new ProcessStartInfo("notepad.exe", "\"" + path + "\"") { UseShellExecute = true });
-                else MessageBox.Show(this, "La licence MIT est disponible dans les sources de DeckEdge.", "Licence de DeckEdge", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                else MessageBox.Show(this, UiText.T("La licence MIT est disponible dans les sources de DeckEdge."), UiText.T("Licence de DeckEdge"), MessageBoxButtons.OK, MessageBoxIcon.Information);
             };
             about.Controls.Add(license); layout.Controls.Add(about);
             var actions = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 76, Padding = new Padding(26, 12, 0, 12), WrapContents = false, BackColor = BackColor };
@@ -202,16 +214,19 @@ namespace DeckEdgeDesktop
             AcceptButton = save; CancelButton = cancel;
             save.Click += delegate {
                 Result = BuildResult(
-                    original, startup.Checked, startupTray.Checked, closeTray.Checked, awake.Checked, fullSensors.Checked
+                    original, startup.Checked, startupTray.Checked, closeTray.Checked, awake.Checked, fullSensors.Checked,
+                    language.SelectedIndex == 1 ? "en" : "fr"
                 );
                 try { PreferencesStore.Save(Result, true); DialogResult = DialogResult.OK; Close(); }
-                catch (Exception ex) { MessageBox.Show(this, "Impossible d'appliquer ces paramètres.\n\n" + ex.Message, "DeckEdge", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                catch (Exception ex) { MessageBox.Show(this, UiText.T("Impossible d'appliquer ces paramètres.") + "\n\n" + ex.Message, "DeckEdge", MessageBoxButtons.OK, MessageBoxIcon.Error); }
             };
+            FormClosed += delegate { if (Result == null) UiText.SetLanguage(original.Language); };
+            UiText.Translate(this);
         }
 
         internal static AppPreferences BuildResult(
             AppPreferences original, bool startWithWindows, bool startupInTray, bool closeToTray,
-            bool keepAwake, bool fullSensorAccess)
+            bool keepAwake, bool fullSensorAccess, string language)
         {
             return new AppPreferences {
                 StartWithWindows = startWithWindows,
@@ -222,7 +237,8 @@ namespace DeckEdgeDesktop
                 WindowWidth = original.WindowWidth,
                 WindowHeight = original.WindowHeight,
                 WindowMaximized = original.WindowMaximized,
-                ServerPort = original.ServerPort
+                ServerPort = original.ServerPort,
+                Language = language == "en" ? "en" : "fr"
             };
         }
 

@@ -4,7 +4,7 @@ const base=require('./ui-base.cjs');
 (async()=>{
  const browser=await chromium.launch({channel:'msedge',headless:true});
  try {
-  const page=await browser.newPage({viewport:{width:1200,height:900}});
+  const page=await browser.newPage({locale:'fr-FR',viewport:{width:1200,height:900}});
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   page.on('dialog',dialog=>dialog.accept());
   const fixture={active_page_id:'page_main',pages:[{id:'page_main',name:'Original',icon:'⌘',buttons:[{id:'a',label:'Touche originale',icon:'⌘',type:'key',target:'playpause',color:'#161c2e'}]}],monitoring:[{label:'CPU',sensor_id:'cpu_load',secondary_sensor_id:''}]};

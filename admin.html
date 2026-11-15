@@ -557,7 +557,10 @@
       <button class="btn btn-secondary" id="studio-undo" onclick="undoStudio()" title="Annuler (Ctrl+Z)" aria-label="Annuler la modification" disabled>↶</button>
       <button class="btn btn-secondary" id="studio-redo" onclick="redoStudio()" title="Rétablir (Ctrl+Y)" aria-label="Rétablir la modification" disabled>↷</button>
       <button class="btn btn-secondary" onclick="openAddMenu(event)">+ Ajouter une touche</button>
-      <button class="btn btn-secondary" id="app-settings-button" onclick="window.chrome.webview.postMessage({type:'openSettings'})" hidden>Paramètres</button>
+      <button class="btn btn-secondary" id="app-settings-button" onclick="window.chrome.webview.postMessage({type:'openSettings'})" hidden data-i18n="studio.settings">Paramètres</button>
+      <select id="studio-language" data-i18n-aria-label="language.label" aria-label="Langue" style="background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 7px 8px; font-size: 12px; font-weight: 700;" onchange="I18n.setLanguage(this.value)">
+        <option value="fr">FR</option><option value="en">EN</option>
+      </select>
       <span id="save-status" role="status">Chargement…</span>
       <button class="btn btn-save" id="studio-save" onclick="saveData()" title="Enregistrer (Ctrl+S)" disabled>Enregistrer</button>
     </div>
@@ -628,7 +631,7 @@
 
     <!-- Colonne Droite : Formulaire d'édition de bouton -->
     <div class="editor-panel" id="editor-panel">
-      <div class="section-title" id="editor-title">Édition de l'élément</div>
+      <div class="section-title" id="editor-title" data-i18n="studio.editor.initial">Édition de l'élément</div>
 
       <div class="field-group">
         <label>Type d'élément</label>
@@ -784,6 +787,7 @@
 
   <div id="studio-menu" role="menu" aria-label="Actions rapides" hidden></div>
   <div id="studio-toast" role="status" aria-live="polite" hidden></div>
+  <script src="/i18n.js"></script>
   <script src="/studio.js"></script>
   <script src="/deck-layout.js"></script>
   <script src="/studio-colors.js"></script>
@@ -1164,7 +1168,7 @@
       selectedIndex = idx;
       
       const btn = page.buttons[idx];
-      document.getElementById('editor-title').innerText = `Édition #${idx + 1} (${btn.label || 'Sans nom'})`;
+      document.getElementById('editor-title').innerText = I18n.t('studio.editor.title', {index: idx + 1, label: btn.label || I18n.t('studio.untitled')});
       document.getElementById('inp-label').value = btn.label || '';
       document.getElementById('inp-icon').value = btn.icon || '⚡';
       document.getElementById('inp-type').value = btn.type || 'hotkey';
@@ -1991,6 +1995,13 @@
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
 
+    I18n.enableLegacy();
+    document.getElementById('studio-language').value = I18n.lang;
+    I18n.onChange(() => {
+      document.getElementById('studio-language').value = I18n.lang;
+      const page = getCurrentPage();
+      if (page?.buttons?.[selectedIndex]) selectButton(selectedIndex);
+    });
     setupStudioErgonomics();
     setupStudioShell();
     loadData();
@@ -2002,7 +2013,7 @@
     <div class="modal-content" style="max-width: 580px; max-height: 90vh; display: flex; flex-direction: column;">
       <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 14px;">
         <h3 style="font-size: 17px; font-weight: 700; color: #a855f7; display: flex; align-items: center; gap: 8px;">
-          <span>🎧 Liaison Native Discord API (RPC)</span>
+          <span data-i18n="studio.discord.title">🎧 Liaison Native Discord API (RPC)</span>
         </h3>
         <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 14px;" onclick="closeDiscordModal()">✕</button>
       </div>
@@ -2054,9 +2065,9 @@
         <div style="margin-bottom: 16px;">
           <div style="font-size: 12px; font-weight: 700; color: #38bdf8; text-transform: uppercase; margin-bottom: 8px;">Guide rapide en 3 étapes (1 minute) :</div>
           <ol style="font-size: 13px; color: #cbd5e1; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; margin: 0;">
-            <li>Ouvrez le <a href="https://discord.com/developers/applications" target="_blank" style="color: #38bdf8; text-decoration: underline; font-weight: 600;">Portail Développeur Discord ↗</a> et cliquez sur <b>"New Application"</b> (nom : <i>DeckEdge</i>).</li>
-            <li>Dans le menu de gauche, allez dans <b>OAuth2</b> > <b>Redirects</b> et ajoutez : <code style="background: #020617; padding: 2px 6px; border-radius: 4px; color: #38bdf8;">https://localhost/</code> puis enregistrez.</li>
-            <li>Copiez le <b>Client ID</b> (dans <i>General Information</i>) et le <b>Client Secret</b> (dans <i>OAuth2</i>) et collez-les ci-dessous :</li>
+            <li data-i18n-html="studio.discord.step1">Ouvrez le <a href="https://discord.com/developers/applications" target="_blank" style="color: #38bdf8; text-decoration: underline; font-weight: 600;">Portail Développeur Discord ↗</a> et cliquez sur <b>"New Application"</b> (nom : <i>DeckEdge</i>).</li>
+            <li data-i18n-html="studio.discord.step2">Dans le menu de gauche, allez dans <b>OAuth2</b> > <b>Redirects</b> et ajoutez : <code style="background: #020617; padding: 2px 6px; border-radius: 4px; color: #38bdf8;">https://localhost/</code> puis enregistrez.</li>
+            <li data-i18n-html="studio.discord.step3">Copiez le <b>Client ID</b> (dans <i>General Information</i>) et le <b>Client Secret</b> (dans <i>OAuth2</i>) et collez-les ci-dessous :</li>
           </ol>
         </div>
 
@@ -2073,7 +2084,7 @@
         <div id="discord-connect-feedback" style="margin-bottom: 12px; font-size: 13px;"></div>
 
         <button type="button" class="btn btn-primary" onclick="connectDiscord()" style="width: 100%; padding: 11px; font-size: 14px; font-weight: 700; background: linear-gradient(135deg, #7c3aed, #5865f2); border: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
-          <span>🚀 Lier mon compte Discord</span>
+          <span data-i18n="studio.discord.link">🚀 Lier mon compte Discord</span>
         </button>
       </div>
     </div>
@@ -2084,7 +2095,7 @@
     <div class="modal-content" style="max-height: 85vh; display: flex; flex-direction: column;">
       <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 12px;">
         <h3 style="font-size: 17px; font-weight: 700; color: #38bdf8; display: flex; align-items: center; gap: 8px;">
-          <span>🔍 Choisir une Application ou un Jeu</span>
+          <span data-i18n="studio.appPicker.title">🔍 Choisir une Application ou un Jeu</span>
         </h3>
         <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 14px;" onclick="closeAppPickerModal()">✕</button>
       </div>

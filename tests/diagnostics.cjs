@@ -4,7 +4,7 @@ const base=require('./ui-base.cjs');
 (async()=>{
  const browser=await chromium.launch({channel:'msedge',headless:true});
  try {
-  const page=await browser.newPage({viewport:{width:1200,height:900}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  const page=await browser.newPage({locale:'fr-FR',viewport:{width:1200,height:900}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
   const fixture={active_page_id:'page_main',pages:[{id:'page_main',name:'Principal',icon:'⌘',buttons:[{id:'a',label:'A',icon:'⌘',type:'key',target:'playpause',color:'#161c2e'}]}],monitoring:[{label:'CPU',sensor_id:'cpu_load',secondary_sensor_id:''}]};
   const report={generated_at:'2026-11-14 12:00:00',app:{name:'DeckEdge',version:'0.1.2',pages:1,buttons:1},system:{platform:'Windows test'},network:{port:5011},audio:{devices:[],apps:[]},monitoring:{connected:false},discord:{is_authenticated:false},logs:{deckedge:['ligne de journal'],desktop:[]}};
   await page.route('**/api/config',route=>route.fulfill({json:fixture}));

@@ -5,7 +5,7 @@ const base=require('./ui-base.cjs');
 (async()=>{
  const browser=await chromium.launch({channel:'msedge',headless:true});
  try {
-  const context=await browser.newContext({viewport:{width:1440,height:1100}});
+  const context=await browser.newContext({viewport:{width:1440,height:1100},locale:'fr-FR'});
   const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
   const buttons=[...Array.from({length:4},(_,i)=>({id:'small'+i,label:['Micro','Pause','Capture','Bureau'][i],type:'hotkey',target:'',icon:['🎙️','⏯️','📸','🖥️'][i],width:'quarter',height:'compact',color:'#2b2e27'})),
    {id:'large',label:'Mode stream',type:'hotkey',target:'',icon:'🎬',width:'full',height:'tall',color:'#3b4930'},
@@ -30,7 +30,7 @@ const base=require('./ui-base.cjs');
    const grid=document.querySelector(selector),g=grid.getBoundingClientRect(),scale=g.width/grid.offsetWidth;
    return Array.from(grid.children).map(tile=>{const r=tile.getBoundingClientRect();return{x:(r.left-g.left)/scale,y:(r.top-g.top)/scale,width:r.width/scale,height:r.height/scale}});
   };
-  const actual=await browser.newPage({viewport:{width:390,height:844}});
+  const actual=await browser.newPage({locale:'fr-FR',viewport:{width:390,height:844}});
   actual.on('pageerror',e=>errors.push(e.message));
   let current=fixture;
   await actual.route('**/api/config',route=>route.fulfill({json:current}));

@@ -5,7 +5,7 @@ const base=require('./ui-base.cjs');
 (async()=>{
  const browser=await chromium.launch({channel:'msedge',headless:true});
  try {
-  const page=await browser.newPage({viewport:{width:1440,height:1000}});
+  const page=await browser.newPage({locale:'fr-FR',viewport:{width:1440,height:1000}});
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(()=>{window.hostMessages=[];window.chrome ||= {};window.chrome.webview={postMessage:m=>window.hostMessages.push(m)}});
   const fixture={active_page_id:'p1',pages:[

@@ -72,7 +72,7 @@ namespace DeckEdgeDesktop
                 catch (Exception ex)
                 {
                     Log(ex.ToString());
-                    MessageBox.Show("DeckEdge ne peut pas démarrer.\n\n" + ex.Message + "\n\nJournal : " + Path.Combine(DataDirectory, "desktop.log"), "DeckEdge", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show(UiText.T("DeckEdge ne peut pas démarrer.\n\n") + ex.Message + "\n\n" + UiText.T("Journal : ") + Path.Combine(DataDirectory, "desktop.log"), "DeckEdge", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
                 finally { mutex.ReleaseMutex(); }
             }
@@ -115,11 +115,11 @@ namespace DeckEdgeDesktop
             {
                 if (IsPortAvailable(port)) return port;
                 if (IsDeckEdgeOnPort(port))
-                    throw new InvalidOperationException("Une autre copie de DeckEdge utilise déjà le port " + port + ". Quittez-la avant de relancer DeckEdge.");
+                    throw new InvalidOperationException(UiText.F("Une autre copie de DeckEdge utilise déjà le port {0}. Quittez-la avant de relancer DeckEdge.", port));
                 if (explicitPort)
-                    throw new InvalidOperationException("Le port " + port + " est déjà utilisé. Choisissez un autre port avec DECKEDGE_PORT.");
+                    throw new InvalidOperationException(UiText.F("Le port {0} est déjà utilisé. Choisissez un autre port avec DECKEDGE_PORT.", port));
             }
-            throw new InvalidOperationException("Aucun port local n'est disponible entre " + preferred + " et " + last + ".");
+            throw new InvalidOperationException(UiText.F("Aucun port local n'est disponible entre {0} et {1}.", preferred, last));
         }
 
         static bool IsPortAvailable(int port)
@@ -161,6 +161,7 @@ namespace DeckEdgeDesktop
         readonly ToolStripStatusLabel serverStatus = new ToolStripStatusLabel("Démarrage du serveur…");
         readonly ToolStripStatusLabel sensorStatus = new ToolStripStatusLabel("Capteurs en attente…");
         readonly NotifyIcon tray = new NotifyIcon();
+        readonly ContextMenuStrip menu = new ContextMenuStrip();
         readonly System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer();
         readonly EventWaitHandle showEvent, stopEvent;
         readonly ToolStripMenuItem keepAwake = new ToolStripMenuItem("Empêcher la mise en veille");
@@ -181,6 +182,7 @@ namespace DeckEdgeDesktop
         public StudioForm(EventWaitHandle show, EventWaitHandle stop, bool startInBackground)
         {
             preferences = PreferencesStore.Load();
+            UiText.SetLanguage(preferences.Language);
             showEvent = show; stopEvent = stop;
             background = startInBackground || (Environment.GetCommandLineArgs().Contains("--startup") && preferences.StartupInTray);
             Text = "DeckEdge — Studio";
@@ -211,7 +213,6 @@ namespace DeckEdgeDesktop
             copyPhone.Click += delegate { OpenPhoneConnection(); };
             status.Items.AddRange(new ToolStripItem[] { serverStatus, sensorStatus, copyPhone });
             Controls.Add(status);
-            var menu = new ContextMenuStrip();
             menu.Items.Add("Ouvrir le Studio", null, delegate { RestoreStudio(); });
             menu.Items.Add("Paramètres…", null, delegate { OpenSettings(); });
             menu.Items.Add("Connecter le téléphone (QR code)…", null, delegate { OpenPhoneConnection(); });
@@ -247,6 +248,8 @@ namespace DeckEdgeDesktop
             FormClosing += OnClosing;
             Microsoft.Win32.SystemEvents.SessionEnding += OnSessionEnding;
             Microsoft.Win32.SystemEvents.PowerModeChanged += OnPowerChanged;
+            UiText.Translate(this);
+            UiText.TranslateItems(menu.Items);
         }
 
         static string Quote(string value) { return "\"" + value.Replace("\"", "") + "\""; }
@@ -293,6 +296,9 @@ namespace DeckEdgeDesktop
             using (var dialog = new SettingsForm(preferences)) {
                 if (dialog.ShowDialog(this) == DialogResult.OK) {
                     preferences = dialog.Result; keepAwake.Checked = preferences.KeepAwake; ApplyKeepAwake();
+                    UiText.SetLanguage(preferences.Language);
+                    UiText.Translate(this);
+                    UiText.TranslateItems(menu.Items);
                 }
             }
         }
@@ -321,7 +327,7 @@ namespace DeckEdgeDesktop
             if (starting || quitting) return;
             starting = true;
             message.Visible = true; message.BringToFront();
-            message.Text = "DeckEdge\n\nDémarrage du serveur…";
+            message.Text = UiText.T("DeckEdge\n\nDémarrage du serveur…");
             try
             {
                 await EnsureWebViewRuntime();
@@ -340,8 +346,8 @@ namespace DeckEdgeDesktop
                         if (changed && !portNoticeShown)
                         {
                             portNoticeShown = true;
-                            tray.ShowBalloonTip(6000, "DeckEdge — port du téléphone",
-                                "Le port " + Program.Port + " est utilisé pour cette session. Rouvrez « Connecter le téléphone » et rescannez le QR code si votre raccourci ne répond plus.",
+                            tray.ShowBalloonTip(6000, UiText.T("DeckEdge — port du téléphone"),
+                                UiText.F("Le port {0} est utilisé pour cette session. Rouvrez « Connecter le téléphone » et rescannez le QR code si votre raccourci ne répond plus.", Program.Port),
                                 ToolTipIcon.Info);
                         }
                     }
@@ -350,10 +356,10 @@ namespace DeckEdgeDesktop
                 var health = await GetHealth();
                 if (quitting) return;
                 if (health != null && (!health.ContainsKey("app") || (string)health["app"] != "DeckEdge"))
-                    throw new InvalidOperationException("Le port " + Program.Port + " est déjà utilisé. Arrêtez l'ancien serveur DeckEdge avant de réessayer.");
+                    throw new InvalidOperationException(UiText.F("Le port {0} est déjà utilisé. Arrêtez l'ancien serveur DeckEdge avant de réessayer.", Program.Port));
                 if (health == null)
                 {
-                    if (backend != null && !backend.HasExited) throw new InvalidOperationException("Le serveur ne répond plus. Quittez DeckEdge puis relancez-le.");
+                    if (backend != null && !backend.HasExited) throw new InvalidOperationException(UiText.T("Le serveur ne répond plus. Quittez DeckEdge puis relancez-le."));
                     string python = await Task.Run(() => FindPython());
                     if (quitting) return;
                     var info = new ProcessStartInfo(python, Quote(Path.Combine(Program.Project, "desktop_backend.py"))) {
@@ -376,10 +382,10 @@ namespace DeckEdgeDesktop
                     for (int i = 0; i < 80 && !quitting; i++) {
                         health = await GetHealth();
                         if (health != null) break;
-                        if (backend.HasExited) throw new InvalidOperationException("Le serveur s'est arrêté au démarrage. Consultez le journal pour connaître la dépendance en cause.");
+                        if (backend.HasExited) throw new InvalidOperationException(UiText.T("Le serveur s'est arrêté au démarrage. Consultez le journal pour connaître la dépendance en cause."));
                         await Task.Delay(250);
                     }
-                    if (health == null && !quitting) throw new InvalidOperationException("Le serveur n'est pas prêt après 20 secondes. Consultez le journal, puis réessayez.");
+                    if (health == null && !quitting) throw new InvalidOperationException(UiText.T("Le serveur n'est pas prêt après 20 secondes. Consultez le journal, puis réessayez."));
                 }
                 if (quitting) return;
                 // Les capteurs ne bloquent pas l'ouverture du Studio s'ils demandent une élévation.
@@ -388,13 +394,13 @@ namespace DeckEdgeDesktop
                 using (var driver = machine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\PawnIO")) {
                     if (preferences.FullSensorAccess && driver == null && !File.Exists(driverNotice) && File.Exists(Path.Combine(Program.Project, "prerequisites", "PawnIO_setup.exe"))) {
                         File.WriteAllText(driverNotice, "Information pilote affichée.");
-                        if (MessageBox.Show(this, "Pour afficher certaines températures et mesures matérielles, DeckEdge utilise le pilote PawnIO.\n\nL’installer maintenant ? Windows demandera votre accord. Vous pourrez aussi le faire plus tard depuis l’icône DeckEdge près de l’horloge.", "Mesures matérielles", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
+                        if (MessageBox.Show(this, UiText.T("Pour afficher certaines températures et mesures matérielles, DeckEdge utilise le pilote PawnIO.\n\nL'installer maintenant ? Windows demandera votre accord. Vous pourrez aussi le faire plus tard depuis l'icône DeckEdge près de l'horloge."), UiText.T("Mesures matérielles"), MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
                             await InstallHardwareDriver();
                     }
                 }
                 await StartSensors();
                 if (quitting) return;
-                message.Text = "DeckEdge\n\nOuverture du Studio…";
+                message.Text = UiText.T("DeckEdge\n\nOuverture du Studio…");
                 if (view.CoreWebView2 == null) {
                     var environment = await CoreWebView2Environment.CreateAsync(null, Path.Combine(Program.DataDirectory, ".desktop-profile"));
                     await view.EnsureCoreWebView2Async(environment);
@@ -418,7 +424,7 @@ namespace DeckEdgeDesktop
                     };
                     view.CoreWebView2.NavigationCompleted += delegate(object sender, CoreWebView2NavigationCompletedEventArgs e) {
                         if (e.IsSuccess) { message.Visible = false; Program.Log("Studio WebView2 prêt."); }
-                        else ShowError("Le Studio n'a pas pu s'afficher. Cliquez sur Réessayer.");
+                        else ShowError(UiText.T("Le Studio n'a pas pu s'afficher. Cliquez sur Réessayer."));
                     };
                 }
                 view.CoreWebView2.Navigate(AdminUrl);
@@ -451,7 +457,7 @@ namespace DeckEdgeDesktop
                     Color? picked = ScreenColorPicker.Pick(this);
                     if (picked.HasValue) color = ToHex(picked.Value);
                 }
-            } catch (Exception ex) { Program.Log("Choix de couleur: " + ex); error = "Impossible d'ouvrir le sélecteur de couleur."; }
+            } catch (Exception ex) { Program.Log("Choix de couleur: " + ex); error = UiText.T("Impossible d'ouvrir le sélecteur de couleur."); }
             if (!quitting && view.CoreWebView2 != null)
                 view.CoreWebView2.PostWebMessageAsJson(new JavaScriptSerializer().Serialize(new { type = "colorPicked", requestId = token, color = color, error = error }));
         }
@@ -463,10 +469,10 @@ namespace DeckEdgeDesktop
             try { CoreWebView2Environment.GetAvailableBrowserVersionString(); return; }
             catch (WebView2RuntimeNotFoundException) { }
             string installer = Path.Combine(Program.Project, "prerequisites", "MicrosoftEdgeWebview2Setup.exe");
-            if (!File.Exists(installer) || MessageBox.Show(this, "Le composant Microsoft WebView2 est nécessaire pour afficher le Studio.\n\nL’installer maintenant ? Une connexion Internet est nécessaire.", "DeckEdge", MessageBoxButtons.YesNo, MessageBoxIcon.Information) != DialogResult.Yes)
-                throw new InvalidOperationException("Installez Microsoft WebView2 Runtime depuis le site de Microsoft, puis relancez DeckEdge.");
+            if (!File.Exists(installer) || MessageBox.Show(this, UiText.T("Le composant Microsoft WebView2 est nécessaire pour afficher le Studio.\n\nL'installer maintenant ? Une connexion Internet est nécessaire."), "DeckEdge", MessageBoxButtons.YesNo, MessageBoxIcon.Information) != DialogResult.Yes)
+                throw new InvalidOperationException(UiText.T("Installez Microsoft WebView2 Runtime depuis le site de Microsoft, puis relancez DeckEdge."));
             await Task.Run(() => { using (var process = Process.Start(new ProcessStartInfo(installer, "/silent /install") { UseShellExecute = false, CreateNoWindow = true })) {
-                process.WaitForExit(); if (process.ExitCode != 0) throw new InvalidOperationException("L’installation de WebView2 a échoué. Installez le Runtime depuis le site de Microsoft.");
+                process.WaitForExit(); if (process.ExitCode != 0) throw new InvalidOperationException(UiText.T("L'installation de WebView2 a échoué. Installez le Runtime depuis le site de Microsoft."));
             }});
             CoreWebView2Environment.GetAvailableBrowserVersionString();
         }
@@ -477,7 +483,7 @@ namespace DeckEdgeDesktop
             if (!File.Exists(installer)) return;
             try {
                 await Task.Run(() => { using (var process = Process.Start(new ProcessStartInfo(installer) { UseShellExecute = true, Verb = "runas" })) { process.WaitForExit(); }});
-                MessageBox.Show(this, "Si l’installation du pilote a réussi, quittez puis relancez DeckEdge pour actualiser les capteurs.", "DeckEdge", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(this, UiText.T("Si l'installation du pilote a réussi, quittez puis relancez DeckEdge pour actualiser les capteurs."), "DeckEdge", MessageBoxButtons.OK, MessageBoxIcon.Information);
             } catch (System.ComponentModel.Win32Exception ex) { if (ex.NativeErrorCode != 1223) Program.Log("Installation PawnIO : " + ex.Message); }
         }
 
@@ -509,13 +515,13 @@ namespace DeckEdgeDesktop
                     }
                 } catch (Exception ex) { Program.Log(ex.Message); }
             }
-            throw new InvalidOperationException("Python et les dépendances DeckEdge sont introuvables. Consultez le README et desktop.log.");
+            throw new InvalidOperationException(UiText.T("Python et les dépendances DeckEdge sont introuvables. Consultez le README et desktop.log."));
         }
 
         async Task StartSensors()
         {
             if (sensorBridge != null && sensorBridge.IsRunning) return;
-            if (backend == null || backend.HasExited) throw new InvalidOperationException("Quittez l'ancien serveur et relancez DeckEdge pour activer le moteur intégré.");
+            if (backend == null || backend.HasExited) throw new InvalidOperationException(UiText.T("Quittez l'ancien serveur et relancez DeckEdge pour activer le moteur intégré."));
             sensorBridge = new SensorBridge();
             try {
                 await sensorBridge.StartAsync(line => {
@@ -527,7 +533,7 @@ namespace DeckEdgeDesktop
                 }, preferences.FullSensorAccess);
             } catch (Exception ex) {
                 Program.Log("Capteurs intégrés: " + ex.Message);
-                tray.ShowBalloonTip(6000, "DeckEdge — capteurs", ex.Message, ToolTipIcon.Warning);
+                tray.ShowBalloonTip(6000, UiText.T("DeckEdge — capteurs"), ex.Message, ToolTipIcon.Warning);
             }
         }
 
@@ -539,9 +545,9 @@ namespace DeckEdgeDesktop
             var health = await GetHealth();
             var sensors = health != null && health.ContainsKey("monitoring") ? health["monitoring"] as Dictionary<string, object> : null;
             if (sensors != null && sensors.ContainsKey("connected") && (bool)sensors["connected"]) {
-                tray.ShowBalloonTip(4000, "DeckEdge", "Le moteur intégré reçoit les mesures du PC.", ToolTipIcon.Info);
+                tray.ShowBalloonTip(4000, "DeckEdge", UiText.T("Le moteur intégré reçoit les mesures du PC."), ToolTipIcon.Info);
             } else {
-                MessageBox.Show("Le moteur intégré peut mettre quelques secondes à détecter les composants. Acceptez sa demande Windows pour accéder à tous les capteurs, notamment aux températures CPU.", "DeckEdge — capteurs");
+                MessageBox.Show(UiText.T("Le moteur intégré peut mettre quelques secondes à détecter les composants. Acceptez sa demande Windows pour accéder à tous les capteurs, notamment aux températures CPU."), UiText.T("DeckEdge — capteurs"));
             }
         }
 
@@ -553,20 +559,20 @@ namespace DeckEdgeDesktop
                 var health = await GetHealth();
                 if (quitting) return;
                 bool alive = health != null && health.ContainsKey("app") && (string)health["app"] == "DeckEdge";
-                serverStatus.Text = alive ? ("● Serveur prêt · port " + Program.Port) : "● Serveur indisponible";
+                serverStatus.Text = alive ? UiText.F("● Serveur prêt · port {0}", Program.Port) : UiText.T("● Serveur indisponible");
                 serverStatus.ForeColor = alive ? Color.FromArgb(178, 199, 151) : Color.FromArgb(226, 140, 128);
                 var sensors = alive && health.ContainsKey("monitoring") ? health["monitoring"] as Dictionary<string, object> : null;
                 bool connected = sensors != null && sensors.ContainsKey("connected") && (bool)sensors["connected"];
                 bool fullAccess = sensors != null && sensors.ContainsKey("elevated") && (bool)sensors["elevated"];
-                sensorStatus.Text = connected ? (fullAccess ? "● Capteurs intégrés" : "○ Capteurs intégrés · accès limité") : "○ Capteurs en attente — menu : Vérifier les capteurs";
+                sensorStatus.Text = connected ? (fullAccess ? UiText.T("● Capteurs intégrés") : UiText.T("○ Capteurs intégrés · accès limité")) : UiText.T("○ Capteurs en attente — menu : Vérifier les capteurs");
                 sensorStatus.ForeColor = connected ? Color.FromArgb(178, 199, 151) : Color.FromArgb(223, 185, 121);
-                tray.Text = alive ? "DeckEdge — " + (connected ? "prêt" : "capteurs en attente") : "DeckEdge — serveur indisponible";
+                tray.Text = alive ? "DeckEdge — " + UiText.T(connected ? "prêt" : "capteurs en attente") : "DeckEdge — " + UiText.T("serveur indisponible");
             } finally { polling = false; }
         }
 
         void ShowError(string error)
         {
-            message.Text = "Impossible d'ouvrir le Studio\n\n" + error;
+            message.Text = UiText.T("Impossible d'ouvrir le Studio\n\n") + error;
             message.Visible = true; message.BringToFront();
             Controls["retry"].Visible = true; Controls["retry"].BringToFront();
         }
@@ -589,7 +595,7 @@ namespace DeckEdgeDesktop
         {
             if (!editorDirty) return true;
             RestoreStudio();
-            return MessageBox.Show(this, "Le Studio contient des modifications non enregistrées.\n\nQuitter sans les enregistrer ?", "DeckEdge", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.Yes;
+            return MessageBox.Show(this, UiText.T("Le Studio contient des modifications non enregistrées.\n\nQuitter sans les enregistrer ?"), "DeckEdge", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.Yes;
         }
 
         void RequestQuit() { if (!quitting && ConfirmQuit()) { quitting = true; Close(); } }
@@ -602,7 +608,7 @@ namespace DeckEdgeDesktop
                 e.Cancel = true; Hide();
                 if (!notified) {
                     notified = true;
-                    tray.ShowBalloonTip(4000, "DeckEdge reste actif", "Le pupitre reste connecté. Double-cliquez sur l'icône pour rouvrir le Studio.", ToolTipIcon.Info);
+                    tray.ShowBalloonTip(4000, UiText.T("DeckEdge reste actif"), UiText.T("Le pupitre reste connecté. Double-cliquez sur l'icône pour rouvrir le Studio."), ToolTipIcon.Info);
                 }
                 return;
             }

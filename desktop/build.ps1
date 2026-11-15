@@ -63,6 +63,7 @@ $compilerArgs += $references | ForEach-Object { "/reference:$_" }
 $compilerArgs += Join-Path $desktopDir 'DeckEdge.cs'
 $compilerArgs += Join-Path $desktopDir 'SensorHost.cs'
 $compilerArgs += Join-Path $desktopDir 'AppSettings.cs'
+$compilerArgs += Join-Path $desktopDir 'UiText.cs'
 $compilerArgs += Join-Path $desktopDir 'ScreenColorPicker.cs'
 $compilerArgs += Join-Path $desktopDir 'AssemblyInfo.cs'
 $compilerArgs += Join-Path $desktopDir 'PhoneConnection.cs'

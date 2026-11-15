@@ -1,5 +1,11 @@
 # Historique
 
+## Non publié
+
+- Pupitre mobile et Studio en français ou anglais, avec bascule mémorisée par appareil.
+- Page d’appairage et messages d’erreur du serveur en français ou anglais.
+- Interface Windows (icône, paramètres, dialogues et notifications) en français ou anglais, avec choix mémorisé sur le PC.
+
 ## 0.1.3 — Profils, sauvegardes et diagnostic
 
 - Restauration annulée si la sauvegarde de sécurité échoue, avec conservation de la configuration actuelle.

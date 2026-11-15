@@ -1223,6 +1223,56 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="DeckEdge Server", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
 PHONE_KEY = pairing_key()
 
+_SERVER_TEXTS = {
+    "fr": {
+        "origin": "Origine non autorisée",
+        "desktop_only": "Ce réglage se modifie dans le Studio sur le PC.",
+        "backup_missing": "Sauvegarde introuvable",
+        "backup_invalid": "Sauvegarde invalide",
+        "pairing_title": "Connecter DeckEdge",
+        "pairing_heading": "Retrouver votre Deck",
+        "pairing_intro": "Cette adresse n’est pas encore associée à votre téléphone.",
+        "pairing_step1": "Sur le PC, ouvrez DeckEdge.",
+        "pairing_step2": "Cliquez sur <b>Connecter le téléphone</b>.",
+        "pairing_step3": "Scannez le QR code avec l’appareil photo.",
+        "pairing_outro": "Ajoutez ensuite le Deck à votre écran d’accueil pour le retrouver aux prochains démarrages.",
+    },
+    "en": {
+        "origin": "Origin not allowed",
+        "desktop_only": "This setting can only be changed in the Studio on the PC.",
+        "backup_missing": "Backup not found",
+        "backup_invalid": "Invalid backup",
+        "pairing_title": "Connect DeckEdge",
+        "pairing_heading": "Find your Deck",
+        "pairing_intro": "This address is not paired with your phone yet.",
+        "pairing_step1": "On the PC, open DeckEdge.",
+        "pairing_step2": "Click <b>Connect phone</b>.",
+        "pairing_step3": "Scan the QR code with your camera.",
+        "pairing_outro": "Then add the Deck to your home screen to find it again on future launches.",
+    },
+}
+
+
+def request_language(connection) -> str:
+    for value in (
+        connection.query_params.get("lang") if hasattr(connection, "query_params") else None,
+        connection.cookies.get("deckedge_lang") if hasattr(connection, "cookies") else None,
+    ):
+        if value in ("fr", "en"):
+            return value
+    header = connection.headers.get("accept-language", "") if hasattr(connection, "headers") else ""
+    first = header.split(",", 1)[0].strip().lower()
+    return "fr" if first.startswith("fr") else "en"
+
+
+def server_text(language: str, key: str) -> str:
+    return _SERVER_TEXTS.get(language, _SERVER_TEXTS["en"]).get(key, key)
+
+
+def pairing_page(language: str) -> str:
+    text = _SERVER_TEXTS.get(language, _SERVER_TEXTS["en"])
+    return f'''<!doctype html><html lang="{language}"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{text["pairing_title"]}</title><body style="margin:0;background:#191b22;color:#eef1fc;font:17px/1.65 system-ui;padding:28px"><main style="max-width:480px;margin:12vh auto"><h1>{text["pairing_heading"]}</h1><p>{text["pairing_intro"]}</p><ol><li>{text["pairing_step1"]}</li><li>{text["pairing_step2"]}</li><li>{text["pairing_step3"]}</li></ol><p>{text["pairing_outro"]}</p></main></body></html>'''
+
 _PRIVATE_IP_RE = re.compile(r"\b((?:10|127|192\.168|172\.(?:1[6-9]|2\d|3[01]))\.\d{1,3})\.\d{1,3}\b")
 
 
@@ -1275,18 +1325,20 @@ def _app_version() -> str:
 @app.middleware("http")
 async def protect_desktop_and_pair_phone(request: Request, call_next):
     local = is_local(request.client.host) if request.client else False
+    language = request_language(request)
     if not allowed_origin(request):
-        return JSONResponse({"detail": "Origine non autorisée"}, status_code=403)
+        return JSONResponse({"detail": server_text(language, "origin")}, status_code=403)
     if not local and not is_paired(request, PHONE_KEY):
-        return HTMLResponse('''<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Connecter DeckEdge</title><body style="margin:0;background:#191b22;color:#eef1fc;font:17px/1.65 system-ui;padding:28px"><main style="max-width:480px;margin:12vh auto"><h1>Retrouver votre Deck</h1><p>Cette adresse n’est pas encore associée à votre téléphone.</p><ol><li>Sur le PC, ouvrez DeckEdge.</li><li>Cliquez sur <b>Connecter le téléphone</b>.</li><li>Scannez le QR code avec l’appareil photo.</li></ol><p>Ajoutez ensuite le Deck à votre écran d’accueil pour le retrouver aux prochains démarrages.</p></main></body></html>''', status_code=401)
+        return HTMLResponse(pairing_page(language), status_code=401)
     desktop_only = request.url.path in {"/admin", "/api/apps", "/api/diagnostics", "/api/monitoring/sensors", "/api/discord/connect", "/api/discord/disconnect", "/api/config/validate", "/api/config/restore", "/api/config/backups"} or (request.url.path == "/api/config" and request.method != "GET")
     if desktop_only and not local:
-        return JSONResponse({"detail": "Ce réglage se modifie dans le Studio sur le PC."}, status_code=403)
+        return JSONResponse({"detail": server_text(language, "desktop_only")}, status_code=403)
     response = await call_next(request)
     if not local and request.query_params.get("key"):
         response.set_cookie(COOKIE, PHONE_KEY, httponly=True, samesite="strict", max_age=31536000)
     if request.url.path in ('/', '/manifest.webmanifest'):
         response.headers['Cache-Control'] = 'no-store'
+    response.headers["Content-Language"] = language
     response.headers["Referrer-Policy"] = "no-referrer"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
@@ -1710,6 +1762,11 @@ async def get_studio_colors_script():
     return FileResponse(BASE_DIR / "studio-colors.js", media_type="text/javascript")
 
 
+@app.get("/i18n.js", include_in_schema=False)
+async def get_i18n_script():
+    return FileResponse(BASE_DIR / "i18n.js", media_type="text/javascript")
+
+
 @app.get("/deck-layout.js", include_in_schema=False)
 async def get_deck_layout_script():
     return FileResponse(BASE_DIR / "deck-layout.js", media_type="text/javascript")
@@ -1767,13 +1824,14 @@ async def create_config_backup_endpoint():
 
 
 @app.post("/api/config/restore")
-async def restore_config_backup_endpoint(payload: BackupNamePayload):
+async def restore_config_backup_endpoint(payload: BackupNamePayload, request: Request):
+    language = request_language(request)
     try:
         config = await asyncio.to_thread(config_store.restore_backup, payload.name)
     except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="Sauvegarde introuvable")
+        raise HTTPException(status_code=404, detail=server_text(language, "backup_missing"))
     except (json.JSONDecodeError, ValidationError):
-        raise HTTPException(status_code=400, detail="Sauvegarde invalide")
+        raise HTTPException(status_code=400, detail=server_text(language, "backup_invalid"))
     except Exception as e:
         logger.exception("Restauration de sauvegarde impossible")
         raise HTTPException(status_code=500, detail=str(e))

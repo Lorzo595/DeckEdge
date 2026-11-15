@@ -5,7 +5,7 @@ const base=require('./ui-base.cjs');
 (async()=>{
  const browser=await chromium.launch({channel:'msedge',headless:true});
  try {
-  const context=await browser.newContext({viewport:{width:390,height:700},isMobile:true,hasTouch:true,deviceScaleFactor:1});
+  const context=await browser.newContext({viewport:{width:390,height:700},isMobile:true,hasTouch:true,deviceScaleFactor:1,locale:'fr-FR'});
   const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
   const buttons=[
    {id:'tap',label:'Commande 1',type:'hotkey',target:'ctrl,m',icon:'⌘'},
@@ -70,7 +70,7 @@ const base=require('./ui-base.cjs');
   await page.setViewportSize({width:390,height:700});
   await page.locator('#deck-grid').evaluate(el=>el.scrollTop=el.scrollHeight);
   await page.screenshot({path:path.resolve(__dirname,'../previews/mobile-defilement-bas.png')});
-  const desktop=await browser.newPage({viewport:{width:1000,height:700}});
+  const desktop=await browser.newPage({locale:'fr-FR',viewport:{width:1000,height:700}});
   await desktop.route('**/api/config',route=>route.fulfill({json:fixture}));
   const desktopMessages=[];
   await desktop.routeWebSocket(/\/ws$/,socket=>socket.onMessage(message=>desktopMessages.push(message)));

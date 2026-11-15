@@ -4,7 +4,7 @@ const base=require('./ui-base.cjs');
 (async()=>{
  const browser=await chromium.launch({channel:'msedge',headless:true});
  try {
-  const page=await browser.newPage(); const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  const page=await browser.newPage({locale:'fr-FR'}); const errors=[];page.on('pageerror',e=>errors.push(e.message));
   const fixture={active_page_id:'page_music',pages:[
    {id:'page_music',name:'Musique',icon:'🎵',buttons:[{id:'m',label:'Musique',type:'hotkey',target:''}]},
    {id:'page_main',name:'Principal',icon:'⌘',buttons:[{id:'p',label:'Principal',type:'hotkey',target:''}]}

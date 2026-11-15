@@ -90,7 +90,7 @@ function setupStudioShell() {
     recording=false;record.textContent='Enregistrer un raccourci';
   }
   const nativeSelect=selectButton;
-  selectButton=function(index){const result=nativeSelect(index);const btn=getCurrentPage()?.buttons?.[selectedIndex];if(btn)document.getElementById('editor-title').textContent=`${btn.label || 'Sans nom'} · Personnaliser`;simplifyFields();return result;};
+  selectButton=function(index){const result=nativeSelect(index);const btn=getCurrentPage()?.buttons?.[selectedIndex];if(btn)document.getElementById('editor-title').textContent=I18n.t('studio.editor.customize',{label:btn.label || I18n.t('studio.untitled')});simplifyFields();return result;};
   const nativeTypeChange=onTypeChange;
   onTypeChange=function(...args){const result=nativeTypeChange(...args);simplifyFields();return result;};
 }

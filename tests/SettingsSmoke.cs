@@ -36,9 +36,33 @@ namespace DeckEdgeDesktop
             var restored = PreferencesStore.Load();
             if (restored.CloseToTray || restored.KeepAwake || restored.FullSensorAccess || restored.WindowWidth != 1024 || restored.ServerPort != 5012)
                 throw new Exception("Préférences non restaurées.");
-            var applied = SettingsForm.BuildResult(restored, false, false, false, false, false);
+            var applied = SettingsForm.BuildResult(restored, false, false, false, false, false, "fr");
             if (applied.ServerPort != 5012)
                 throw new Exception("Le port serveur n'est pas conservé après « Appliquer ».");
+            if (applied.Language != "fr")
+                throw new Exception("La langue choisie n'est pas conservée après « Appliquer ».");
+            UiText.SetLanguage("en");
+            if (UiText.T("Paramètres de DeckEdge") != "DeckEdge Settings" || UiText.T("Texte inconnu") != "Texte inconnu")
+                throw new Exception("Traduction de l'interface incorrecte.");
+            UiText.SetLanguage("fr");
+            if (UiText.T("Paramètres de DeckEdge") != "Paramètres de DeckEdge")
+                throw new Exception("Le français devrait rester inchangé.");
+            using (var label = new Label { Text = "Langue" }) {
+                UiText.SetLanguage("en"); UiText.Translate(label);
+                if (label.Text != "Language") throw new Exception("Libellé de paramètres non traduit.");
+                UiText.SetLanguage("fr"); UiText.Translate(label);
+                if (label.Text != "Langue") throw new Exception("Libellé français non restauré après bascule.");
+            }
+            using (var menu = new ContextMenuStrip()) {
+                menu.Items.Add("Ouvrir le Studio");
+                UiText.SetLanguage("en"); UiText.TranslateItems(menu.Items);
+                if (menu.Items[0].Text != "Open Studio") throw new Exception("Menu non traduit.");
+                UiText.SetLanguage("fr"); UiText.TranslateItems(menu.Items);
+                if (menu.Items[0].Text != "Ouvrir le Studio") throw new Exception("Menu français non restauré après bascule.");
+            }
+            restored.Language = "en"; PreferencesStore.Save(restored, false);
+            if (PreferencesStore.Load().Language != "en")
+                throw new Exception("La langue n'est pas restaurée depuis les préférences.");
             restored.WindowMaximized = true; PreferencesStore.Save(restored, false);
             if (!PreferencesStore.Load().WindowMaximized || File.Exists(Path.Combine(Project,"app-settings.json.tmp")))
                 throw new Exception("Écriture atomique incorrecte.");
