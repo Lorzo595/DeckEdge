@@ -1,4 +1,4 @@
-/* L'organisation du Studio ne modifie jamais les profils au chargement. */
+/* The Studio layout never modifies profiles on load. */
 function setupStudioShell() {
   const layout = document.querySelector('.main-layout');
   const deck = document.querySelector('.deck-section');

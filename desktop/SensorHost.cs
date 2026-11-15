@@ -15,8 +15,8 @@ using LibreHardwareMonitor.Hardware;
 
 namespace DeckEdgeDesktop
 {
-    // Le moteur utilise la bibliothèque LHM, sans exécuter son application graphique.
-    // Seul ce mode de DeckEdge demande les droits matériels ; le Studio reste normal.
+    // The engine uses the LHM library without running its graphical application.
+    // Only this DeckEdge mode requests hardware access; the Studio stays non-elevated.
     internal static class SensorWorker
     {
         delegate bool WindowVisitor(IntPtr window, IntPtr data);
@@ -51,7 +51,7 @@ namespace DeckEdgeDesktop
                         }
                     }
                 }
-            } catch (IOException) { /* Fermeture du canal par DeckEdge : arrêt normal. */ }
+            } catch (IOException) { /* Pipe closed by DeckEdge: normal shutdown. */ }
             catch (Exception ex) { Program.Log("Moteur de capteurs: " + ex); }
             finally {
                 if (computer != null) { try { computer.Close(); } catch (Exception ex) { Program.Log("Fermeture capteurs: " + ex.Message); } }
@@ -61,7 +61,7 @@ namespace DeckEdgeDesktop
 
         static void CloseLegacyMonitorOnce()
         {
-            // Migration de l'ancien poste de développement uniquement.
+            // Migration of the old development machine only.
             if (Directory.Exists(Path.Combine(Program.Project, "runtime"))) return;
             string marker = Path.Combine(Program.Project, ".integrated-monitoring");
             if (File.Exists(marker)) return;
@@ -166,7 +166,7 @@ namespace DeckEdgeDesktop
                         WorkingDirectory = AppDomain.CurrentDomain.BaseDirectory
                     })) { }
                 }
-                // Une connexion absente ne doit pas laisser un canal bloqué indéfiniment.
+                // A missing connection must not leave the pipe blocked indefinitely.
                 ExpireUnconnectedPipe();
             } catch { Dispose(); throw; }
         }

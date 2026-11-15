@@ -1,4 +1,4 @@
-/* Internationalisation FR/EN commune au pupitre et au Studio. */
+/* FR/EN internationalization shared by the deck and the Studio. */
 (() => {
   const STORAGE_KEY = 'deckedge.lang';
   const messages = {

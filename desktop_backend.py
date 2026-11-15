@@ -1,7 +1,7 @@
-"""Processus serveur privé de l'application Windows DeckEdge.
+"""Private server process for the DeckEdge Windows application.
 
-La fermeture du canal stdin (y compris si l'application plante) arrête le serveur.
-Aucun endpoint HTTP d'arrêt n'est exposé sur le réseau.
+Closing the stdin channel (including if the application crashes) stops the server.
+No HTTP shutdown endpoint is exposed on the network.
 """
 import asyncio
 import logging

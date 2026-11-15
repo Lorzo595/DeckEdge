@@ -1,8 +1,8 @@
 """
-Service Discord RPC pour DeckEdge.
-Permet de contrôler le micro (Mute) et la sourdine (Deafen) de Discord en arrière-plan
-via le Named Pipe local (\\\\.\\pipe\\discord-ipc-0), même lorsque Discord n'est pas au premier plan.
-Architecture threadée avec lecteur dédié asynchrone non-bloquant (PeekNamedPipe) et zéro deadlock.
+Discord RPC service for DeckEdge.
+Controls Discord's microphone (mute) and headphone (deafen) state in the background
+through the local named pipe (\\\\.\\pipe\\discord-ipc-0), even when Discord is not in the foreground.
+Threaded architecture with a dedicated non-blocking async reader (PeekNamedPipe) and zero deadlock.
 """
 
 import ctypes
@@ -45,7 +45,7 @@ class DiscordRPCService:
         self._worker_thread: Optional[threading.Thread] = None
         self._reader_thread: Optional[threading.Thread] = None
 
-        # Synchronisation requête-réponse via nonce (évite toute course entre threads)
+        # Request/response synchronization via nonce (avoids any race between threads)
         self._pending_events: Dict[str, threading.Event] = {}
         self._pending_responses: Dict[str, Any] = {}
 
@@ -115,7 +115,7 @@ class DiscordRPCService:
         logger.info("Service Discord RPC arrêté.")
 
     def _connect_and_handshake(self) -> bool:
-        """Trouve le named pipe Discord actif et effectue le handshake initial."""
+        """Find the active Discord named pipe and perform the initial handshake."""
         with self._lock:
             if self.pipe:
                 return True
@@ -130,7 +130,7 @@ class DiscordRPCService:
                     hs = json.dumps({"v": 1, "client_id": cid}).encode("utf-8")
                     p.write(struct.pack("<II", 0, len(hs)) + hs)
 
-                    # Lecture synchrone de la réponse READY au handshake
+                    # Synchronous read of the READY response to the handshake
                     avail = wintypes.DWORD()
                     t0 = time.time()
                     got_hs = False
@@ -138,7 +138,7 @@ class DiscordRPCService:
                         if kernel32.PeekNamedPipe(h, None, 0, None, ctypes.byref(avail), None) and avail.value >= 8:
                             hdr = p.read(8)
                             op, length = struct.unpack("<II", hdr)
-                            p.read(length)  # message READY consommé
+                            p.read(length)  # READY message consumed
                             got_hs = True
                             break
                         time.sleep(0.01)
@@ -152,7 +152,7 @@ class DiscordRPCService:
                     self.is_connected = True
                     logger.info(f"Connecté au pipe Discord : {pipe_path}")
 
-                    # Démarrer le reader thread dédié qui dépilera tous les messages suivants
+                    # Start the dedicated reader thread that will drain all following messages
                     if not self._reader_thread or not self._reader_thread.is_alive():
                         self._reader_thread = threading.Thread(target=self._reader_loop, daemon=True, name="DiscordRPCReader")
                         self._reader_thread.start()
@@ -169,7 +169,7 @@ class DiscordRPCService:
             return False
 
     def _close_pipe(self) -> None:
-        """Ferme proprement le pipe et débloque les requêtes en attente."""
+        """Close the pipe cleanly and unblock pending requests."""
         with self._lock:
             with self._write_lock:
                 if self.pipe:
@@ -182,14 +182,14 @@ class DiscordRPCService:
             self.is_connected = False
             self.is_authenticated = False
 
-            # Débloquer immédiatement les threads en attente pour éviter les blocages
+            # Immediately unblock waiting threads to avoid deadlocks
             for evt in list(self._pending_events.values()):
                 evt.set()
             self._pending_events.clear()
             self._pending_responses.clear()
 
     def send_command(self, cmd: str, args: Dict[str, Any], evt: Optional[str] = None, timeout: float = 3.5) -> Optional[Dict[str, Any]]:
-        """Envoie une commande JSON RPC à Discord et attend la réponse associée au nonce."""
+        """Send a JSON RPC command to Discord and wait for the response matching the nonce."""
         if not self.pipe or not self.handle or not self.is_connected:
             return None
 
@@ -227,7 +227,7 @@ class DiscordRPCService:
             self._close_pipe()
             return None
 
-        # Attente du signal déclenché par le reader thread indépendant
+        # Wait for the signal raised by the independent reader thread
         if done_event.wait(timeout=timeout):
             with self._lock:
                 self._pending_events.pop(nonce, None)
@@ -239,7 +239,7 @@ class DiscordRPCService:
             return None
 
     def _reader_loop(self) -> None:
-        """Boucle dédiée de lecture non-bloquante du pipe Discord."""
+        """Dedicated non-blocking read loop for the Discord pipe."""
         avail = wintypes.DWORD()
         while self._running:
             h = self.handle
@@ -270,13 +270,13 @@ class DiscordRPCService:
                     msg = json.loads(body.decode("utf-8"))
                     nonce = msg.get("nonce")
 
-                    # 1. Réponse à une commande en attente (nonce)
+                    # 1. Response to a pending command (nonce)
                     if nonce and nonce in self._pending_events:
                         with self._lock:
                             self._pending_responses[nonce] = msg
                             self._pending_events[nonce].set()
 
-                    # 2. Événement vocal spontané envoyé par Discord
+                    # 2. Spontaneous voice event sent by Discord
                     elif msg.get("cmd") == "DISPATCH" and msg.get("evt") == "VOICE_SETTINGS_UPDATE":
                         d = msg.get("data", {})
                         old_mute, old_deaf = self.mute, self.deaf
@@ -293,21 +293,21 @@ class DiscordRPCService:
                 time.sleep(0.5)
 
     def _worker_loop(self) -> None:
-        """Superviseur de connexion et d'authentification."""
+        """Connection and authentication supervisor."""
         while self._running:
             if not self.pipe or not self.is_connected:
                 if not self._connect_and_handshake():
                     time.sleep(2.0)
                     continue
 
-            # Authentifier la session si nécessaire
+            # Authenticate the session if needed
             if self.is_connected and not self.is_authenticated and self.client_id and self.access_token:
                 self._authenticate_session()
 
             time.sleep(1.0)
 
     def _authenticate_session(self) -> bool:
-        """Authentifie le client auprès de Discord avec l'access_token OAuth2."""
+        """Authenticate the client to Discord with the OAuth2 access_token."""
         if not self.pipe or not self.is_connected:
             return False
 
@@ -323,10 +323,10 @@ class DiscordRPCService:
             self.save_config()
             logger.info(f"Discord RPC Authentifié avec succès ! Compte : {self.user_info.get('global_name')}")
 
-            # Souscription aux événements vocaux
+            # Subscribe to voice events
             self.send_command("SUBSCRIBE", {}, evt="VOICE_SETTINGS_UPDATE", timeout=2.0)
 
-            # Récupération de l'état vocal actuel
+            # Retrieve the current voice state
             vres = self.send_command("GET_VOICE_SETTINGS", {}, timeout=2.0)
             if vres and "data" in vres:
                 v_data = vres["data"]
@@ -336,7 +336,7 @@ class DiscordRPCService:
             return True
         else:
             logger.warning(f"Échec authentification Discord : {res}")
-            # Si le jeton est expiré, tenter un rafraîchissement
+            # If the token has expired, try a refresh
             if self.refresh_token:
                 logger.info("Tentative de rafraîchissement du jeton OAuth2 Discord...")
                 if self._refresh_oauth_token():
@@ -389,7 +389,7 @@ class DiscordRPCService:
             return False
 
     def authorize_flow(self, client_id: str, client_secret: str) -> Dict[str, Any]:
-        """Déclenche la pop-up native d'autorisation sur Discord et échange le code."""
+        """Trigger Discord's native authorization pop-up and exchange the code."""
         with self._lock:
             self.client_id = client_id.strip()
             self.client_secret = client_secret.strip()
@@ -399,7 +399,7 @@ class DiscordRPCService:
         if not self._connect_and_handshake():
             return {"success": False, "error": "Impossible d'ouvrir le pipe Discord. Discord est-il lancé ?"}
 
-        # Envoyer AUTHORIZE (déclenche la fenêtre de permission native Discord sur le PC)
+        # Send AUTHORIZE (opens Discord's native permission window on the PC)
         logger.info("Envoi de la commande AUTHORIZE à Discord...")
         res = self.send_command(
             "AUTHORIZE",
@@ -421,7 +421,7 @@ class DiscordRPCService:
         if not code:
             return {"success": False, "error": "Aucun code d'autorisation reçu de Discord."}
 
-        # Échange du code contre un access_token
+        # Exchange the code for an access_token
         try:
             post_data = {
                 "client_id": self.client_id,
@@ -463,7 +463,7 @@ class DiscordRPCService:
             return {"success": False, "error": str(e)}
 
     def toggle_mute(self) -> Optional[bool]:
-        """Bascule l'état du micro dans Discord (sans avoir besoin du focus)."""
+        """Toggle the microphone state in Discord (without needing focus)."""
         if not self.is_authenticated:
             logger.warning("Discord RPC non authentifié. Impossible de couper le micro via RPC.")
             return None
@@ -476,7 +476,7 @@ class DiscordRPCService:
         return None
 
     def toggle_deaf(self) -> Optional[bool]:
-        """Bascule la sourdine (casque) dans Discord (sans avoir besoin du focus)."""
+        """Toggle the headphone (deafen) state in Discord (without needing focus)."""
         if not self.is_authenticated:
             logger.warning("Discord RPC non authentifié. Impossible de couper le casque via RPC.")
             return None

@@ -1,4 +1,4 @@
-/* Sélecteur natif dans l'application, EyeDropper dans les navigateurs compatibles. */
+/* Native picker in the app, EyeDropper in compatible browsers. */
 let studioColorRequest = null;
 
 function syncStudioColorFields() {

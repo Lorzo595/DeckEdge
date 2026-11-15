@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 
 namespace DeckEdgeDesktop
 {
-    // Banc de contrôle des fichiers de préférences, sans écrire au démarrage Windows.
+    // Test bench for the preferences files, without writing to Windows startup.
     internal static class Program
     {
         internal static string Project;

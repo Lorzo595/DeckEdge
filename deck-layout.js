@@ -1,4 +1,4 @@
-/* Disposition commune au pupitre et à son aperçu dans le Studio. */
+/* Layout shared by the deck and its preview in the Studio. */
 window.DeckLayout = Object.freeze({
   activeDisplay(widget) {
     const source = widget || {};

@@ -1,4 +1,4 @@
-"""Regroupement des sessions d'une application sur toutes les sorties Windows."""
+"""Group an application's sessions across all Windows outputs."""
 
 
 class ApplicationVolume:
@@ -34,7 +34,7 @@ class ApplicationVolume:
             raise RuntimeError("Aucune session audio disponible")
 
     def GetMasterVolume(self):
-        # Si les sessions diffèrent, afficher le niveau le plus élevé.
+        # If the sessions differ, report the highest level.
         return max(self._read("GetMasterVolume"))
 
     def GetMute(self):
@@ -58,7 +58,7 @@ def collect_application_volumes(devices, make_session, control_interface, volume
         for index in range(count):
             try:
                 session = make_session(enumerator.GetSession(index).QueryInterface(control_interface))
-                # Les sessions inactives restent pilotables, les sessions expirées non.
+                # Inactive sessions stay controllable, expired sessions do not.
                 if session.State == 2:
                     continue
                 process = session.Process
@@ -70,6 +70,6 @@ def collect_application_volumes(devices, make_session, control_interface, volume
                 control = session._ctl.QueryInterface(volume_interface)
                 apps.setdefault(name, ApplicationVolume()).add(control, device.FriendlyName)
             except Exception:
-                # Un processus terminé ou inaccessible ne masque pas les suivants.
+                # A terminated or inaccessible process does not hide the following ones.
                 continue
     return apps

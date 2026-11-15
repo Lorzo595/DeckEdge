@@ -7,8 +7,8 @@ using System.Windows.Forms;
 
 namespace DeckEdgeDesktop
 {
-    // Surface de sélection presque transparente : aucune capture plein écran
-    // n'est créée ou redessinée. Le pixel est lu après retrait de cette surface.
+    // Almost transparent selection surface: no full-screen capture is created
+    // or redrawn. The pixel is read after this surface has been removed.
     internal sealed class ScreenColorPicker : Form
     {
         bool sampling, closing;
@@ -24,7 +24,7 @@ namespace DeckEdgeDesktop
         {
             IntPtr previous = IntPtr.Zero;
             try {
-                // Conserver les coordonnées physiques même avec plusieurs échelles Windows.
+                // Keep physical coordinates even with multiple Windows display scales.
                 previous = SetThreadDpiAwarenessContext(new IntPtr(-4));
                 using (var picker = new ScreenColorPicker()) {
                     picker.ShowDialog(owner);
@@ -46,7 +46,7 @@ namespace DeckEdgeDesktop
             KeyDown += delegate(object sender, KeyEventArgs e) {
                 if (e.KeyCode == Keys.Escape) { DialogResult = DialogResult.Cancel; Close(); }
             };
-            // Attendre le relâchement consomme le clic entier, sans l'envoyer dessous.
+            // Waiting for the release consumes the whole click without sending it underneath.
             MouseUp += async delegate(object sender, MouseEventArgs e) {
                 if (sampling) return;
                 if (e.Button == MouseButtons.Right) { DialogResult = DialogResult.Cancel; Close(); return; }
