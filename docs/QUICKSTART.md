@@ -1,6 +1,6 @@
-﻿# Getting started with DeckEdge
+# Getting started with DeckEdge
 
-Developed by Lorzo595, with help from ChatGPT. Source code under the MIT license.
+Developed by Lorzo595. Source code under the MIT license.
 
 ## Installation
 Run Setup-x64.exe, choose the folder and finish the wizard. A shortcut
