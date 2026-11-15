@@ -26,12 +26,9 @@ def _write_key(value):
     try:
         temp.write_text(value, encoding='ascii')
         os.replace(temp, KEY_FILE)
-    except OSError:
-        try:
+    finally:
+        if temp.exists():
             temp.unlink()
-        except OSError:
-            pass
-        KEY_FILE.write_text(value, encoding='ascii')
 
 
 def pairing_key():

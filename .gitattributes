@@ -1,7 +1,6 @@
 # Normalize line endings in the Git index.
-# Text files are stored with LF and checked out according to each
-# machine's native setting (CRLF on Windows with core.autocrlf=true).
-* text=auto
+# Text files use LF both in the index and in working trees, including Windows.
+* text=auto eol=lf
 
 *.png binary
 *.jpg binary

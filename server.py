@@ -40,7 +40,7 @@ if sys.stderr is None:
 
 import comtypes
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, Response
 import pyautogui
 import psutil
 from pydantic import BaseModel, Field, ValidationError, model_validator
@@ -1069,8 +1069,11 @@ class ConnectionManager:
         self._devices: Dict[WebSocket, Optional[str]] = {}
         self._lock = asyncio.Lock()
 
-    async def connect(self, ws: WebSocket, device_id: Optional[str] = None) -> None:
-        await ws.accept()
+    async def connect(self, ws: WebSocket, device_id: Optional[str] = None, headers=None) -> None:
+        if headers:
+            await ws.accept(headers=headers)
+        else:
+            await ws.accept()
         async with self._lock:
             self._active.add(ws)
             self._devices[ws] = device_id
@@ -1395,6 +1398,9 @@ async def protect_desktop_and_pair_phone(request: Request, call_next):
     language = request_language(request)
     if not allowed_origin(request):
         return JSONResponse({"detail": server_text(language, "origin")}, status_code=403)
+    desktop_only = request.url.path in {"/admin", "/api/apps", "/api/diagnostics", "/api/monitoring/sensors", "/api/discord/connect", "/api/discord/disconnect", "/api/config/validate", "/api/config/restore", "/api/config/backups", "/api/actions/test"} or request.url.path.startswith("/api/phones") or (request.url.path == "/api/config" and request.method != "GET")
+    if desktop_only and not local:
+        return JSONResponse({"detail": server_text(language, "desktop_only")}, status_code=403)
     issued_token = None
     if not local:
         ip = request.client.host if request.client else ""
@@ -1408,9 +1414,6 @@ async def protect_desktop_and_pair_phone(request: Request, call_next):
             device, issued_token = phones.pair(user_agent, ip)
         if device is None:
             return HTMLResponse(pairing_page(language), status_code=401)
-    desktop_only = request.url.path in {"/admin", "/api/apps", "/api/diagnostics", "/api/monitoring/sensors", "/api/discord/connect", "/api/discord/disconnect", "/api/config/validate", "/api/config/restore", "/api/config/backups", "/api/actions/test"} or request.url.path.startswith("/api/phones") or (request.url.path == "/api/config" and request.method != "GET")
-    if desktop_only and not local:
-        return JSONResponse({"detail": server_text(language, "desktop_only")}, status_code=403)
     response = await call_next(request)
     if issued_token:
         response.set_cookie(COOKIE, issued_token, httponly=True, samesite="strict", max_age=31536000, path="/")
@@ -2107,9 +2110,12 @@ async def list_phones_endpoint():
 @app.delete("/api/phones/{phone_id}")
 async def revoke_phone_endpoint(phone_id: str, request: Request):
     global PHONE_KEY
+    if not any(phone['id'] == phone_id for phone in phones.list()):
+        raise HTTPException(status_code=404, detail=server_text(request_language(request), "phone_missing"))
+    # Fail before revoking a token if its old pairing link cannot be invalidated.
+    PHONE_KEY = rotate_pairing_key()
     if not phones.revoke(phone_id):
         raise HTTPException(status_code=404, detail=server_text(request_language(request), "phone_missing"))
-    PHONE_KEY = rotate_pairing_key()
     closed = await manager.disconnect_device(phone_id)
     logger.info("Phone %s revoked; pairing link renewed; %s session(s) closed", phone_id, closed)
     return {"status": "ok", "closed_sessions": closed, "pairing_key_rotated": True}
@@ -2125,8 +2131,8 @@ async def rename_phone_endpoint(phone_id: str, payload: PhoneRenamePayload, requ
 @app.post("/api/phones/revoke-all")
 async def revoke_all_phones_endpoint():
     global PHONE_KEY
-    revoked = phones.revoke_all()
     PHONE_KEY = rotate_pairing_key()
+    revoked = phones.revoke_all()
     closed = await manager.disconnect_phones()
     logger.info("All phones revoked (%s); pairing link renewed; %s session(s) closed", revoked, closed)
     return {"status": "ok", "revoked": revoked, "closed_sessions": closed, "pairing_key_rotated": True}
@@ -2489,12 +2495,28 @@ async def toggle_discord_deaf_endpoint():
 async def websocket_endpoint(websocket: WebSocket):
     local = is_local(websocket.client.host) if websocket.client else False
     ip = websocket.client.host if websocket.client else ""
-    device = None if local else phones.authenticate(websocket.cookies.get(COOKIE, ""), ip)
-    legacy = (not local and device is None and _matches_master_key(websocket.cookies.get(COOKIE, "")))
-    if not allowed_origin(websocket) or (not local and device is None and not legacy):
+    if not allowed_origin(websocket):
         await websocket.close(code=1008)
         return
-    await manager.connect(websocket, device["id"] if device else None)
+    token = websocket.cookies.get(COOKIE, "")
+    device = None if local else phones.authenticate(token, ip)
+    headers = None
+    if not local and device is None and _matches_master_key(token):
+        # Old decks may reconnect their socket without reloading the page.
+        # Migrate during the HTTP upgrade, and bind even these sockets to a device.
+        device, token = phones.pair(websocket.headers.get('user-agent', ''), ip)
+        response = Response()
+        response.set_cookie(COOKIE, token, httponly=True, samesite='strict', max_age=31536000, path='/')
+        headers = [(key, value) for key, value in response.raw_headers if key == b'set-cookie']
+    if not local and device is None:
+        await websocket.close(code=1008)
+        return
+    await manager.connect(websocket, device['id'] if device else None, headers=headers)
+    # A revoke can occur while accept()/connect() is suspended.
+    if not local and phones.authenticate(token, ip) is None:
+        await websocket.close(code=1008)
+        await manager.disconnect(websocket)
+        return
 
     # On client connection, send the initial state of the audio devices/apps and buttons
     try:
@@ -2534,6 +2556,9 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             raw_msg = await websocket.receive_text()
+            if not local and phones.authenticate(token, ip) is None:
+                await websocket.close(code=1008)
+                break
             if not raw_msg or len(raw_msg) > MAX_WS_MESSAGE_BYTES:
                 continue
 
