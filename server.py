@@ -1573,8 +1573,7 @@ async def handle_button_click(btn_id: str) -> None:
             return
 
         logger.info("Clic reçu [%s] '%s'", target_btn.id, target_btn.label)
-        config = await asyncio.to_thread(config_store.load)
-        await asyncio.to_thread(_execute_button, target_btn, config)
+        await asyncio.to_thread(_execute_button, target_btn)
         # Mute commands return the new mute state: False also means a successful
         # unmute. Keep the existing optimistic toggle; telemetry reconciles it.
         if not target_btn.is_toggle:
@@ -1701,8 +1700,10 @@ def _condition_met(step: ActionStep, config: Optional[DeckConfig] = None) -> boo
     if condition == "always":
         return True
     if condition in ("button_on", "button_off"):
-        button = _find_config_button(config, target)
-        if button is None:
+        # Execution reads live state for every step; explicit configs are used
+        # by isolated callers. Validation separately uses the unsaved Studio config.
+        button = _find_config_button(config, target) if config is not None else config_store.get_button(target)
+        if button is None or not button.is_toggle:
             return False
         return bool(button.state) if condition == "button_on" else not bool(button.state)
     if condition == "app_running":
@@ -1841,9 +1842,9 @@ def _test_audio_target(b_type: str, target: str) -> List[Dict[str, Any]]:
     action = action.strip()
     if action != "mute" and not re.fullmatch(r"[+-]\d+(?:\.\d+)?", action):
         return [_test_check("action.audio.action_invalid", False, target)]
-    if app_name.strip().lower() in ("master", "windows"):
+    if app_name.strip().lower() in ("master", "general", "windows"):
         return [_test_check("action.audio.ready", True, target)]
-    present = _audio_app_present(app_name)
+    present = _audio_device_present(app_name) if app_name.startswith("device:") else _audio_app_present(app_name)
     return [_test_check("action.audio.ready" if present else "action.audio.inactive", present, target)]
 
 

@@ -207,10 +207,26 @@ function moveStudioButton(pageId) {
   studioNotify(`Touche déplacée vers « ${destination.name} ».`, 'Voir', () => switchPage(destination.id));
 }
 
+function remapClonedButtons(pages) {
+  const ids = new Map();
+  pages.forEach(page => (page.buttons || []).forEach(button => {
+    const id = studioId('b');
+    ids.set(button.id, id);
+    button.id = id;
+    button.state = false;
+  }));
+  pages.forEach(page => (page.buttons || []).forEach(button => {
+    (button.steps || []).forEach(step => {
+      if (['button_on', 'button_off'].includes(step.condition) && ids.has(step.condition_target))
+        step.condition_target = ids.get(step.condition_target);
+    });
+  }));
+}
+
 function duplicateStudioPage(pageId) {
   const source = config.pages.find(p => p.id === pageId); if (!source) return;
   const copy = studioClone(source); copy.id = studioId('page'); copy.name = source.name.slice(0,42) + ' (copie)';
-  copy.buttons.forEach(button => { button.id = studioId('b'); button.state = false; });
+  remapClonedButtons([copy]);
   config.pages.splice(config.pages.indexOf(source) + 1, 0, copy); switchPage(copy.id);
   studioNotify('Profil dupliqué.');
 }
