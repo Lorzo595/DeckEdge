@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="DeckEdge">
@@ -174,7 +174,7 @@
     .deck-slider {
       background: #0d1322 !important;
       border: 1px solid #1e293b;
-      touch-action: pan-y !important;
+      touch-action: pan-y pinch-zoom !important;
       position: relative;
       overflow: hidden;
       padding: 0;
@@ -402,10 +402,10 @@
     @media (orientation: portrait) { .gauge-val { font-size: clamp(13px, 3.8vw, 20px); } }
     html { height: 100%; overflow: hidden; background: var(--bg); }
     body { width: 100%; height: var(--app-height, 100dvh); min-height: 0; padding-bottom: 0; }
-    .deck-grid { min-height: 0; min-width: 0; touch-action: pan-y; overscroll-behavior-y: contain;
+    .deck-grid { min-height: 0; min-width: 0; touch-action: pan-y pinch-zoom; overscroll-behavior-y: contain;
       -webkit-overflow-scrolling: touch; padding: 2px 1px max(18px, var(--safe-bottom));
       scroll-padding-bottom: max(18px, var(--safe-bottom)); }
-    .deck-btn, .slider-mute-btn { touch-action: pan-y; }
+    .deck-btn, .slider-mute-btn { touch-action: pan-y pinch-zoom; }
     .slider-mute-btn { color: inherit; font-family: inherit; }
     @media (orientation: landscape) { .deck-grid { grid-auto-rows: minmax(88px, 1fr); } }
   </style>
@@ -602,7 +602,7 @@
             <div class="slider-fill" id="fill-${btn.id}" style="width: ${currentVol}%; background: ${accentColor}40; border-right-color: ${accentColor};"></div>
             <div class="slider-content">
               <div class="slider-left">
-                <button type="button" class="slider-mute-btn" id="mute-btn-${btn.id}" aria-label="${deckText(I18n.t('deck.mute'))}">${deckText(isMuted ? '🔇' : (btn.icon || '🔊'))}</button>
+                <button type="button" class="slider-mute-btn" id="mute-btn-${btn.id}" aria-pressed="${isMuted ? 'true' : 'false'}" aria-label="${deckText(I18n.t('deck.mute'))}">${deckText(isMuted ? '🔇' : (btn.icon || '🔊'))}</button>
                 <div class="slider-info">
                   <span class="slider-name">${deckText(btn.label || I18n.t('deck.volume'))}</span>
                   <span class="slider-type-badge">${typeBadge}</span>
@@ -624,6 +624,7 @@
           const button = document.createElement('button');
           button.className = 'deck-btn';
           button.id = `btn-dom-${btn.id}`;
+          if (btn.is_toggle) button.setAttribute('aria-pressed', btn.state ? 'true' : 'false');
           DeckLayout.apply(button, btn);
 
           const isAct = btn.is_toggle && btn.state;
@@ -955,12 +956,13 @@
         if (valEl) valEl.innerText = vol + '%';
         if (muted) {
           slider.classList.add('is-muted');
-          if (muteBtn) muteBtn.innerText = '🔇';
+          if (muteBtn) { muteBtn.innerText = '🔇'; muteBtn.setAttribute('aria-pressed', 'true'); }
         } else {
           slider.classList.remove('is-muted');
           if (muteBtn) {
             const btnObj = findBtnInConfig(btnId);
             muteBtn.innerText = (btnObj && btnObj.icon) ? btnObj.icon : '🔊';
+            muteBtn.setAttribute('aria-pressed', 'false');
           }
         }
       });
@@ -1011,6 +1013,9 @@
         : (msg.label || (btnObj && btnObj.label) || '');
 
       const isToggle = (btnObj && btnObj.is_toggle) || ('active_icon' in msg) || ('active_label' in msg);
+
+      if (isToggle) el.setAttribute('aria-pressed', isAct ? 'true' : 'false');
+      else el.removeAttribute('aria-pressed');
 
       el.style.backgroundColor = bg.toLowerCase() === '#161c2e' ? '#2b2e27' : bg;
       el.style.borderColor = isAct ? '#e28c80' : (bg.toLowerCase() === '#161c2e' ? '#454a3d' : bg);

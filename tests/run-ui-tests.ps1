@@ -44,6 +44,8 @@ try {
         'tests/diagnostics.cjs',
         'tests/profiles.cjs',
         'tests/sequences.cjs',
+        'tests/studio-actions.cjs',
+        'tests/mobile-accessibility.cjs',
         'tests/i18n.cjs',
         'tests/studio-i18n.cjs'
     )

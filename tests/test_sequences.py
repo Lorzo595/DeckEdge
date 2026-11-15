@@ -4,7 +4,7 @@ from unittest.mock import call, patch
 from pydantic import ValidationError
 
 import server
-from server import ActionStep, ButtonConfig, DeckConfig
+from server import ActionStep, ButtonConfig, DeckConfig, PageConfig
 
 
 class SequenceValidationTests(unittest.TestCase):
@@ -18,7 +18,7 @@ class SequenceValidationTests(unittest.TestCase):
                     "label": "Séquence",
                     "type": "sequence",
                     "steps": [
-                        {"type": "hotkey", "target": "ctrl,shift,m", "delay": 0.2},
+                        {"type": "hotkey", "target": "ctrl,shift,m", "delay": 0.2, "condition": "button_on", "condition_target": "gate"},
                         {"type": "launch", "target": "calc.exe", "delay": 0},
                     ],
                 }],
@@ -27,6 +27,9 @@ class SequenceValidationTests(unittest.TestCase):
         restored = DeckConfig.model_validate_json(config.model_dump_json())
         self.assertEqual([step.type for step in restored.pages[0].buttons[0].steps], ["hotkey", "launch"])
         self.assertEqual(restored.pages[0].buttons[0].steps[0].delay, 0.2)
+        self.assertEqual(restored.pages[0].buttons[0].steps[0].condition, "button_on")
+        self.assertEqual(restored.pages[0].buttons[0].steps[0].condition_target, "gate")
+        self.assertEqual(restored.pages[0].buttons[0].steps[1].condition, "always")
 
     def test_empty_sequence_is_rejected(self):
         with self.assertRaises(ValidationError):
@@ -80,6 +83,88 @@ class SequenceExecutionTests(unittest.TestCase):
             self.assertTrue(server._execute_button(sequence))
             self.assertTrue(server._execute_button(simple))
         self.assertEqual(execute.call_args_list, [call("key", "a"), call("key", "playpause")])
+
+
+class SequenceConditionTests(unittest.TestCase):
+    def config(self, state=False):
+        return DeckConfig(pages=[PageConfig(
+            id="page_main", name="Principal",
+            buttons=[ButtonConfig(id="gate", type="key", target="playpause", is_toggle=True, state=state)],
+        )])
+
+    def test_condition_is_optional_and_defaults_to_always(self):
+        step = ActionStep(type="key", target="a")
+        self.assertEqual(step.condition, "always")
+        self.assertTrue(server._condition_met(step))
+
+    def test_button_condition_skips_or_runs_steps(self):
+        config = self.config(state=False)
+        steps = [
+            ActionStep(type="key", target="first", condition="button_on", condition_target="gate"),
+            ActionStep(type="key", target="second", condition="button_off", condition_target="gate"),
+            ActionStep(type="key", target="third", condition="button_on", condition_target="missing"),
+        ]
+        calls = []
+        with patch.object(server, "_execute_action", side_effect=lambda kind, target: calls.append(target) or True):
+            self.assertTrue(server._execute_sequence(steps, config))
+        self.assertEqual(calls, ["second"])
+
+        config.pages[0].buttons[0].state = True
+        calls.clear()
+        with patch.object(server, "_execute_action", side_effect=lambda kind, target: calls.append(target) or True):
+            self.assertTrue(server._execute_sequence(steps, config))
+        self.assertEqual(calls, ["first"])
+
+    def test_app_and_microphone_conditions(self):
+        app_step = ActionStep(type="key", target="a", condition="app_running", condition_target="spotify")
+        with patch.object(server, "_is_app_running", return_value=False):
+            self.assertFalse(server._condition_met(app_step))
+        with patch.object(server, "_is_app_running", return_value=True):
+            self.assertTrue(server._condition_met(app_step))
+
+        mic_step = ActionStep(type="key", target="a", condition="mic_muted")
+        with patch.object(server.audio_engine, "get_system_states", return_value={"mic_muted": True}):
+            self.assertTrue(server._condition_met(mic_step))
+        unmuted = ActionStep(type="key", target="a", condition="mic_unmuted")
+        with patch.object(server.audio_engine, "get_system_states", return_value={"mic_muted": True}):
+            self.assertFalse(server._condition_met(unmuted))
+
+
+class ActionTestTests(unittest.TestCase):
+    def test_key_and_hotkey_validation(self):
+        self.assertTrue(server._test_action_request(ButtonConfig(id="k", type="key", target="playpause"), None)["ok"])
+        self.assertFalse(server._test_action_request(ButtonConfig(id="k", type="key", target="not-a-key"), None)["ok"])
+        self.assertTrue(server._test_action_request(ButtonConfig(id="h", type="hotkey", target="ctrl,shift,m"), None)["ok"])
+        self.assertFalse(server._test_action_request(ButtonConfig(id="h", type="hotkey", target="ctrl,nope"), None)["ok"])
+
+    def test_launch_validation(self):
+        self.assertTrue(server._test_action_request(ButtonConfig(id="l", type="launch", target="https://example.com"), None)["ok"])
+        self.assertTrue(server._test_action_request(ButtonConfig(id="l", type="launch", target="ms-settings:"), None)["ok"])
+        self.assertTrue(server._test_action_request(ButtonConfig(id="l", type="launch", target="start discord:"), None)["ok"])
+        self.assertFalse(server._test_action_request(ButtonConfig(id="l", type="launch", target="C:/missing/file.exe"), None)["ok"])
+
+    def test_audio_validation_reports_missing_session(self):
+        inventory = {"devices": [{"name": "Speakers", "target": "device:Speakers"}], "apps": [{"name": "Spotify", "process": "spotify.exe", "target": "app:spotify"}]}
+        with patch.object(server, "get_audio_targets", return_value=inventory):
+            self.assertTrue(server._test_action_request(ButtonConfig(id="a", type="slider", target="master"), None)["ok"])
+            self.assertTrue(server._test_action_request(ButtonConfig(id="a", type="slider", target="app:spotify"), None)["ok"])
+            self.assertFalse(server._test_action_request(ButtonConfig(id="a", type="slider", target="app:discord"), None)["ok"])
+            self.assertTrue(server._test_action_request(ButtonConfig(id="a", type="volume_app", target="spotify:+10"), None)["ok"])
+            self.assertFalse(server._test_action_request(ButtonConfig(id="a", type="volume_app", target="spotify:jump"), None)["ok"])
+
+    def test_sequence_validation_includes_conditions(self):
+        config = DeckConfig(pages=[PageConfig(id="p", name="P", buttons=[ButtonConfig(id="gate", type="key", target="a", is_toggle=True)])])
+        valid = ButtonConfig(id="s", type="sequence", steps=[
+            {"type": "key", "target": "a", "condition": "button_on", "condition_target": "gate"},
+            {"type": "launch", "target": "https://example.com"},
+        ])
+        self.assertTrue(server._test_action_request(valid, config)["ok"])
+        invalid = ButtonConfig(id="s", type="sequence", steps=[
+            {"type": "key", "target": "a", "condition": "button_on", "condition_target": "missing"},
+        ])
+        result = server._test_action_request(invalid, config)
+        self.assertFalse(result["ok"])
+        self.assertIn("action.condition.button_missing", [check["code"] for check in result["checks"]])
 
 
 if __name__ == "__main__":
