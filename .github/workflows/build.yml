@@ -27,6 +27,9 @@ jobs:
       - name: Install Python dependencies
         shell: pwsh
         run: python -m pip install --disable-pip-version-check -r requirements.txt
+      - name: Check private pairing registry exclusion
+        shell: pwsh
+        run: ./tests/run-package-privacy-smoke.ps1
       - name: Python tests
         shell: pwsh
         run: python -m unittest discover -s tests -t . -p "test_*.py"
