@@ -4,7 +4,7 @@ const base=require('./ui-base.cjs');
 (async()=>{
  const browser=await chromium.launch({channel:'msedge',headless:true});
  try {
-  const context=await browser.newContext({viewport:{width:1200,height:900},locale:'en-US'});
+  const context=await browser.newContext({viewport:{width:1200,height:900},locale:'fr-FR'});
   const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
   const fixture={active_page_id:'page_main',pages:[{id:'page_main',name:'Principal',icon:'⌘',buttons:[{id:'a',label:'Ma touche',icon:'⌘',type:'key',target:'playpause',color:'#161c2e'}]}],monitoring:[{label:'CPU',sensor_id:'cpu_load',secondary_sensor_id:''}]};
   await page.route('**/api/config',route=>route.fulfill({json:fixture}));

@@ -388,6 +388,18 @@
 
   let language = detect();
 
+  // Optional ?lang=en / ?lang=fr for links and deterministic tests.
+  try {
+    const requested = new URL(location.href).searchParams.get('lang');
+    if (supported.includes(requested)) {
+      language = requested;
+      try { localStorage.setItem(STORAGE_KEY, language); } catch {}
+      const url = new URL(location.href);
+      url.searchParams.delete('lang');
+      history.replaceState(null, '', url.pathname + url.search + url.hash);
+    }
+  } catch {}
+
   function t(key, values = {}) {
     const table = messages[language] || messages.en;
     const fallback = messages.en;
