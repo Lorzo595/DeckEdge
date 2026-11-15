@@ -20,7 +20,7 @@ foreach($name in $archives){
             }
             if($entries | Where-Object {$_ -match '\.(exe|dll|pdb|zip|png)$'}){throw 'Binaire ou capture présent dans les sources publiques.'}
         }else{
-            foreach($required in @('DeckEdge/DeckEdge.exe','DeckEdge/portable.flag','DeckEdge/runtime/python.exe','DeckEdge/LibreHardwareMonitorLib.dll','DeckEdge/QRCoder.dll','DeckEdge/QRCoder-LICENSE.txt','DeckEdge/local_discovery.py','DeckEdge/prerequisites/PawnIO_setup.exe','DeckEdge/PYTHON-PACKAGES.json','DeckEdge/licenses/sources/SOURCES.json')){
+            foreach($required in @('DeckEdge/DeckEdge.exe','DeckEdge/DeckEdge.Updater.exe','DeckEdge/portable.flag','DeckEdge/runtime/python.exe','DeckEdge/LibreHardwareMonitorLib.dll','DeckEdge/QRCoder.dll','DeckEdge/QRCoder-LICENSE.txt','DeckEdge/local_discovery.py','DeckEdge/prerequisites/PawnIO_setup.exe','DeckEdge/PYTHON-PACKAGES.json','DeckEdge/licenses/sources/SOURCES.json')){
                 if($required -notin $entries){throw "Portable incomplet : $required"}
             }
         }
