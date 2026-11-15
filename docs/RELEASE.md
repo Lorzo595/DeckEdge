@@ -5,7 +5,7 @@
 1. Build with `packaging/build-release.ps1`, then run `packaging/check-release.ps1`.
 2. Open `.build/latest-release.json`: the `source` field points to a **DeckEdge**
    folder containing only the public files. Publish that folder, or extract
-   `dist/DeckEdge-0.1.4-Source.zip` and publish its contents.
+   `dist/DeckEdge-0.1.5-Source.zip` and publish its contents.
 3. Create a public GitHub repository, then push these sources to it. Include the
    hidden `.gitignore` and `.github` files. Do not push the full working folder
    containing your profiles, WebView2 cache, logs or credentials.
@@ -21,11 +21,11 @@ git commit -m "Initial public release"
 git branch -M main
 git remote add origin https://github.com/YOUR-ACCOUNT/DeckEdge.git
 git push -u origin main
-git tag v0.1.4
-git push origin v0.1.4
+git tag v0.1.5
+git push origin v0.1.5
 ```
 
-The `v0.1.4` tag must match VERSION. The workflow creates a **draft Release**
+The `v0.1.5` tag must match VERSION. The workflow creates a **draft Release**
 with the installer, the portable build, the sources and SHA256SUMS.txt. Check the
 files and the notes, then click **Publish release** to make them downloadable.
 Users download the files from **Releases**, not the automatic "Code → Download ZIP"
