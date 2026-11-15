@@ -388,17 +388,23 @@
 
   let language = detect();
 
+  function persistLanguage() {
+    try { localStorage.setItem(STORAGE_KEY, language); } catch {}
+    try { document.cookie = `deckedge_lang=${language}; Path=/; SameSite=Lax; Max-Age=31536000`; } catch {}
+  }
+
   // Optional ?lang=en / ?lang=fr for links and deterministic tests.
   try {
     const requested = new URL(location.href).searchParams.get('lang');
     if (supported.includes(requested)) {
       language = requested;
-      try { localStorage.setItem(STORAGE_KEY, language); } catch {}
+      persistLanguage();
       const url = new URL(location.href);
       url.searchParams.delete('lang');
       history.replaceState(null, '', url.pathname + url.search + url.hash);
     }
   } catch {}
+  persistLanguage();
 
   function t(key, values = {}) {
     const table = messages[language] || messages.en;
@@ -596,7 +602,7 @@
     stopLegacyObserver();
     restoreLegacy();
     language = value;
-    try { localStorage.setItem(STORAGE_KEY, language); } catch {}
+    persistLanguage();
     apply();
     if (legacyEnabled && language === 'en') {
       translateLegacyTree(document.body);

@@ -33,6 +33,18 @@ class NetworkAccessTests(unittest.TestCase):
         self.assertEqual(phone.post('/api/discord/connect', json={}).status_code, 403)
         self.assertEqual(phone.get('/api/apps').status_code, 403)
 
+    def test_server_messages_follow_language(self):
+        phone = self.client('192.168.1.100', '192.168.1.50:5000')
+        english = phone.get('/', headers={'Accept-Language': 'en-US'})
+        self.assertEqual(english.status_code, 401)
+        self.assertIn('Find your Deck', english.text)
+        french = phone.get('/', headers={'Accept-Language': 'fr-FR'})
+        self.assertIn('Retrouver votre Deck', french.text)
+        cookie = phone.get('/', headers={'Accept-Language': 'fr-FR', 'Cookie': 'deckedge_lang=en'})
+        self.assertIn('Find your Deck', cookie.text)
+        origin = phone.get('/api/config', headers={'Origin': 'https://example.org', 'Accept-Language': 'en-US'})
+        self.assertEqual(origin.json()['detail'], 'Origin not allowed')
+
     def test_websocket_requires_key_and_rejects_external_origin(self):
         phone = self.client('192.168.1.100', '192.168.1.50:5000')
         with self.assertRaises(WebSocketDisconnect):
