@@ -52,7 +52,7 @@ try { $icon.Save($stream) } finally {
 }
 $cscPath = Join-Path $env:WINDIR 'Microsoft.NET/Framework64/v4.0.30319/csc.exe'
 $appPath = Join-Path $outputDir 'DeckEdge.exe'
-$references = @('System.dll','System.Core.dll','System.Drawing.dll','System.Windows.Forms.dll','System.Web.Extensions.dll','System.Xml.dll','System.Security.dll',
+$references = @('System.dll','System.Core.dll','System.Drawing.dll','System.Windows.Forms.dll','System.Web.Extensions.dll','System.Xml.dll','System.Security.dll','System.IO.Compression.dll','System.IO.Compression.FileSystem.dll',
     (Join-Path $qrDir 'lib/net40/QRCoder.dll'),
     (Join-Path $HardwareDirectory 'LibreHardwareMonitorLib.dll'),
     (Join-Path $sdkDir 'lib/net462/Microsoft.Web.WebView2.Core.dll'),
@@ -67,8 +67,13 @@ $compilerArgs += Join-Path $desktopDir 'UiText.cs'
 $compilerArgs += Join-Path $desktopDir 'ScreenColorPicker.cs'
 $compilerArgs += Join-Path $desktopDir 'AssemblyInfo.cs'
 $compilerArgs += Join-Path $desktopDir 'PhoneConnection.cs'
+$compilerArgs += Join-Path $desktopDir 'UpdateEngine.cs'
+$compilerArgs += Join-Path $desktopDir 'Updates.cs'
 & $cscPath $compilerArgs
 if ($LASTEXITCODE -ne 0) { throw 'La compilation de DeckEdge a échoué.' }
+$updaterReferences = @('System.dll','System.Core.dll','System.Drawing.dll','System.Windows.Forms.dll','System.Web.Extensions.dll','System.Security.dll','System.IO.Compression.dll','System.IO.Compression.FileSystem.dll') | ForEach-Object { "/reference:$_" }
+& $cscPath /nologo /target:winexe /platform:x64 /optimize+ /codepage:65001 "/out:$(Join-Path $outputDir 'DeckEdge.Updater.exe')" @updaterReferences (Join-Path $desktopDir 'UpdateEngine.cs') (Join-Path $desktopDir 'UpdaterMain.cs') (Join-Path $desktopDir 'UiText.cs')
+if ($LASTEXITCODE -ne 0) { throw 'La compilation du programme de mise à jour a échoué.' }
 Copy-Item -LiteralPath (Join-Path $desktopDir 'LibreHardwareMonitor-LICENSE.txt'),(Join-Path $desktopDir 'THIRD-PARTY-NOTICES.md') -Destination $outputDir -Force
 Copy-Item -LiteralPath (Join-Path $qrDir 'lib/net40/QRCoder.dll'),(Join-Path $desktopDir 'QRCoder-LICENSE.txt') -Destination $outputDir -Force
 Get-ChildItem -LiteralPath $HardwareDirectory -Filter '*.dll' |

@@ -147,7 +147,7 @@ namespace DeckEdgeDesktop
         readonly AppPreferences original;
         readonly CheckBox startup, startupTray, closeTray, awake, fullSensors;
 
-        internal SettingsForm(AppPreferences preferences)
+        internal SettingsForm(AppPreferences preferences, Action<IWin32Window> openUpdates = null)
         {
             original = preferences;
             UiText.SetLanguage(preferences.Language);
@@ -187,6 +187,9 @@ namespace DeckEdgeDesktop
                 Text = "La taille de la fenêtre est mémorisée automatiquement. Ces paramètres concernent ce PC ; les profils du pupitre sont enregistrés séparément.",
                 MaximumSize = new Size(470, 0), AutoSize = true, ForeColor = Color.FromArgb(163, 167, 156), Font = new Font("Segoe UI", 9), Margin = new Padding(0, 0, 0, 15)
             });
+            var updates = new Button { Text = "Rechercher une mise à jour…", AutoSize = true, FlatStyle = FlatStyle.Flat, Margin = new Padding(0, 0, 0, 15), Enabled = openUpdates != null };
+            updates.Click += delegate { if (openUpdates != null) openUpdates(this); };
+            layout.Controls.Add(updates);
             var assembly = typeof(SettingsForm).Assembly;
             var company = (AssemblyCompanyAttribute)Attribute.GetCustomAttribute(assembly, typeof(AssemblyCompanyAttribute));
             var about = new FlowLayoutPanel {
