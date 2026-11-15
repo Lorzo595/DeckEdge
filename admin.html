@@ -2347,6 +2347,8 @@
     I18n.onChange(() => {
       document.getElementById('studio-language').value = I18n.lang;
       renderIconLibrary();
+      renderPagesBar();
+      renderGrid();
       const page = getCurrentPage();
       if (page?.buttons?.[selectedIndex]) selectButton(selectedIndex);
     });
