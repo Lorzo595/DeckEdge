@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.5 — In-app updates
+
+- Manual update check from Settings and the tray menu, with release notes and optional pre-release inclusion.
+- Download official GitHub packages, validate SHA256 and archive paths, then update and restart without a setup wizard.
+- Preserve installed/portable mode, profiles, phone pairing, custom data directories and unrelated files.
+- Refuse to update unsaved Studio changes or overwrite a newer version; wait for clean shutdown and block another instance during replacement.
+- Back up replaced files and restore them on a write failure. Cancel preparation without changing the running application.
+- Add updater unit, bilingual layout and installed/portable helper restart tests.
+
 ## 0.1.4 — Folders, conditional actions and bilingual interfaces
 
 - Mobile deck and Studio in French or English, with the choice remembered per device.

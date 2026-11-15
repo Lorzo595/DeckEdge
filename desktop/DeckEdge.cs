@@ -215,6 +215,7 @@ namespace DeckEdgeDesktop
             Controls.Add(status);
             menu.Items.Add("Ouvrir le Studio", null, delegate { RestoreStudio(); });
             menu.Items.Add("Paramètres…", null, delegate { OpenSettings(); });
+            menu.Items.Add("Rechercher une mise à jour…", null, delegate { OpenUpdates(this); });
             menu.Items.Add("Connecter le téléphone (QR code)…", null, delegate { OpenPhoneConnection(); });
             menu.Items.Add("Copier le lien du téléphone", null, delegate { phoneUrl = FindPhoneUrl(); Clipboard.SetText(phoneUrl); });
             menu.Items.Add("Vérifier les capteurs", null, async delegate { await CheckSensors(); });
@@ -293,7 +294,7 @@ namespace DeckEdgeDesktop
         {
             RestoreStudio(); SaveWindowPreferences();
             preferences.StartWithWindows = PreferencesStore.StartupEnabled();
-            using (var dialog = new SettingsForm(preferences)) {
+            using (var dialog = new SettingsForm(preferences, OpenUpdates)) {
                 if (dialog.ShowDialog(this) == DialogResult.OK) {
                     preferences = dialog.Result; keepAwake.Checked = preferences.KeepAwake; ApplyKeepAwake();
                     UiText.SetLanguage(preferences.Language);
@@ -301,6 +302,23 @@ namespace DeckEdgeDesktop
                     UiText.TranslateItems(menu.Items);
                 }
             }
+        }
+
+        void OpenUpdates(IWin32Window owner)
+        {
+            using (var dialog = new UpdatesForm(delegate(string plan) {
+                if (editorDirty || quitting || cleaning || starting) return false;
+                string helper = Path.Combine(Path.GetDirectoryName(plan), "DeckEdge.Updater.exe");
+                Process.Start(new ProcessStartInfo(helper, Quote(plan)) {
+                    WorkingDirectory = Path.GetDirectoryName(plan), UseShellExecute = false, CreateNoWindow = true
+                });
+                // The helper waits for this process, including backend/sensor cleanup.
+                quitting = true;
+                var settings = owner as SettingsForm;
+                if (settings != null) settings.Close();
+                BeginInvoke(new Action(Close));
+                return true;
+            }, ready: delegate { return !editorDirty && !quitting && !cleaning && !starting; })) dialog.ShowDialog(owner);
         }
 
         async Task<Dictionary<string, object>> GetHealth()

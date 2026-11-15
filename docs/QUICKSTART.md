@@ -2,6 +2,15 @@
 
 Developed by Lorzo595. Source code under the MIT license.
 
+## Updating from DeckEdge
+
+Starting with 0.1.5, open **Settings → Check for updates** or use the tray menu.
+Save your Studio changes, review the notes and choose **Update and restart**.
+The app keeps profiles and phone pairing, verifies the download, closes cleanly
+and updates in place. Preparation can be cancelled. Older versions need one
+initial manual installation of a build containing this feature; portable users
+must copy their old `data` folder on that initial migration. See [UPDATES.md](UPDATES.md).
+
 ## Installation
 Run Setup-x64.exe, choose the folder and finish the wizard. A shortcut
 is added to the Start menu; the desktop shortcut is optional. Uninstalling

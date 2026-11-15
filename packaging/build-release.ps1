@@ -75,6 +75,7 @@ try {
     & $python -m unittest discover -s tests -t . -p 'test_*.py'
     if($LASTEXITCODE -ne 0){throw 'Tests Python en échec.'}
 } finally {$env:DECKEDGE_DATA_DIR=$previousData}
+& "$root/tests/run-update-smoke.ps1"
 $dist=Join-Path $root 'dist';New-Item -ItemType Directory -Path $dist -Force | Out-Null
 if(-not $PortableOnly){
     if(-not $IsccPath){$IsccPath=Join-Path $root '.build/tools/InnoSetup/ISCC.exe'}
