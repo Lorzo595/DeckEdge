@@ -18,6 +18,12 @@ namespace DeckEdgeDesktop
 
     internal static class PhoneConnection
     {
+        internal static bool SameEndpoint(string first, string second)
+        {
+            Uri a, b;
+            return Uri.TryCreate(first, UriKind.Absolute, out a) && Uri.TryCreate(second, UriKind.Absolute, out b)
+                && a.GetLeftPart(UriPartial.Authority) == b.GetLeftPart(UriPartial.Authority);
+        }
         internal static PhoneAddress[] Addresses(string key, bool includePermanent = true)
         {
             var addresses = NetworkInterface.GetAllNetworkInterfaces()
@@ -53,6 +59,7 @@ namespace DeckEdgeDesktop
         readonly Func<Task<int>> clientCount;
         bool polling;
         bool permanentShown, selectedByUser;
+        string displayedKey;
 
         internal PhoneConnectionForm(Func<Task<int>> readClientCount)
         {
@@ -108,11 +115,12 @@ namespace DeckEdgeDesktop
             string previous = (network.SelectedItem as PhoneAddress) == null ? null : ((PhoneAddress)network.SelectedItem).Url;
             try {
                 Program.RefreshPhoneKey();
+                displayedKey = Program.PhoneKey;
                 var addresses = PhoneConnection.Addresses(Program.PhoneKey);
                 permanentShown = Program.PhoneDiscoveryReady && !String.IsNullOrEmpty(Program.PhoneHost);
                 network.Items.Clear(); network.Items.AddRange(addresses);
                 network.Enabled = addresses.Length > 0;
-                if (addresses.Length > 0) { int selected = selectedByUser ? Array.FindIndex(addresses, a => a.Url == previous) : 0; network.SelectedIndex = Math.Max(0, selected); }
+                if (addresses.Length > 0) { int selected = selectedByUser ? Array.FindIndex(addresses, a => PhoneConnection.SameEndpoint(a.Url, previous)) : 0; network.SelectedIndex = Math.Max(0, selected); }
                 else { UpdateQr(); connection.Text = UiText.T("Aucun réseau local détecté. Connectez le PC au Wi-Fi ou à Ethernet, puis actualisez."); }
             } catch { UpdateQr(); connection.Text = UiText.T("Réseaux indisponibles. Vérifiez la connexion du PC et actualisez."); }
         }
@@ -135,7 +143,8 @@ namespace DeckEdgeDesktop
             try {
                 int count = await clientCount();
                 if (IsDisposed || Disposing) return;
-                if (permanentShown != Program.PhoneDiscoveryReady) RefreshAddresses();
+                Program.RefreshPhoneKey();
+                if (displayedKey != Program.PhoneKey || permanentShown != Program.PhoneDiscoveryReady) RefreshAddresses();
                 connection.ForeColor = count > 0 ? Color.FromArgb(112, 218, 158) : Color.FromArgb(180, 195, 222);
                 if (network.Items.Count == 0) return;
                 connection.Text = count > 0 ? UiText.T("Pupitre connecté · vous pouvez utiliser DeckEdge sur votre téléphone.") : count < 0 ? UiText.T("Le serveur ne répond pas encore. Gardez DeckEdge ouvert.") : UiText.T("Serveur prêt · scannez le QR code pour connecter le téléphone.");
