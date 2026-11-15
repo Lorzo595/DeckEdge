@@ -24,7 +24,7 @@ if (-not (Test-Path -LiteralPath (Join-Path $sdkDir 'lib/net462/Microsoft.Web.We
     Expand-Archive -LiteralPath $archivePath -DestinationPath $sdkDir -Force
 }
 New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
-# Icône dessinée localement, commune à la fenêtre, à la barre des tâches et au raccourci.
+# Icon drawn locally, shared by the window, the taskbar and the shortcut.
 Add-Type -AssemblyName System.Drawing
 Add-Type -TypeDefinition @'
 using System;

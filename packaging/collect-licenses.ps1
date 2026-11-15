@@ -27,16 +27,16 @@ Copy-Item -LiteralPath $zeroconfArchive -Destination $sources
 $sourceManifest+=@{name='zeroconf';version='0.154.0';url=$sdist.url;sha256=$sdist.digests.sha256}
 $sourceManifest | ConvertTo-Json -Depth 4 | Set-Content -Encoding utf8 (Join-Path $sources 'SOURCES.json')
 @'
-Sources originales, non modifiées. Décompressez chaque archive pour consulter
-les licences et les instructions de reconstruction de son projet.
-LibreHardwareMonitor 0.9.6 : dotnet build LibreHardwareMonitorLib -c Release -f net472.
-PawnIO.Modules 0.1.6 : instructions et compilateur Pawn dans le README du projet.
-PawnIO 2.1.0 : instructions de construction du pilote dans le README du projet.
-zeroconf 0.154.0 : sources Python/Cython, licence et instructions du projet dans
-le paquet source PyPI fourni ; reconstruction avec les outils déclarés dans pyproject.toml.
-Les bibliothèques .NET et modules Python restent remplaçables par des versions
-compatibles ; DeckEdge ne restreint pas leur modification.
-SOURCES.json donne les commits et les empreintes des archives fournies.
+Original, unmodified sources. Extract each archive to read the licenses
+and rebuild instructions for its project.
+LibreHardwareMonitor 0.9.6: dotnet build LibreHardwareMonitorLib -c Release -f net472.
+PawnIO.Modules 0.1.6: instructions and Pawn compiler in the project README.
+PawnIO 2.1.0: driver build instructions in the project README.
+zeroconf 0.154.0: Python/Cython sources, license and project instructions in
+the provided PyPI source package; rebuild with the tools declared in pyproject.toml.
+.NET libraries and Python modules remain replaceable with compatible versions;
+DeckEdge does not restrict their modification.
+SOURCES.json lists the commits and archive hashes provided.
 '@ | Set-Content -Encoding utf8 (Join-Path $sources 'README.txt')
 $notice=Join-Path $cache 'LHM-THIRD-PARTY-NOTICES.txt'
 if(-not(Test-Path $notice)){Invoke-WebRequest 'https://raw.githubusercontent.com/LibreHardwareMonitor/LibreHardwareMonitor/3d331e3370efb858411f19511373eff65a218701/THIRD-PARTY-NOTICES.txt' -OutFile $notice -UseBasicParsing}

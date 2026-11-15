@@ -1,4 +1,4 @@
-/* Studio desktop : navigation, surface de travail et bibliothèque. */
+/* Desktop Studio: navigation, workspace and library. */
 :root{--bg:#191a1e;--surface:#24252b;--surface-hover:#303139;--border:#36373f;--primary:#7aa2ff;--primary-hover:#98b6ff;--text:#eeeef2;--text-muted:#9b9ca9;--danger:#ee7b87}
 body{background:var(--bg);color:var(--text);height:100vh;overflow:hidden;font-size:13px}
 header{height:66px;min-height:66px;padding:0 20px;background:#222329;position:relative;border-bottom:1px solid #34353d;gap:20px}

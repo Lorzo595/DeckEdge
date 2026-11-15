@@ -1,111 +1,111 @@
-# Construire DeckEdge sous Windows
+# Building DeckEdge on Windows
 
-## Environnement
+## Environment
 
-Windows x64, .NET Framework 4.8, PowerShell 5.1 ou 7, accès HTTPS à Python.org,
-PyPI, NuGet et GitHub. Le compilateur C# de .NET Framework est utilisé ; Visual
-Studio n’est pas nécessaire. Git et Node.js ne sont nécessaires que pour contribuer
-ou lancer les tests navigateur. Le logiciel vise Windows 10 build 19041+ / Windows 11.
+Windows x64, .NET Framework 4.8, PowerShell 5.1 or 7, HTTPS access to Python.org,
+PyPI, NuGet and GitHub. The .NET Framework C# compiler is used; Visual
+Studio is not required. Git and Node.js are only needed to contribute
+or to run the browser tests. The software targets Windows 10 build 19041+ / Windows 11.
 
-## Une commande pour les trois distributions
+## One command for the three distributions
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File packaging\build-release.ps1
 ```
 
-Le script télécharge des composants dans `.build`, contrôle les empreintes
-de `packaging/dependencies.json`, crée Python 3.14.9 embarqué et ses dépendances
-verrouillées, compile le Studio et construit les archives ainsi que l’installateur.
-Il installe le compilateur Inno Setup dans `.build/tools/InnoSetup` pour l’utilisateur
-courant si nécessaire. Aucun outil de construction n’est installé dans le portable.
-Vous pouvez fournir un Inno Setup déjà installé avec `-IsccPath "...\ISCC.exe"`.
-`-PortableOnly` évite l’installation d’Inno Setup et ne produit pas de Setup.exe.
+The script downloads components into `.build`, checks the hashes
+in `packaging/dependencies.json`, creates the embedded Python 3.14.9 and its locked
+dependencies, compiles the Studio and builds the archives and the installer.
+It installs the Inno Setup compiler into `.build/tools/InnoSetup` for the current
+user when needed. No build tool is installed inside the portable build.
+You can supply an already installed Inno Setup with `-IsccPath "...\ISCC.exe"`.
+`-PortableOnly` skips the Inno Setup installation and produces no Setup.exe.
 
-Les sorties vont dans `dist`. `.build/latest-release.json` indique le dossier
-portable et le dossier de sources nettoyées. Les dossiers de préparation sont
-nouveaux à chaque construction pour éviter de réintroduire d’anciennes données.
-Les scripts n’effacent jamais la configuration du poste de développement.
+Outputs go to `dist`. `.build/latest-release.json` points to the portable
+folder and the cleaned sources folder. Preparation folders are
+new on every build to avoid reintroducing old data.
+The scripts never delete the developer machine's configuration.
 
-Le runtime embarqué est isolé par `python314._pth` ; son chemin vers le serveur
-reste relatif. Les bibliothèques sont copiées sans caches Python ni scripts
-d’installation contenant des chemins absolus. `--check` teste le serveur avec
-des données temporaires. Les tests Python sont exécutés avant l’installateur.
+The embedded runtime is isolated by `python314._pth`; its path to the server
+stays relative. Libraries are copied without Python caches or installation
+scripts containing absolute paths. `--check` tests the server with
+temporary data. The Python tests run before the installer.
 
-Les composants de capteurs sont téléchargés depuis LibreHardwareMonitor 0.9.6,
-jamais depuis une application LHM installée à côté du projet. Les notices et les
-sources exactes de LibreHardwareMonitor, PawnIO.Modules et PawnIO sont incluses.
-Les licences .NET viennent des paquets NuGet correspondants, et les licences
-Python des distributions installées. Le bootstrapper WebView2 est vérifié par
-sa signature Authenticode Microsoft ; sa version Evergreen peut évoluer.
+Sensor components are downloaded from LibreHardwareMonitor 0.9.6,
+never from an LHM application installed next to the project. The notices and the
+exact sources of LibreHardwareMonitor, PawnIO.Modules and PawnIO are included.
+.NET licenses come from the matching NuGet packages, and Python
+licenses from the installed distributions. The WebView2 bootstrapper is verified
+by its Microsoft Authenticode signature; its Evergreen version may change.
 
-Les dépendances directes et transitives sont verrouillées dans requirements.txt.
-Les empreintes ne constituent pas une compilation bit pour bit reproductible :
-horodatages, signatures des prérequis et outils peuvent varier. Le bootstrap
-get-pip est fixé à un commit officiel. Tout échec SHA256 interrompt la construction ;
-vérifiez l’origine, mettez à jour le manifeste et testez avant une nouvelle version.
+Direct and transitive dependencies are locked in requirements.txt.
+The hashes do not make the build bit-for-bit reproducible:
+timestamps, prerequisite signatures and tools may vary. The get-pip
+bootstrap is pinned to an official commit. Any SHA256 failure stops the build;
+check the origin, update the manifest and test before a new release.
 
-## Vérifications
+## Checks
 
 ```powershell
 packaging\check-release.ps1
 .venv\Scripts\python.exe -m unittest discover -s tests -t . -p "test_*.py"
 ```
 
-Les tests réseau vérifient l’association par clé, le cookie privé, le refus
-d’administration distante et les origines WebSocket. Les tests existants couvrent
-l’audio, le profil de démarrage, les tailles de widgets, le monitoring, la
-persistance et les régressions de commandes.
+The network tests check key-based pairing, the private cookie, refusal of
+remote administration and WebSocket origins. The existing tests cover
+audio, the startup profile, widget sizes, monitoring, persistence and
+command regressions.
 
-Le test C# des préférences vérifie les valeurs par défaut, la migration et
-l’écriture atomique sans modifier l’inscription au démarrage Windows :
+The C# preferences test checks the defaults, the migration and
+atomic writes without changing the Windows startup registration:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tests\run-csharp-smoke.ps1
 ```
 
-Après avoir quitté toute copie de DeckEdge, `packaging/smoke-test.ps1` extrait
-le portable dans un chemin contenant des espaces, le lance avec un PATH sans
-Python, vérifie le serveur, les capteurs limités, la sauvegarde et l’arrêt.
-`-IncludeInstaller` teste aussi l’installation et la désinstallation dans `.build`,
-avec des données isolées et sans activer le démarrage automatique. Cette option
-refuse de fonctionner si DeckEdge est déjà installé pour l’utilisateur courant.
-Ce test local ne remplace pas une validation dans une VM Windows propre.
+After quitting every copy of DeckEdge, `packaging/smoke-test.ps1` extracts
+the portable build into a path containing spaces, launches it with a PATH without
+Python, and checks the server, the limited sensors, the backup and the shutdown.
+`-IncludeInstaller` also tests installation and uninstallation in `.build`,
+with isolated data and without enabling automatic startup. This option
+refuses to run if DeckEdge is already installed for the current user.
+This local test does not replace validation in a clean Windows VM.
 
-Les tests navigateur nécessitent Node.js, Playwright et Edge. Pour les installer
-sans ajouter de dépendance de production : `npm install --no-save playwright`.
-Le script suivant démarre un serveur isolé sur `127.0.0.1:5011`, exécute les onze
-tests Studio/mobile et s’arrête proprement :
+The browser tests require Node.js, Playwright and Edge. To install them
+without adding a production dependency: `npm install --no-save playwright`.
+The following script starts an isolated server on `127.0.0.1:5011`, runs the eleven
+Studio/mobile tests and shuts down cleanly:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tests\run-ui-tests.ps1
 ```
 
-Les tests couverts sont `studio-shell`, `studio-ergonomics`, `studio-colors`,
+The tests covered are `studio-shell`, `studio-ergonomics`, `studio-colors`,
 `mobile-preview`, `mobile-gestures`, `startup-profile`, `diagnostics`, `profiles`,
-`sequences`, `i18n` et `studio-i18n`.
-Le script accepte `-Port` et `-DataDirectory` pour isoler les données ; le dossier
-de données doit rester sous `.build`. Pour lancer un test manuel, définir
-`DECKEDGE_TEST_URL` vers le serveur de test.
+`sequences`, `i18n` and `studio-i18n`.
+The script accepts `-Port` and `-DataDirectory` to isolate the data; the data
+folder must stay under `.build`. To run a manual test, set
+`DECKEDGE_TEST_URL` to the test server.
 
-Les tests du Studio interceptent les profils et les sauvegardes ; ils ne doivent
-pas modifier les profils réels. Ne jamais activer une commande réelle pour tester
-un changement visuel. Pour une validation finale, tester l’installation et la
-désinstallation sur une VM Windows propre, puis le portable déplacé dans un
-chemin contenant des espaces. Vérifier un PC sans Python et, si possible, sans
-WebView2/PawnIO pour les parcours d’installation des prérequis.
+The Studio tests intercept profiles and backups; they must not
+modify the real profiles. Never enable a real command to test
+a visual change. For a final validation, test the installation and
+uninstallation on a clean Windows VM, then the portable build moved into a
+path containing spaces. Check a PC without Python and, if possible, without
+WebView2/PawnIO for the prerequisite installation flows.
 
-## Exécution depuis les sources
+## Running from source
 
-Créer un environnement Python avec requirements.txt, puis `desktop/build.ps1`.
-Le Studio cherche un Python compatible dans les installations utilisateur et PATH.
-Les données restent dans le projet en développement. On peut aussi exécuter
-`python server.py` pour le serveur seul ; les capteurs intégrés nécessitent le Studio.
+Create a Python environment with requirements.txt, then run `desktop/build.ps1`.
+The Studio looks for a compatible Python in the user installations and PATH.
+Data stays in the project during development. You can also run
+`python server.py` for the server alone; the built-in sensors require the Studio.
 
-Pour un test isolé : définir `DECKEDGE_DATA_DIR` avant de lancer le serveur Python.
-Le build natif de développement conserve les données existantes du projet.
+For an isolated test: set `DECKEDGE_DATA_DIR` before starting the Python server.
+The native development build keeps the project's existing data.
 
-## Changer de version
+## Changing the version
 
-Mettre à jour VERSION, les deux attributs de version dans desktop/AssemblyInfo.cs,
-CHANGELOG.md et docs/RELEASE-NOTES.md. Reconstruire, contrôler les archives et
-tester les exécutables avant de créer le tag GitHub correspondant.
+Update VERSION, both version attributes in desktop/AssemblyInfo.cs,
+CHANGELOG.md and docs/RELEASE-NOTES.md. Rebuild, check the archives and
+test the executables before creating the matching GitHub tag.

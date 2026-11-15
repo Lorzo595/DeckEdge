@@ -1,9 +1,9 @@
-## Changement
+## Change
 
-Décrire le problème et le comportement obtenu.
+Describe the problem and the resulting behavior.
 
 ## Validation
 
-Indiquer les tests réalisés et les limites éventuelles.
+List the tests performed and any limitations.
 
-Ne joindre aucun profil personnel, identifiant Discord, lien privé de téléphone ou journal non nettoyé.
+Do not attach any personal profile, Discord identifier, private phone link or uncleaned log.

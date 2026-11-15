@@ -1,4 +1,4 @@
-/* Même grille et mêmes proportions dans le téléphone et dans l'éditeur. */
+/* Same grid and proportions in the phone and in the editor. */
 .deck-layout-grid.deck-grid, .deck-layout-grid.deck-grid-preview {
   display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-auto-flow: row;
   grid-auto-rows: 28px; gap: 8px; align-content: start;

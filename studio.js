@@ -1,4 +1,4 @@
-/* Ergonomie du Studio : actions locales, historique et liaison à l'application. */
+/* Studio ergonomics: local actions, history and app linkage. */
 let studioReady = false;
 let studioRestoring = false;
 let studioHistory = [];

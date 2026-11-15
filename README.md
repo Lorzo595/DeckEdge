@@ -1,151 +1,151 @@
-﻿# DeckEdge
+# DeckEdge
 
-Votre téléphone devient un pupitre de contrôle pour Windows : raccourcis,
-applications, musique, volume par application et monitoring matériel.
-Le Studio Windows permet de tout organiser avec un aperçu mobile, une bibliothèque
-d’actions et des réglages simples. Aucun Stream Deck physique n’est nécessaire.
+Turn your phone into a control deck for Windows: shortcuts, apps, music,
+per-app volume and hardware monitoring. The Windows Studio lets you organize
+everything with a mobile preview, an action library and simple settings.
+No physical Stream Deck required.
 
-**Windows 10 (2004+) / Windows 11 · x64 · version 0.1.3 · licence MIT**
+**Windows 10 (2004+) / Windows 11 · x64 · version 0.1.3 · MIT license**
 
-Développé par **Lorzo595**, avec l’aide de **ChatGPT**.
+Built by **Lorzo595**, with help from **ChatGPT**.
 
-> **Version de test publique.** DeckEdge 0.1.3 fonctionne et a été testé
-> sur le poste de développement, mais la validation sur plusieurs PC et les retours
-> utilisateurs restent nécessaires avant une version 1.0.0.
+> **Public test version.** DeckEdge 0.1.3 works and has been tested
+> on the development machine, but validation across multiple PCs and user
+> feedback are still needed before a 1.0.0 release.
 
-[Télécharger la version 0.1.3](https://github.com/Lorzo595/DeckEdge/releases/tag/v0.1.3)
-· [Signaler un problème](https://github.com/Lorzo595/DeckEdge/issues)
-· [Guide de démarrage](docs/QUICKSTART.md)
+[Download version 0.1.3](https://github.com/Lorzo595/DeckEdge/releases/tag/v0.1.3)
+· [Report an issue](https://github.com/Lorzo595/DeckEdge/issues)
+· [Quick start guide](docs/QUICKSTART.md)
 
-## Fonctionnalités
+## Features
 
-| Domaine | Ce que permet DeckEdge |
+| Area | What DeckEdge lets you do |
 | --- | --- |
-| Studio Windows | Fenêtre dédiée, icône près de l’horloge, réglages locaux et lancement au démarrage facultatif |
-| Pupitre mobile | Interface dans le navigateur du téléphone, en portrait ou paysage, sur le même réseau privé que le PC |
-| Connexion au PC | Premier scan par QR code local, clé conservée et adresse permanente propre au PC pour les ouvertures suivantes |
-| Profils | Plusieurs pages de commandes, ajout, renommage, duplication et déplacement de touches |
-| Organisation | Aperçu de téléphone, glisser-déposer et widgets de largeur et hauteur réglables |
-| Actions | Raccourcis clavier, touches multimédias, lancement d’applications, fichiers et sites web |
-| Audio | Volume Windows, sorties audio et applications ayant une session audio active, avec curseurs et sourdine |
-| Monitoring | Moteur LibreHardwareMonitor intégré et choix de 1 à 6 indicateurs, avec une seconde mesure facultative |
-| Personnalisation | Nom, icône, couleurs, pipette et états actif/inactif pour les touches à bascule |
-| Langues | Interface du pupitre, du Studio et de l’application Windows en français ou anglais, avec mémorisation du choix |
-| Édition | Bibliothèque avec recherche, clic droit, duplication, annuler/rétablir et raccourcis clavier |
-| Profils | Export/import JSON et sauvegardes locales avec restauration |
-| Diagnostic | Rapport local copiable avec chemins, clé et IP privées masqués |
-| Discord | Intégration RPC facultative pour le micro et la sourdine, nécessitant une configuration Discord personnelle |
+| Windows Studio | Dedicated window, tray icon near the clock, local settings and optional launch at startup |
+| Mobile deck | Interface in the phone browser, portrait or landscape, on the same private network as the PC |
+| PC connection | First pairing by local QR code, key kept and a permanent address specific to the PC for later visits |
+| Profiles | Multiple command pages, add, rename, duplicate and move keys |
+| Organization | Phone preview, drag and drop, and widgets with adjustable width and height |
+| Actions | Keyboard shortcuts, media keys, launching apps, files and websites |
+| Audio | Windows volume, audio outputs and apps with an active audio session, with sliders and mute |
+| Monitoring | Built-in LibreHardwareMonitor engine and a choice of 1 to 6 sensors, with an optional secondary reading |
+| Customization | Name, icon, colors, eyedropper and active/inactive states for toggle keys |
+| Languages | Deck, Studio and Windows app interface in French or English, with the choice remembered |
+| Editing | Library with search, right-click, duplication, undo/redo and keyboard shortcuts |
+| Profiles | JSON export/import and local backups with restore |
+| Diagnostics | Copyable local report with paths, key and private IPs masked |
+| Discord | Optional RPC integration for the mic and mute, requiring your own Discord setup |
 
-Le téléphone n’a pas d’application à installer et aucun compte DeckEdge n’est
-nécessaire. Les commandes s’exécutent sur le PC ; le téléphone sert de télécommande.
-Le logiciel ne nécessite aucun abonnement et son code est disponible sous MIT.
+The phone needs no app installed and no DeckEdge account. Commands run on the PC;
+the phone acts as a remote. The software requires no subscription and its code
+is available under MIT.
 
-## Télécharger
+## Download
 
-Dans la [Release 0.1.3](https://github.com/Lorzo595/DeckEdge/releases/tag/v0.1.3), choisir :
+In the [0.1.3 Release](https://github.com/Lorzo595/DeckEdge/releases/tag/v0.1.3), choose:
 
-| Fichier | Usage |
+| File | Purpose |
 | --- | --- |
-| `DeckEdge-0.1.3-Setup-x64.exe` | Installation classique, raccourcis et désinstallation Windows |
-| `DeckEdge-0.1.3-Portable-x64.zip` | Décompresser, puis lancer `DeckEdge/DeckEdge.exe` ; tout reste dans ce dossier |
-| `DeckEdge-0.1.3-Source.zip` | Sources propres à publier, étudier ou modifier |
-| `SHA256SUMS.txt` | Empreintes des fichiers de cette version |
+| `DeckEdge-0.1.3-Setup-x64.exe` | Standard installation, shortcuts and Windows uninstall |
+| `DeckEdge-0.1.3-Portable-x64.zip` | Unzip, then run `DeckEdge/DeckEdge.exe`; everything stays in that folder |
+| `DeckEdge-0.1.3-Source.zip` | Clean sources to publish, study or modify |
+| `SHA256SUMS.txt` | Checksums for the files in this version |
 
-Python et le moteur LibreHardwareMonitor sont inclus. Il n’est pas nécessaire
-d’installer Python, Chrome ou l’application LibreHardwareMonitor.
-Microsoft WebView2 Runtime est nécessaire ; DeckEdge propose son installation
-s’il manque (connexion Internet nécessaire). Le pilote PawnIO est proposé pour
-certaines températures et mesures matérielles ; il nécessite un accord administrateur.
-Le Studio fonctionne sans droits administrateur, avec des mesures limitées si
-l’accès matériel complet est refusé.
+Python and the LibreHardwareMonitor engine are included. You do not need
+to install Python, Chrome or the LibreHardwareMonitor application.
+Microsoft WebView2 Runtime is required; DeckEdge offers to install it
+if missing (Internet connection required). The PawnIO driver is offered for
+some temperatures and hardware readings; it requires administrator consent.
+The Studio runs without administrator rights, with limited readings if
+full hardware access is refused.
 
-### Installation classique
+### Standard installation
 
-1. Télécharger `DeckEdge-0.1.3-Setup-x64.exe` depuis la Release.
-2. Suivre l’assistant. L’installation se fait pour l’utilisateur courant, avec
-   un raccourci dans le menu Démarrer et un raccourci Bureau facultatif.
-3. Ouvrir DeckEdge. Accepter l’installation de WebView2 s’il manque et choisir
-   si l’accès matériel complet est souhaité.
-4. La désinstallation passe par les applications installées de Windows ; les
-   profils sont conservés dans le dossier de données de l’utilisateur.
+1. Download `DeckEdge-0.1.3-Setup-x64.exe` from the Release.
+2. Follow the wizard. Installation is for the current user, with
+   a Start menu shortcut and an optional Desktop shortcut.
+3. Open DeckEdge. Accept the WebView2 installation if it is missing and choose
+   whether full hardware access is wanted.
+4. Uninstall through the Windows installed apps list; profiles
+   are kept in the user data folder.
 
-### Version portable
+### Portable version
 
-1. Télécharger `DeckEdge-0.1.3-Portable-x64.zip` et extraire **toute** l’archive.
-2. Ouvrir le dossier `DeckEdge`, puis lancer `DeckEdge.exe`.
-3. Conserver ensemble `runtime`, les bibliothèques et `portable.flag`. Les données
-   sont créées dans `data` ; déplacer le dossier entier pour emporter le Deck.
+1. Download `DeckEdge-0.1.3-Portable-x64.zip` and extract the **entire** archive.
+2. Open the `DeckEdge` folder, then run `DeckEdge.exe`.
+3. Keep `runtime`, the libraries and `portable.flag` together. Data
+   is created in `data`; move the whole folder to take the deck with you.
 
-WebView2 et le pilote matériel PawnIO restent des composants système : le mode
-portable concerne DeckEdge et ses données, pas l’installation de ces prérequis.
-Il peut fonctionner hors ligne une fois les prérequis présents, sauf les actions
-qui ouvrent des services en ligne. Ne pas télécharger le ZIP « Code » de GitHub
-pour installer l’app : ce ZIP contient les sources et aucun exécutable prêt à lancer.
+WebView2 and the PawnIO hardware driver remain system components: portable
+mode covers DeckEdge and its data, not the installation of these prerequisites.
+It can work offline once the prerequisites are present, except for actions
+that open online services. Do not download the GitHub "Code" ZIP
+to install the app: that ZIP contains the sources and no ready-to-run executable.
 
-Les exécutables de cette première version ne sont pas signés avec un certificat
-éditeur DeckEdge. Windows peut afficher un avertissement SmartScreen. Distribuez
-uniquement les fichiers que vous avez construits ou téléchargés depuis la Release
-originale, et vérifiez leur empreinte en cas de doute.
+The executables of this first version are not signed with a DeckEdge
+publisher certificate. Windows may show a SmartScreen warning. Distribute
+only files you built or downloaded from the original Release, and verify their
+checksum if in doubt.
 
-## Premiers pas
+## Getting started
 
-1. Installer DeckEdge ou extraire **tout** le dossier de l’archive portable dans
-   un emplacement où vous pouvez écrire. Lancer `DeckEdge.exe`.
-2. Dans le Studio, choisir un profil, ajouter une action depuis la bibliothèque,
-   puis sélectionner la touche pour régler son nom, son icône et sa couleur.
-3. Cliquer sur **Enregistrer**. Le clic droit, le glisser-déposer, Ctrl+Z et Ctrl+S
-   permettent de travailler plus rapidement.
-4. Connecter le téléphone au même réseau privé que le PC. Dans DeckEdge,
-   **Connecter le téléphone** affiche un QR code privé à scanner. Choisir
-   **Ce PC · adresse permanente**, puis ajouter la page ouverte à l’écran
-   d’accueil du téléphone ou aux favoris : un nouveau scan n’est pas nécessaire
-   à chaque démarrage. Le lien peut toujours être copié en secours.
-5. Si le pare-feu Windows le demande, autoriser DeckEdge/Python sur le réseau
-   **privé uniquement**. Le serveur utilise le port TCP 5000, ou le suivant s'il
-   est déjà occupé ; le QR code indique toujours le bon port.
+1. Install DeckEdge or extract the **entire** folder from the portable archive to
+   a location you can write to. Run `DeckEdge.exe`.
+2. In the Studio, choose a profile, add an action from the library,
+   then select the key to set its name, icon and color.
+3. Click **Save**. Right-click, drag and drop, Ctrl+Z and Ctrl+S
+   make work faster.
+4. Connect the phone to the same private network as the PC. In DeckEdge,
+   **Connect phone** displays a private QR code to scan. Choose
+   **This PC · permanent address**, then add the page opened on the phone's
+   home screen or to bookmarks: a new scan is not needed
+   at each startup. The link can always be copied as a fallback.
+5. If Windows Firewall asks, allow DeckEdge/Python on the
+   **private** network only. The server uses TCP port 5000, or the next one if it
+   is already in use; the QR code always shows the right port.
 
-Fermer la fenêtre conserve par défaut DeckEdge près de l’horloge. Le menu de
-cette icône permet de rouvrir le Studio, quitter complètement, voir les journaux
-ou ouvrir les données. **Paramètres** permet notamment le lancement au démarrage.
-La section **À propos de DeckEdge** y affiche la version, le développeur, la
-licence et les crédits des principaux composants, avec accès au texte de licence.
-Une seule copie de DeckEdge doit utiliser un port donné à la fois. Si le port
-5000 est occupé par un autre logiciel, DeckEdge choisit automatiquement le port
-suivant et le mémorise pour les prochains lancements. Si une autre copie de
-DeckEdge tourne déjà, quittez-la avant d’ouvrir la version installée ou portable.
+Closing the window keeps DeckEdge near the clock by default. The menu of
+that icon lets you reopen the Studio, quit completely, view the logs
+or open the data folder. **Settings** in particular handles launch at startup.
+The **About DeckEdge** section shows the version, developer,
+license and credits for the main components, with access to the license text.
+Only one copy of DeckEdge should use a given port at a time. If port
+5000 is taken by other software, DeckEdge automatically chooses the next
+port and remembers it for later launches. If another copy of
+DeckEdge is already running, quit it before opening the installed or portable version.
 
-[Guide de démarrage](docs/QUICKSTART.md) · [Construction](docs/BUILD.md) ·
-[Publication GitHub](docs/RELEASE.md) · [Internationalisation](docs/I18N.md) ·
-[Sécurité](SECURITY.md)
+[Quick start guide](docs/QUICKSTART.md) · [Building](docs/BUILD.md) ·
+[GitHub publishing](docs/RELEASE.md) · [Internationalization](docs/I18N.md) ·
+[Security](SECURITY.md)
 
-L’adresse permanente utilise la découverte locale mDNS (`.local`) et reste propre
-au PC même si son adresse IP change. La clé d’association reste dans les données
-de DeckEdge : ni un redémarrage ni le changement de pseudo GitHub ne la modifient.
-Sur un réseau bloquant le multicast, choisir l’adresse Wi-Fi/Ethernet de secours
-dans l’écran QR ; cette adresse IP peut changer. Effacer les données de DeckEdge
-ou supprimer le raccourci et l’association du navigateur peut nécessiter un nouveau scan.
+The permanent address uses local mDNS discovery (`.local`) and stays specific
+to the PC even if its IP address changes. The pairing key stays in DeckEdge's
+data: neither a restart nor a GitHub username change alters it.
+On a network that blocks multicast, choose the fallback Wi-Fi/Ethernet address
+in the QR screen; that IP address can change. Erasing DeckEdge's data
+or removing the shortcut and the browser pairing may require a new scan.
 
-## Vos données
+## Your data
 
-- Version installée : `%LOCALAPPDATA%\DeckEdge`.
-- Version portable : `data` à côté de `DeckEdge.exe`.
-- Développement depuis les sources : dossier du projet, sauf si
-  `DECKEDGE_DATA_DIR` désigne un autre emplacement.
+- Installed version: `%LOCALAPPDATA%\DeckEdge`.
+- Portable version: `data` next to `DeckEdge.exe`.
+- Development from sources: the project folder, unless
+  `DECKEDGE_DATA_DIR` points to another location.
 
-Les profils, réglages, clé du téléphone et identifiants Discord ne sont jamais
-inclus dans les distributions produites par les scripts de construction.
-La désinstallation conserve les profils. Pour migrer, quittez les deux versions
-puis copiez vos fichiers de données dans le nouveau dossier ; reconnectez le
-compte Discord si nécessaire. Sauvegardez le dossier avant une mise à jour.
+Profiles, settings, the phone key and Discord credentials are never
+included in distributions produced by the build scripts.
+Uninstalling keeps profiles. To migrate, quit both versions
+then copy your data files into the new folder; reconnect the
+Discord account if needed. Back up the folder before an update.
 
-Pour mettre à jour une version portable : extraire la nouvelle version dans un
-nouveau dossier, puis y recopier l’ancien dossier `data`. Ne mélangez pas les
-bibliothèques de versions différentes. Conservez `portable.flag` près de l’exécutable.
-Le démarrage automatique d’une copie portable doit être réactivé si vous la déplacez.
+To update a portable version: extract the new version into a
+new folder, then copy the old `data` folder into it. Do not mix
+libraries from different versions. Keep `portable.flag` next to the executable.
+Automatic startup of a portable copy must be re-enabled if you move it.
 
-## Développer
+## Development
 
-Windows x64, Python 3.14 et .NET Framework 4.8 sont recommandés.
+Windows x64, Python 3.14 and .NET Framework 4.8 are recommended.
 
 ```powershell
 python -m venv .venv
@@ -157,71 +157,70 @@ powershell -ExecutionPolicy Bypass -File tests\run-ui-tests.ps1
 powershell -ExecutionPolicy Bypass -File desktop\build.ps1
 ```
 
-`desktop/build.ps1` récupère les dépendances officielles manquantes et compile
-le Studio avec le compilateur .NET Framework de Windows. Le raccourci généré
-ouvre le Studio, son serveur et les capteurs intégrés. Aucune dépendance ne
-provient d’un dossier LibreHardwareMonitor installé sur le poste de l’auteur.
+`desktop/build.ps1` fetches missing official dependencies and compiles
+the Studio with the Windows .NET Framework compiler. The generated shortcut
+opens the Studio, its server and the built-in sensors. No dependency
+comes from a LibreHardwareMonitor folder installed on the author's machine.
 
-Pour les tests ou un lancement isolé, `DECKEDGE_DATA_DIR` déplace les données et
-`DECKEDGE_PORT` force le port TCP du serveur. Sans cette variable, le port 5000
-est utilisé puis le suivant s’il est occupé.
+For tests or an isolated run, `DECKEDGE_DATA_DIR` moves the data and
+`DECKEDGE_PORT` forces the server's TCP port. Without this variable, port 5000
+is used, then the next one if it is busy.
 
-Pour fabriquer l’installateur, le portable et les sources propres :
+To build the installer, the portable version and the clean sources:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File packaging\build-release.ps1
 ```
 
-Les résultats sont écrits dans `dist`. Les détails, tests et prérequis sont dans
-[docs/BUILD.md](docs/BUILD.md). Les scripts téléchargent leurs outils dans `.build`.
+Results are written to `dist`. Details, tests and prerequisites are in
+[docs/BUILD.md](docs/BUILD.md). The scripts download their tools into `.build`.
 
 ## Architecture
 
-- `desktop/` : application Windows C# WinForms / WebView2, icône et moteur de capteurs.
-- `server.py`, `desktop_backend.py` : serveur FastAPI, WebSockets et cycle de vie.
-- `audio_sessions.py`, `monitoring.py`, `discord_rpc.py` : intégrations Windows.
-- `admin.html`, `studio*.js`, `studio-shell.css` : Studio de configuration.
-- `index.html`, `deck-layout.*` : pupitre mobile et grille partagée.
-- `packaging/`, `.github/workflows/` : distributions et automatisation.
+- `desktop/`: C# WinForms / WebView2 Windows app, icon and sensor engine.
+- `server.py`, `desktop_backend.py`: FastAPI server, WebSockets and lifecycle.
+- `audio_sessions.py`, `monitoring.py`, `discord_rpc.py`: Windows integrations.
+- `admin.html`, `studio*.js`, `studio-shell.css`: configuration Studio.
+- `index.html`, `deck-layout.*`: mobile deck and shared grid.
+- `packaging/`, `.github/workflows/`: distributions and automation.
 
-L’API d’administration est locale au PC. Le téléphone est associé par un lien
-privé. Utiliser uniquement un réseau privé de confiance ; ne pas exposer le port
-du serveur sur Internet. Voir [SECURITY.md](SECURITY.md).
+The admin API is local to the PC. The phone is paired through a private
+link. Use only a trusted private network; do not expose the server
+port to the Internet. See [SECURITY.md](SECURITY.md).
 
-## Licence et composants tiers
+## License and third-party components
 
-Le code de DeckEdge est sous [MIT](LICENSE). Les composants tiers gardent leurs
-licences et leurs auteurs : [mentions](desktop/THIRD-PARTY-NOTICES.md).
-Les distributions incluent les licences, un inventaire des dépendances et les
-sources correspondant aux composants matériels redistribués.
+DeckEdge code is under [MIT](LICENSE). Third-party components keep their
+licenses and authors: [notices](desktop/THIRD-PARTY-NOTICES.md).
+Distributions include the licenses, a dependency inventory and the
+sources for the redistributed hardware components.
 
-DeckEdge est un projet indépendant, sans affiliation à Elgato, Corsair, Discord
-ou Microsoft. Les noms de produits appartiennent à leurs propriétaires.
+DeckEdge is an independent project, not affiliated with Elgato, Corsair, Discord
+or Microsoft. Product names belong to their owners.
 
-## Retours et limites de la version de test
+## Feedback and public test limitations
 
-- Windows x64 uniquement ; les autres systèmes hôtes ne sont pas pris en charge.
-- Le port TCP 5000 est utilisé par défaut. Si un autre logiciel l’occupe,
-  DeckEdge choisit automatiquement le port suivant ; une seule instance
-  DeckEdge doit utiliser un port donné.
-- La disponibilité des capteurs dépend du matériel, des pilotes et des droits Windows.
-- Une application audio doit avoir créé une session audio pour apparaître dans la liste.
-- L’intégration Discord est facultative et demande ses propres identifiants de configuration.
-- Les exécutables DeckEdge ne sont pas encore signés et n’ont pas encore été validés
-  sur une machine Windows vierge ou un ensemble représentatif de matériels.
+- Windows x64 only; other host systems are not supported.
+- TCP port 5000 is used by default. If another program occupies it,
+  DeckEdge automatically chooses the next port; only one DeckEdge
+  instance should use a given port.
+- Sensor availability depends on hardware, drivers and Windows permissions.
+- An audio app must have created an audio session to appear in the list.
+- Discord integration is optional and requires its own configuration credentials.
+- DeckEdge executables are not yet signed and have not yet been validated
+  on a clean Windows machine or a representative set of hardware.
 
-Pour un bug, [ouvrir une issue](https://github.com/Lorzo595/DeckEdge/issues)
-en précisant la version, Windows, le mode installé/portable, les étapes et le
-comportement attendu. Masquer les chemins personnels, les noms de compte, les
-jetons Discord et les liens privés de téléphone avant de joindre une capture
-ou un extrait de journal. Ne jamais publier le dossier de données complet.
+For a bug, [open an issue](https://github.com/Lorzo595/DeckEdge/issues)
+stating the version, Windows, installed/portable mode, steps and expected
+behavior. Mask personal paths, account names, Discord tokens and private phone
+links before attaching a screenshot or log excerpt. Never publish the full data folder.
 
-Les contributions sont les bienvenues : voir [CONTRIBUTING.md](CONTRIBUTING.md).
-Pour un problème de sécurité, suivre [SECURITY.md](SECURITY.md).
+Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md).
+For a security issue, follow [SECURITY.md](SECURITY.md).
 
-## Contributeurs
+## Contributors
 
-- [Lorzo595](https://github.com/Lorzo595) — création et développement de DeckEdge.
-- [xavco63](https://github.com/xavco63) — fiabilité de la configuration et de l’audio, diagnostic, import/export et sauvegardes des profils ([PR #2](https://github.com/Lorzo595/DeckEdge/pull/2), [#4](https://github.com/Lorzo595/DeckEdge/pull/4), [#5](https://github.com/Lorzo595/DeckEdge/pull/5)).
+- [Lorzo595](https://github.com/Lorzo595) — creation and development of DeckEdge.
+- [xavco63](https://github.com/xavco63) — reliability of configuration and audio, diagnostics, profile import/export and backups ([PR #2](https://github.com/Lorzo595/DeckEdge/pull/2), [#4](https://github.com/Lorzo595/DeckEdge/pull/4), [#5](https://github.com/Lorzo595/DeckEdge/pull/5)).
 
-Développé avec l’aide de **ChatGPT**. Merci aux projets libres utilisés par DeckEdge, notamment LibreHardwareMonitor et QRCoder ; leurs licences sont incluses dans les distributions.
+Built with help from **ChatGPT**. Thanks to the open-source projects used by DeckEdge, in particular LibreHardwareMonitor and QRCoder; their licenses are included in the distributions.

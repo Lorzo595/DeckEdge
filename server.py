@@ -1,10 +1,10 @@
 """
-DeckEdge - Backend FastAPI & Orchestrateur WebSocket
-Architecture sécurisée avec validation Pydantic v2 :
-- Support Multi-Pages / Profils (Gaming, Stream, Desktop, Musique)
-- Contrôle de volume par application spécifique Windows via pycaw (Discord, Spotify, Master...)
-- Boutons à bascule (Toggle state) avec retour d'état visuel en temps réel
-- Télémétrie LHM asynchrone et persistance atomique
+DeckEdge - FastAPI backend & WebSocket orchestrator.
+Secure architecture with Pydantic v2 validation:
+- Multi-page / profile support (Gaming, Stream, Desktop, Music)
+- Per-application Windows volume control via pycaw (Discord, Spotify, Master...)
+- Toggle buttons with real-time visual state feedback
+- Async LHM telemetry and atomic persistence
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ import sys
 from monitoring import MonitoringState, DEFAULT_WIDGETS
 from audio_sessions import collect_application_volumes
 
-# Redirection obligatoire sous pythonw.exe
+# Mandatory redirection under pythonw.exe
 if sys.stdout is None:
     sys.stdout = open(os.devnull, "w")
 if sys.stderr is None:
@@ -48,14 +48,14 @@ from app_paths import DATA_DIR, PORT
 from network_access import COOKIE, pairing_key, is_local, allowed_origin, is_paired
 from local_discovery import discovery, HOSTNAME
 
-# Configuration du logging
+# Logging configuration
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
 )
 logger = logging.getLogger("DeckEdge")
 
-# Chemins absolus
+# Absolute paths
 BASE_DIR = Path(__file__).resolve().parent
 CONFIG_PATH = DATA_DIR / "config.json"
 CONFIG_BAK_PATH = DATA_DIR / "config.json.bak"
@@ -71,7 +71,7 @@ pyautogui.FAILSAFE = False
 
 
 # ============================================================================
-# 1. MODÈLES DE VALIDATION (Pydantic v2)
+# 1. VALIDATION MODELS (Pydantic v2)
 # ============================================================================
 
 ActionType = Literal["hotkey", "key", "launch", "volume_app", "slider", "sequence"]
@@ -114,7 +114,7 @@ class ButtonConfig(BaseModel):
         pattern=r"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$",
         description="Couleur hexadécimale de fond (état inactif)"
     )
-    # Bouton à bascule (Toggle)
+    # Toggle button
     is_toggle: bool = Field(default=False, description="Activer le mode bascule ON/OFF")
     state: bool = Field(default=False, description="État actif (True) ou inactif (False)")
     active_label: Optional[str] = Field(default="", max_length=50, description="Libellé affiché si actif")
@@ -157,7 +157,7 @@ class DeckConfig(BaseModel):
 
         data = dict(data)
 
-        # Rétrocompatibilité : migration transparente depuis l'ancienne structure {"buttons": [...]}
+        # Backward compatibility: transparent migration from the legacy {"buttons": [...]} structure
         if "pages" not in data and "buttons" in data:
             data = {
                 **data,
@@ -222,7 +222,7 @@ class DeckConfig(BaseModel):
 
         data["pages"] = normalized_pages
 
-        # Principal est le profil d'ouverture ; la navigation reste locale aux interfaces.
+        # "Principal" is the opening profile; navigation stays local to each interface.
         active_page_id = data.get("active_page_id")
         if isinstance(active_page_id, str):
             active_page_id = page_id_map.get(active_page_id, active_page_id)
@@ -287,14 +287,14 @@ DEFAULT_CONFIG = DeckConfig(
 
 
 # ============================================================================
-# 2. PERSISTANCE SÉRIALISÉE ET ATOMIQUE DE LA CONFIGURATION
+# 2. SERIALIZED, ATOMIC CONFIGURATION PERSISTENCE
 # ============================================================================
 
 T = TypeVar("T")
 
 
 def _write_json_atomic(path: Path, payload: Dict[str, Any]) -> None:
-    """Écrit un JSON complet puis remplace le fichier, avec un temporaire unique."""
+    """Write a complete JSON document then replace the file, using a unique temporary file."""
     text = json.dumps(payload, indent=2, ensure_ascii=False)
     fd, tmp_name = tempfile.mkstemp(prefix=path.name + ".", suffix=".tmp", dir=path.parent)
     try:
@@ -321,12 +321,12 @@ def _write_json_atomic(path: Path, payload: Dict[str, Any]) -> None:
 
 
 class ConfigStore:
-    """Source de vérité unique : lectures, mutations et écritures sérialisées.
+    """Single source of truth: serialized reads, mutations and writes.
 
-    Toutes les mutations passent par ``update`` afin qu'une sauvegarde lente ne
-    puisse pas écraser une modification faite entre-temps. Les écritures utilisent
-    un fichier temporaire unique et le backup représente toujours la configuration
-    précédemment validée, jamais un fichier corrompu.
+    Every mutation goes through ``update`` so that a slow save can never
+    overwrite a modification made in the meantime. Writes use a unique
+    temporary file, and the backup always represents the previously validated
+    configuration, never a corrupted file.
     """
 
     def __init__(self, path: Path = CONFIG_PATH, backup_path: Path = CONFIG_BAK_PATH, debounce: float = 0.15, retry_delay: float = 0.5) -> None:
@@ -400,7 +400,7 @@ class ConfigStore:
         logger.info("Configuration persistée de manière atomique.")
 
     def load(self) -> DeckConfig:
-        """Retourne une copie isolée de la configuration courante."""
+        """Return an isolated copy of the current configuration."""
         with self._lock:
             return self._read_locked()
 
@@ -408,7 +408,7 @@ class ConfigStore:
         while not self._stop.is_set():
             if not self._wake.wait(0.5):
                 continue
-            # Regroupe les rafales de clics et de synchronisations d'état.
+            # Group bursts of clicks and state synchronizations.
             time.sleep(self.debounce)
             if self._stop.is_set():
                 break
@@ -417,13 +417,13 @@ class ConfigStore:
                 self.flush()
             except Exception:
                 logger.exception("Échec de la sauvegarde différée de la configuration; nouvelle tentative")
-                # flush() laisse _dirty à True. Réarmer le réveil, sinon le writer
-                # attendrait indéfiniment une nouvelle modification.
+                # flush() leaves _dirty set to True. Re-arm the wake event, otherwise
+                # the writer would wait forever for a new modification.
                 self._wake.set()
                 time.sleep(self.retry_delay)
 
     def flush(self) -> None:
-        """Écrit immédiatement les modifications en attente."""
+        """Write pending changes immediately."""
         with self._lock:
             if not self._dirty or self._config is None:
                 return
@@ -433,7 +433,7 @@ class ConfigStore:
             self._wake.clear()
 
     def close(self) -> None:
-        """Écrit les dernières modifications puis arrête le writer."""
+        """Write the last changes then stop the writer."""
         try:
             self.flush()
         except Exception:
@@ -445,14 +445,14 @@ class ConfigStore:
                 self._writer.join(timeout=2.0)
 
     def save(self, config: DeckConfig) -> None:
-        """Remplace la configuration de façon atomique et sérialisée."""
+        """Replace the configuration atomically and under the lock."""
         with self._lock:
             self._write_locked(config)
             self._dirty = False
             self._wake.clear()
 
     def update(self, mutator: Callable[[DeckConfig], Tuple[T, bool]]) -> T:
-        """Applique une mutation atomique ; l'écriture est regroupée en arrière-plan."""
+        """Apply an atomic mutation; the write is batched in the background."""
         with self._lock:
             config = self._read_locked()
             result, dirty = mutator(config)
@@ -501,7 +501,7 @@ class ConfigStore:
                 logger.warning("Impossible de supprimer l'ancienne sauvegarde %s: %s", path.name, e)
 
     def create_backup(self) -> Dict[str, Any]:
-        """Crée une sauvegarde horodatée de la configuration courante."""
+        """Create a timestamped backup of the current configuration."""
         with self._lock:
             config = self._read_locked()
             self.backup_dir.mkdir(parents=True, exist_ok=True)
@@ -536,7 +536,7 @@ class ConfigStore:
             return entries[:50]
 
     def restore_backup(self, name: str) -> DeckConfig:
-        """Restaure une sauvegarde validée, après avoir sauvegardé l'état courant."""
+        """Restore a validated backup, after backing up the current state."""
         with self._lock:
             path = self._backup_path_locked(name)
             if path is None or not path.exists():
@@ -636,7 +636,7 @@ def hardware_state_for(
 
 
 # ============================================================================
-# 3. MOTEUR AUDIO CENTRALISÉ ET HAUTE PERFORMANCE (pycaw / WASAPI)
+# 3. CENTRALIZED, HIGH-PERFORMANCE AUDIO ENGINE (pycaw / WASAPI)
 # ============================================================================
 
 from pycaw.constants import AudioDeviceState, EDataFlow
@@ -644,10 +644,10 @@ import queue
 
 class AudioEngine(threading.Thread):
     """
-    Thread dédié Windows COM pour toutes les opérations audio.
-    - Évite la création/destruction perpétuelle d'appartements COM.
-    - Cache les périphériques et sessions audio pour des temps de réponse < 0.2ms.
-    - Coalescence des mises à jour de volume pour éliminer tout lag / saccade lors du glissement tactile.
+    Dedicated Windows COM thread for all audio operations.
+    - Avoids the perpetual creation/destruction of COM apartments.
+    - Caches audio devices and sessions for response times < 0.2ms.
+    - Coalesces volume updates to eliminate any lag / stutter while dragging the touch slider.
     """
 
     def __init__(self) -> None:
@@ -667,7 +667,7 @@ class AudioEngine(threading.Thread):
             while True:
                 if time.monotonic() - self._cache_refreshed_at >= 2.0:
                     self._refresh_caches()
-                # 1. Traitement coalescent et instantané des volumes en attente
+                # 1. Coalesced, immediate processing of pending volumes
                 pending = {}
                 with self._lock:
                     if self._pending_volumes:
@@ -677,7 +677,7 @@ class AudioEngine(threading.Thread):
                 for target, pct in pending.items():
                     self._apply_volume(target, pct)
 
-                # 2. Commandes synchrones
+                # 2. Synchronous commands
                 try:
                     item = self._cmd_queue.get(timeout=0.02)
                 except queue.Empty:
@@ -762,7 +762,7 @@ class AudioEngine(threading.Thread):
                 logger.debug(f"Erreur set master volume: {e}")
             return
 
-        # Périphérique spécifique
+        # Specific device
         if t.startswith("device:"):
             device = self._resolve_device(t[7:].strip().lower())
             if device is not None:
@@ -772,7 +772,7 @@ class AudioEngine(threading.Thread):
                     logger.debug(f"Erreur set device volume: {e}")
             return
 
-        # Application (une cible vide ne doit jamais toucher la première session)
+        # Application (an empty target must never hit the first session)
         app_name = t[4:].strip().lower() if t.startswith("app:") else t
         control = self._resolve_app(app_name)
         if control is not None:
@@ -796,7 +796,7 @@ class AudioEngine(threading.Thread):
             except Exception:
                 return False
 
-        # Microphone matériel Windows
+        # Windows hardware microphone
         if t in ("mic", "microphone", "mic:mute", "microphone:mute"):
             try:
                 from pycaw.pycaw import IAudioEndpointVolume
@@ -810,7 +810,7 @@ class AudioEngine(threading.Thread):
                 logger.debug(f"Erreur mute micro: {e}")
             return False
 
-        # Périphérique spécifique
+        # Specific device
         if t.startswith("device:"):
             device = self._resolve_device(t[7:].strip().lower())
             if device is None:
@@ -922,7 +922,7 @@ class AudioEngine(threading.Thread):
         return sorted(list(apps))
 
     def set_volume(self, target: str, percent: int) -> None:
-        """Coalescence ultra-rapide non-bloquante (0ms)."""
+        """Ultra-fast non-blocking coalescing (0ms)."""
         with self._lock:
             self._pending_volumes[target] = percent
 
@@ -1032,11 +1032,11 @@ def adjust_audio_volume(target_spec: str) -> bool:
 
 
 # ============================================================================
-# 4. GESTIONNAIRE DE CONNEXIONS WEBSOCKET RÉSISTANT
+# 4. RESILIENT WEBSOCKET CONNECTION MANAGER
 # ============================================================================
 
 class ConnectionManager:
-    """Gère le cycle de vie des WebSockets et élimine silencieusement les sockets fantômes."""
+    """Manage the WebSocket lifecycle and silently drop ghost sockets."""
 
     def __init__(self) -> None:
         self._active: set[WebSocket] = set()
@@ -1101,11 +1101,11 @@ def _spawn_button_click(btn_id: str) -> None:
 
 
 # ============================================================================
-# 5. SERVICE CENTRALISÉ DE TÉLÉMÉTRIE HARDWARE (LHM)
+# 5. CENTRALIZED HARDWARE TELEMETRY SERVICE (LHM)
 # ============================================================================
 
 class LHMTelemetryService(MonitoringState):
-    """Diffuse les mesures reçues du moteur LHM intégré à DeckEdge."""
+    """Broadcast the measurements received from the LHM engine built into DeckEdge."""
 
     def __init__(self) -> None:
         super().__init__()
@@ -1120,7 +1120,7 @@ class LHMTelemetryService(MonitoringState):
                 payload = self.payload(config.monitoring)
                 await manager.broadcast(payload)
 
-                # Synchronisation automatique de l'état matériel (Micro Windows, Master, Discord...)
+                # Automatic synchronization of hardware state (Windows mic, master, Discord...)
                 try:
                     sys_states = await asyncio.to_thread(audio_engine.get_system_states)
                     mic_muted = sys_states.get("mic_muted", False)
@@ -1200,7 +1200,7 @@ def setup_discord_integration(main_loop: asyncio.AbstractEventLoop):
 
 
 # ============================================================================
-# 6. CYCLE DE VIE DE L'APPLICATION (FastAPI Lifespan)
+# 6. APPLICATION LIFECYCLE (FastAPI Lifespan)
 # ============================================================================
 
 @asynccontextmanager
@@ -1277,13 +1277,13 @@ _PRIVATE_IP_RE = re.compile(r"\b((?:10|127|192\.168|172\.(?:1[6-9]|2\d|3[01]))\.
 
 
 def _path_pattern(path: str) -> str:
-    """Regex Windows/Linux insensible à la casse et aux séparateurs."""
+    """Case- and separator-insensitive Windows/Linux regex."""
     parts = [part for part in re.split(r"[\\/]+", path) if part]
     return r"[\\/]+".join(re.escape(part) for part in parts)
 
 
 def _redact_text(value: Any) -> str:
-    """Masque les chemins personnels, la clé du téléphone et les IP privées."""
+    """Mask personal paths, the phone key and private IPs."""
     text = "" if value is None else str(value)
     for path, replacement in (
         (str(DATA_DIR), "<données>"),
@@ -1347,7 +1347,7 @@ async def protect_desktop_and_pair_phone(request: Request, call_next):
 
 
 # ============================================================================
-# 7. ÉMULATION DE TOUCHES WIN32 NATIVE & EXÉCUTION D'ACTIONS
+# 7. NATIVE WIN32 KEY EMULATION & ACTION EXECUTION
 # ============================================================================
 
 user32 = ctypes.windll.user32
@@ -1392,7 +1392,7 @@ class INPUT(ctypes.Structure):
     ]
 
 def ensure_default_desktop() -> None:
-    """Garantit que le thread actif est attaché au bureau interactif Default de Windows."""
+    """Ensure the current thread is attached to the Windows interactive Default desktop."""
     try:
         hdesk = user32.OpenDesktopW("Default", 0, False, 0x01FF)
         if hdesk:
@@ -1458,7 +1458,7 @@ def _press_vk(vk: int, down: bool) -> None:
         user32.keybd_event(vk, scan, flags, 0)
 
 def send_win32_key(key_str: str) -> bool:
-    """Envoie une touche simple avec scan code et drapeaux étendus natifs."""
+    """Send a single key with a native scan code and extended flags."""
     ensure_default_desktop()
     k = key_str.lower().strip()
     if k in VK_MAP:
@@ -1478,7 +1478,7 @@ def send_win32_key(key_str: str) -> bool:
     return True
 
 def send_win32_hotkey(keys_str: str) -> bool:
-    """Envoie une combinaison de touches native (ex: 'win,d', 'ctrl,shift,m')."""
+    """Send a native key combination (e.g. 'win,d', 'ctrl,shift,m')."""
     ensure_default_desktop()
     tokens = [k.strip().lower() for k in keys_str.split(",") if k.strip()]
     if not tokens:
@@ -1497,17 +1497,17 @@ def send_win32_hotkey(keys_str: str) -> bool:
             except Exception:
                 return False
 
-    # Appui ordonné avec scan codes et drapeaux étendus
+    # Ordered key press with scan codes and extended flags
     for vk in vks:
         _press_vk(vk, True)
     time.sleep(0.03)
-    # Relâchement en ordre inverse
+    # Release in reverse order
     for vk in reversed(vks):
         _press_vk(vk, False)
     return True
 
 def force_foreground_window(hwnd: int) -> bool:
-    """Restaure et force une fenêtre au premier plan en contournant le verrouillage de focus Windows."""
+    """Restore a window and force it to the foreground, bypassing the Windows focus lock."""
     try:
         if user32.IsIconic(hwnd):
             user32.ShowWindow(hwnd, 9)  # SW_RESTORE
@@ -1531,7 +1531,7 @@ def force_foreground_window(hwnd: int) -> bool:
         return False
 
 def bring_window_to_front_by_keyword(keyword: str) -> bool:
-    """Recherche une fenêtre visible correspondant au mot-clé et l'amène au premier plan."""
+    """Find a visible window matching the keyword and bring it to the foreground."""
     ensure_default_desktop()
     kw = keyword.lower().strip()
     if not kw:
@@ -1599,23 +1599,23 @@ async def handle_button_click(btn_id: str) -> None:
 
 
 def launch_win32_target(target: str) -> bool:
-    """Lance tout type de cible Windows (.lnk, .exe, url, protocole uri) de façon native et silencieuse."""
+    """Launch any kind of Windows target (.lnk, .exe, url, uri protocol) natively and silently."""
     ensure_default_desktop()
     t = target.strip()
-    # Nettoyer d'éventuels préfixes 'start ""' ou 'start'
+    # Strip any leading 'start ""' or 'start' prefixes
     if t.lower().startswith("start "):
         t = t[6:].strip()
         if t.startswith('""'):
             t = t[2:].strip()
         elif t.startswith("''"):
             t = t[2:].strip()
-    # Supprimer les guillemets englobants
+    # Remove surrounding quotes
     if (t.startswith('"') and t.endswith('"')) or (t.startswith("'") and t.endswith("'")):
         t = t[1:-1].strip()
 
     t_lower = t.lower()
 
-    # 1. Si une fenêtre de l'application est déjà ouverte, l'amener instantanément au premier plan !
+    # 1. If an application window is already open, bring it to the foreground instantly!
     if "youtube music" in t_lower or "cinhimbnkkaeohfgghhklpknlkffjgod" in t_lower or "music.youtube.com" in t_lower:
         if bring_window_to_front_by_keyword("youtube music"):
             return True
@@ -1629,7 +1629,7 @@ def launch_win32_target(target: str) -> bool:
         if bring_window_to_front_by_keyword("steelseries"):
             return True
 
-    # 2. Cas spécifique YouTube Music (Application PWA Chrome)
+    # 2. YouTube Music special case (Chrome PWA application)
     if "youtube music" in t_lower or "cinhimbnkkaeohfgghhklpknlkffjgod" in t_lower or "music.youtube.com" in t_lower:
         chrome_paths = [
             r"C:\Program Files\Google\Chrome\Application\chrome.exe",
@@ -1644,7 +1644,7 @@ def launch_win32_target(target: str) -> bool:
                 except Exception:
                     pass
 
-    # 3. Lancement standard Windows (fichiers, raccourcis, protocoles URI)
+    # 3. Standard Windows launch (files, shortcuts, URI protocols)
     try:
         os.startfile(t)
         return True
@@ -1672,7 +1672,7 @@ def _execute_action(b_type: str, target: str) -> bool:
         elif b_type == "launch":
             return launch_win32_target(target)
         elif b_type == "volume_app":
-            # Contrôles directs Discord RPC (fonctionne en tâche de fond même sans focus)
+            # Direct Discord RPC controls (work in the background even without focus)
             t_lower = target.lower()
             if t_lower == "discord:mute":
                 if discord_rpc.is_authenticated:
@@ -1784,7 +1784,7 @@ async def get_config_endpoint():
 
 @app.post("/api/config")
 async def save_config_endpoint(config: DeckConfig):
-    """Reçoit la nouvelle config, valide via Pydantic, sauvegarde et notifie."""
+    """Receive the new config, validate it via Pydantic, save it and notify."""
     try:
         await asyncio.to_thread(config_store.save, config)
         await manager.broadcast({"type": "reload_config"})
@@ -1800,7 +1800,7 @@ class BackupNamePayload(BaseModel):
 
 @app.post("/api/config/validate")
 async def validate_config_endpoint(config: DeckConfig):
-    """Valide et normalise un profil importé sans l'enregistrer."""
+    """Validate and normalize an imported profile without saving it."""
     return {"status": "ok", "config": config.model_dump(mode="json")}
 
 
@@ -1841,14 +1841,14 @@ async def restore_config_backup_endpoint(payload: BackupNamePayload, request: Re
 
 @app.get("/api/audio/sessions")
 async def get_audio_sessions():
-    """Retourne la liste des applications Windows actives ayant du son."""
+    """Return the list of active Windows applications that are producing sound."""
     sessions = await asyncio.to_thread(get_audio_sessions_list)
     return {"sessions": sessions}
 
 
 @app.get("/api/audio/targets")
 async def get_audio_targets_endpoint():
-    """Retourne l'arborescence complète des périphériques de sortie et apps avec leurs volumes."""
+    """Return the full tree of output devices and apps with their volumes."""
     targets = await asyncio.to_thread(get_audio_targets)
     return targets
 
@@ -1860,7 +1860,7 @@ class VolumeSetPayload(BaseModel):
 
 @app.post("/api/audio/volume")
 async def set_volume_endpoint(payload: VolumeSetPayload):
-    """Règle le volume absolu (0-100) pour un slider."""
+    """Set the absolute volume (0-100) for a slider."""
     ok = await asyncio.to_thread(set_audio_target_volume, payload.target, payload.value)
     if ok:
         await manager.broadcast({
@@ -1875,7 +1875,7 @@ _apps_cache: List[Dict[str, Any]] = []
 _apps_cache_time: float = 0.0
 
 def get_installed_apps_and_games() -> List[Dict[str, Any]]:
-    """Scanne les jeux Steam, raccourcis du menu Démarrer et utilitaires Windows."""
+    """Scan Steam games, Start menu shortcuts and Windows system utilities."""
     global _apps_cache, _apps_cache_time
     now = time.time()
     if _apps_cache and (now - _apps_cache_time) < 30.0:
@@ -1884,7 +1884,7 @@ def get_installed_apps_and_games() -> List[Dict[str, Any]]:
     items: List[Dict[str, Any]] = []
     seen_names = set()
 
-    # 1. Jeux Steam installés
+    # 1. Installed Steam games
     try:
         import winreg
         with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Valve\Steam") as key:
@@ -1918,7 +1918,7 @@ def get_installed_apps_and_games() -> List[Dict[str, Any]]:
     except Exception as e:
         logger.debug(f"Erreur scan Steam: {e}")
 
-    # 2. Applications du menu Démarrer (Raccourcis .lnk)
+    # 2. Start menu applications (shortcuts, .lnk)
     start_dirs = [
         Path(os.environ.get("APPDATA", "")) / "Microsoft" / "Windows" / "Start Menu" / "Programs",
         Path(os.environ.get("PROGRAMDATA", "")) / "Microsoft" / "Windows" / "Start Menu" / "Programs"
@@ -1956,7 +1956,7 @@ def get_installed_apps_and_games() -> List[Dict[str, Any]]:
                     "category": "Applications"
                 })
 
-    # 3. Outils Système essentiels & Raccourcis Web populaires
+    # 3. Essential system tools & popular web shortcuts
     system_tools = [
         { "name": "YouTube Music (Web)", "target": "https://music.youtube.com", "type": "launch", "icon": "🎧", "color": "#ff0000", "category": "Applications" },
         { "name": "Calculatrice", "target": "calc.exe", "type": "launch", "icon": "🧮", "color": "#161c2e", "category": "Système" },
@@ -1980,7 +1980,7 @@ def get_installed_apps_and_games() -> List[Dict[str, Any]]:
 
 @app.get("/api/apps")
 async def get_apps_endpoint():
-    """Retourne la liste des jeux Steam, applications du menu Démarrer et outils système."""
+    """Return the list of Steam games, Start menu applications and system tools."""
     apps = await asyncio.to_thread(get_installed_apps_and_games)
     return {"apps": apps}
 
@@ -1992,7 +1992,7 @@ async def get_monitoring_sensors():
 
 @app.get("/api/diagnostics", include_in_schema=False)
 async def get_diagnostics(request: Request):
-    """Rapport local destiné au support ; les chemins et secrets sont masqués."""
+    """Local support report; paths and secrets are masked."""
     config = await asyncio.to_thread(config_store.load)
     try:
         audio = await asyncio.to_thread(get_audio_targets)
@@ -2080,7 +2080,7 @@ async def get_diagnostics(request: Request):
 
 @app.get("/api/health")
 async def healthcheck():
-    """Healthcheck complet."""
+    """Full health check."""
     config = await asyncio.to_thread(config_store.load)
     return {
         "app": "DeckEdge",
@@ -2101,7 +2101,7 @@ async def healthcheck():
     }
 
 
-# --- ROUTES DISCORD RPC INTÉGRATION ---
+# --- DISCORD RPC INTEGRATION ROUTES ---
 
 class DiscordConnectPayload(BaseModel):
     client_id: str
@@ -2110,15 +2110,15 @@ class DiscordConnectPayload(BaseModel):
 
 @app.get("/api/discord/status")
 async def get_discord_status_endpoint():
-    """Retourne l'état actuel de la liaison Discord RPC et de la voix (Mute / Sourdine)."""
+    """Return the current Discord RPC link state and voice state (Mute / Deafen)."""
     return discord_rpc.get_status()
 
 
 @app.post("/api/discord/connect")
 async def connect_discord_endpoint(payload: DiscordConnectPayload):
     """
-    Lance le flux d'autorisation native dans Discord sur le PC,
-    récupère le code sur le named pipe et échange le jeton OAuth2.
+    Start the native authorization flow in Discord on the PC,
+    retrieve the code from the named pipe and exchange it for an OAuth2 token.
     """
     res = await asyncio.to_thread(discord_rpc.authorize_flow, payload.client_id, payload.client_secret)
     return res
@@ -2126,7 +2126,7 @@ async def connect_discord_endpoint(payload: DiscordConnectPayload):
 
 @app.post("/api/discord/disconnect")
 async def disconnect_discord_endpoint():
-    """Déconnecte et supprime les clés Discord enregistrées."""
+    """Disconnect and delete the stored Discord keys."""
     discord_rpc.client_id = ""
     discord_rpc.client_secret = ""
     discord_rpc.access_token = ""
@@ -2139,14 +2139,14 @@ async def disconnect_discord_endpoint():
 
 @app.post("/api/discord/toggle-mute")
 async def toggle_discord_mute_endpoint():
-    """Bascule le micro Discord directement sans focus."""
+    """Toggle the Discord microphone directly without focus."""
     res = await asyncio.to_thread(discord_rpc.toggle_mute)
     return {"success": res is not None, "mute": discord_rpc.mute}
 
 
 @app.post("/api/discord/toggle-deaf")
 async def toggle_discord_deaf_endpoint():
-    """Bascule la sourdine Discord directement sans focus."""
+    """Toggle Discord deafen directly without focus."""
     res = await asyncio.to_thread(discord_rpc.toggle_deaf)
     return {"success": res is not None, "deaf": discord_rpc.deaf}
 
@@ -2163,7 +2163,7 @@ async def websocket_endpoint(websocket: WebSocket):
         return
     await manager.connect(websocket)
 
-    # À la connexion d'un client, lui transmettre l'état initial des périphériques/apps audio et des boutons
+    # On client connection, send the initial state of the audio devices/apps and buttons
     try:
         targets_init = await asyncio.to_thread(get_audio_targets)
         await websocket.send_json({"type": "audio_targets", "data": targets_init})
@@ -2204,7 +2204,7 @@ async def websocket_endpoint(websocket: WebSocket):
             if not raw_msg or len(raw_msg) > MAX_WS_MESSAGE_BYTES:
                 continue
 
-            # Support soit d'un objet JSON {action: "set_volume" / "toggle_mute" / "click"}, soit d'un ID de bouton brut ("b1")
+            # Accept either a JSON object {action: "set_volume" / "toggle_mute" / "click"} or a raw button ID ("b1")
             if raw_msg.startswith("{"):
                 try:
                     parsed = json.loads(raw_msg)
@@ -2216,7 +2216,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
                 action = parsed.get("action")
 
-                # 1. Slider : réglage en temps réel du volume (instantané et coalescé)
+                # 1. Slider: real-time volume adjustment (immediate and coalesced)
                 if action == "set_volume":
                     target = parsed.get("target")
                     if not isinstance(target, str) or not target.strip() or len(target) > 256:
@@ -2228,7 +2228,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         continue
                     val = max(0, min(100, val))
                     set_audio_target_volume(target, val)
-                    # Diffusion aux AUTRES clients pour synchroniser (évite tout écho/saccade sur le téléphone qui manipule)
+                    # Broadcast to the OTHER clients to synchronize (avoids any echo/stutter on the phone doing the drag)
                     await manager.broadcast({
                         "type": "volume_update",
                         "target": target,
@@ -2236,7 +2236,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     }, exclude_ws=websocket)
                     continue
 
-                # 2. Slider : bascule Mute
+                # 2. Slider: Mute toggle
                 if action == "toggle_mute":
                     target = parsed.get("target")
                     if not isinstance(target, str) or not target.strip() or len(target) > 256:
@@ -2250,13 +2250,13 @@ async def websocket_endpoint(websocket: WebSocket):
                     }, exclude_ws=websocket)
                     continue
 
-                # 3. Clic bouton via JSON
+                # 3. Button click via JSON
                 btn_id = parsed.get("btn_id")
                 if isinstance(btn_id, str) and _IDENTIFIER_PATTERN.fullmatch(btn_id) and allow_button_click():
                     _spawn_button_click(btn_id)
                 continue
 
-            # Traitement d'un clic bouton envoyé sous forme de texte brut
+            # Handle a button click sent as plain text
             btn_id = raw_msg.strip()
             if _IDENTIFIER_PATTERN.fullmatch(btn_id) and allow_button_click():
                 _spawn_button_click(btn_id)

@@ -1,29 +1,29 @@
-# Sécurité et données locales
+# Security and local data
 
-DeckEdge exécute sur votre PC les raccourcis et applications que vous configurez.
-Utilisez-le sur un réseau privé de confiance. Il ne doit pas être exposé sur Internet
-ou placé derrière une redirection de port. Le transport local est HTTP, sans TLS.
+DeckEdge runs the shortcuts and applications you configure on your PC.
+Use it on a trusted private network. It must not be exposed to the Internet
+or placed behind a port forward. Local transport is HTTP, without TLS.
 
-Le Studio et les modifications de configuration ne sont accessibles que depuis le PC.
-Le téléphone doit utiliser le lien complet fourni dans « Connecter le téléphone » :
-ce lien contient une clé d’accès privée. Ne le publiez pas. Le navigateur mémorise
-l’association dans un cookie. Pour révoquer tous les téléphones, quittez DeckEdge,
-supprimez `.phone-key` dans le dossier de données et redémarrez, puis reconnectez-les.
-Une origine web externe ne peut pas utiliser le serveur ni ses WebSockets.
+The Studio and configuration changes are only accessible from the PC.
+The phone must use the full link provided in "Connect phone":
+that link contains a private access key. Do not publish it. The browser remembers
+the pairing in a cookie. To revoke all phones, quit DeckEdge,
+delete `.phone-key` in the data folder and restart, then reconnect them.
+An external web origin cannot use the server or its WebSockets.
 
-Le nom permanent `.local` est dérivé d’un identifiant du PC, sans publier cet
-identifiant brut. La découverte mDNS annonce seulement le nom et le port du service,
-jamais la clé privée. Le QR code est généré localement. Le manifeste de raccourci
-est réservé aux appareils associés, n’est pas mis en cache et conserve le lien
-privé pour retrouver le Deck après redémarrage. Ne partagez pas ce raccourci.
+The permanent `.local` name is derived from a PC identifier, without publishing that
+raw identifier. mDNS discovery announces only the service name and port,
+never the private key. The QR code is generated locally. The shortcut manifest
+is reserved for paired devices, is not cached, and keeps the private link to
+find the deck after a restart. Do not share this shortcut.
 
-Les données sont stockées dans `%LOCALAPPDATA%\DeckEdge` pour l’installation,
-ou `data` à côté de DeckEdge.exe en portable. Les jetons Discord sont locaux ;
-ils ne doivent jamais être ajoutés à GitHub, aux captures ou aux signalements.
-La désinstallation conserve les profils. Supprimez volontairement ce dossier
-après désinstallation si vous souhaitez aussi effacer vos données.
+Data is stored in `%LOCALAPPDATA%\DeckEdge` for the installation,
+or `data` next to DeckEdge.exe in portable mode. Discord tokens are local;
+they must never be added to GitHub, screenshots or reports.
+Uninstalling keeps profiles. Deliberately delete this folder
+after uninstalling if you also want to erase your data.
 
-Pour signaler une vulnérabilité, utilisez l’onglet Security du dépôt GitHub et
-« Report a vulnerability » lorsqu’il est activé. Ne publiez aucun secret dans
-une issue publique. Si ce canal n’est pas activé, contactez le propriétaire du
-dépôt avant de publier les détails exploitables.
+To report a vulnerability, use the Security tab of the GitHub repository and
+"Report a vulnerability" when it is enabled. Do not publish any secret in
+a public issue. If this channel is not enabled, contact the repository owner
+before publishing exploitable details.

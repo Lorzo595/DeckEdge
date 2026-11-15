@@ -1,4 +1,4 @@
-"""État du moteur de capteurs intégré et présentation des indicateurs du pupitre."""
+"""State of the built-in sensor engine and rendering of the deck indicators."""
 import math
 import threading
 import time

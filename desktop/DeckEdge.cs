@@ -388,7 +388,7 @@ namespace DeckEdgeDesktop
                     if (health == null && !quitting) throw new InvalidOperationException(UiText.T("Le serveur n'est pas prêt après 20 secondes. Consultez le journal, puis réessayez."));
                 }
                 if (quitting) return;
-                // Les capteurs ne bloquent pas l'ouverture du Studio s'ils demandent une élévation.
+                // Sensors do not block the Studio from opening when they require elevation.
                 string driverNotice = Path.Combine(Program.DataDirectory, ".driver-notice");
                 using (var machine = Microsoft.Win32.RegistryKey.OpenBaseKey(Microsoft.Win32.RegistryHive.LocalMachine, Microsoft.Win32.RegistryView.Registry64))
                 using (var driver = machine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\PawnIO")) {
@@ -585,7 +585,7 @@ namespace DeckEdgeDesktop
 
         void OnSessionEnding(object sender, Microsoft.Win32.SessionEndingEventArgs e)
         {
-            // La session Windows ferme le canal du serveur même en cas d'arrêt forcé.
+            // The Windows session closes the server pipe even on forced shutdown.
             quitting = true;
             if (sensorBridge != null) sensorBridge.Dispose();
             try { lock (backendInputLock) { if (backendInput != null) backendInput.Close(); } } catch { }

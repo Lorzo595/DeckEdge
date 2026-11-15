@@ -36,7 +36,7 @@
 
     .main-layout { display: grid; grid-template-columns: 1fr 420px; gap: 24px; padding: 24px 28px; flex: 1; max-width: 1460px; margin: 0 auto; width: 100%; }
 
-    /* Zone Grille Visuelle & Pages */
+    /* Visual grid & pages area */
     .deck-section { display: flex; flex-direction: column; gap: 16px; }
 
     .pages-bar {
@@ -122,7 +122,7 @@
     .btn-index-badge { position: absolute; top: 8px; left: 10px; font-size: 10px; color: var(--text-muted); font-weight: bold; z-index: 2; }
     .btn-toggle-badge { position: absolute; top: 8px; right: 10px; font-size: 9px; padding: 2px 6px; border-radius: 4px; background: rgba(56, 189, 248, 0.2); color: var(--primary); font-weight: 700; text-transform: uppercase; z-index: 2; }
 
-    /* Rendu Preview Spécifique pour les Sliders */
+    /* Slider-specific preview rendering */
     .preview-btn.is-slider {
       background: #111827;
       border-color: #1f2937;
@@ -145,7 +145,7 @@
       z-index: 2;
     }
 
-    /* Panneau d'édition */
+    /* Editor panel */
     .editor-panel {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -238,7 +238,7 @@
     .toggle-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
     .switch-label { font-size: 13px; font-weight: 600; color: #fff; }
 
-    /* Boutons globaux */
+    /* Global buttons */
     .btn {
       padding: 10px 16px;
       border-radius: 8px;
@@ -263,7 +263,7 @@
     .preview-btn.dragging { opacity: 0.35; border-style: dashed; cursor: grabbing; }
     .preview-btn.drag-over { border-color: var(--primary) !important; background: #1e3a5f !important; transform: scale(1.03); }
 
-    /* Modal Sélecteur d'Apps & Jeux */
+    /* Apps & games picker modal */
     .modal-overlay {
       position: fixed;
       top: 0;
@@ -364,7 +364,7 @@
       color: #a855f7;
     }
 
-    /* Deck Edge — console graphite / ambre. Aucune ressource externe. */
+    /* Deck Edge — graphite / amber console. No external resources. */
     :root { color-scheme: dark; --bg: #171817; --surface: #20221f;
       --surface-hover: #2a2d28; --border: #383c34; --primary: #dfb979;
       --primary-hover: #edcb94; --danger: #e28c80; --text: #eeeee7; --text-muted: #a3a79c; }
@@ -568,7 +568,7 @@
 
   <div class="main-layout">
     
-    <!-- Colonne Gauche : Aperçu & Gestion des Pages -->
+    <!-- Left column: preview & page management -->
     <div class="deck-section">
       <div class="workspace-heading">
         <div><h2>Votre pupitre.</h2><p>Composez vos profils. Gardez vos commandes à portée de main.</p></div>
@@ -584,10 +584,10 @@
           <span>Appliquer avec « Enregistrer ».</span>
         </div>
       </details>
-      <!-- Barre d'onglets de profils -->
+      <!-- Profile tab bar -->
       <div class="pages-bar" id="pages-bar"></div>
 
-      <!-- Contrôles de la page active -->
+      <!-- Active page controls -->
       <div class="page-header-row">
         <div class="page-info" id="current-page-info">
           <span>Page active :</span>
@@ -629,7 +629,7 @@
       <p class="deck-note">Clic droit ou ⋯ pour les actions rapides · Glissez pour réorganiser · Ctrl+S pour enregistrer.</p>
     </div>
 
-    <!-- Colonne Droite : Formulaire d'édition de bouton -->
+    <!-- Right column: button edit form -->
     <div class="editor-panel" id="editor-panel">
       <div class="section-title" id="editor-title" data-i18n="studio.editor.initial">Édition de l'élément</div>
 
@@ -662,7 +662,7 @@
         </div>
       </div>
 
-      <!-- Configuration spécifique pour le SLIDER DE VOLUME -->
+      <!-- Volume slider specific configuration -->
       <div class="slider-box" id="box-slider-setup">
         <div class="section-title" style="color: var(--primary);">Réglages du Curseur de Volume</div>
         
@@ -678,7 +678,7 @@
         </div>
       </div>
 
-      <!-- Configuration spécifique pour la SÉQUENCE D'ACTIONS -->
+      <!-- Action sequence specific configuration -->
       <div class="sequence-box" id="box-sequence-setup">
         <div class="section-title" style="color: var(--primary);">Séquence d’actions</div>
         <div id="sequence-steps" style="display: flex; flex-direction: column; gap: 8px;"></div>
@@ -730,7 +730,7 @@
         </div>
       </div>
 
-      <!-- Champ Commande / Cible (masqué ou assisté pour les sliders) -->
+      <!-- Command / target field (hidden or assisted for sliders) -->
       <div class="field-group" id="grp-target">
         <label>Commande / Cible brute</label>
         
@@ -743,7 +743,7 @@
         <div class="quick-presets" id="presets-container"></div>
       </div>
 
-      <!-- Mode Bascule (Toggle State) - Masqué pour les sliders -->
+      <!-- Toggle mode (Toggle State) - hidden for sliders -->
       <div class="toggle-box" id="box-toggle">
         <div class="toggle-header" onclick="toggleSwitchMode()">
           <span class="switch-label">🔄 Mode Bascule (Toggle ON/OFF)</span>
@@ -924,7 +924,7 @@
       const sel = document.getElementById('sel-audio-target');
       sel.innerHTML = '';
 
-      // Groupe Périphériques de sortie
+      // Output devices group
       const grpDev = document.createElement('optgroup');
       grpDev.label = "🎧 Périphériques de sortie audio (Casque, Écrans...)";
       (audioTargets.devices || []).forEach(d => {
@@ -935,7 +935,7 @@
       });
       sel.appendChild(grpDev);
 
-      // Groupe Applications
+      // Applications group
       const grpApp = document.createElement('optgroup');
       grpApp.label = "🎵 Applications avec une session audio";
       (audioTargets.apps || []).forEach(a => {
@@ -947,7 +947,7 @@
       });
       sel.appendChild(grpApp);
 
-      // Sélectionner la cible actuelle du bouton si elle existe
+      // Select the button's current target when it exists
       const page = getCurrentPage();
       if (page && page.buttons[selectedIndex]) {
         const currTarget = page.buttons[selectedIndex].target;
@@ -964,7 +964,7 @@
       liveUpdate('target', val);
       document.getElementById('inp-target').value = val;
       
-      // Auto-remplissage intelligent du libellé et de l'icône si vides
+      // Smart auto-fill of the label and icon when empty
       const page = getCurrentPage();
       const btn = page.buttons[selectedIndex];
       if (btn) {
@@ -1210,7 +1210,7 @@
       document.getElementById('box-sequence-setup').style.display = isSequence ? 'flex' : 'none';
 
       if (isSlider && !selecting && btn) {
-        // Défaut couleur slider cyan si sombre
+        // Default the slider color to cyan when dark
         if (!btn.color || btn.color === '#161c2e') {
           setColor('#38bdf8');
         }
@@ -1518,7 +1518,7 @@
     }
 
     // =========================================================================
-    // SÉLECTEUR INTÉGRÉ D'APPLICATIONS ET JEUX STEAM
+    // BUILT-IN STEAM APPS AND GAMES PICKER
     // =========================================================================
     let installedAppsList = [];
     let currentAppCategory = 'all';
@@ -1553,7 +1553,7 @@
           const data = await res.json();
           installedAppsList = data.apps || [];
           
-          // Mise à jour des compteurs
+          // Update the counters
           const gamesCount = installedAppsList.filter(a => a.category === 'Jeux').length;
           const appsCount = installedAppsList.filter(a => a.category === 'Applications').length;
           document.getElementById('count-all').innerText = installedAppsList.length;
@@ -1640,7 +1640,7 @@
     }
 
     // =========================================================================
-    // INTÉGRATION DISCORD API / RPC
+    // DISCORD API / RPC INTEGRATION
     // =========================================================================
     let discordPollInterval = null;
 
@@ -1670,7 +1670,7 @@
         if (text) text.innerText = 'Discord';
       }
 
-      // Vues du modal
+      // Modal views
       const viewConnected = document.getElementById('discord-view-connected');
       const viewDisconnected = document.getElementById('discord-view-disconnected');
 
@@ -2008,7 +2008,7 @@
     checkDiscordStatus();
   </script>
 
-  <!-- MODAL INTÉGRATION DISCORD API -->
+  <!-- DISCORD API INTEGRATION MODAL -->
   <div id="discord-modal" class="modal-overlay" style="display: none;" onclick="closeDiscordModalOnOverlay(event)">
     <div class="modal-content" style="max-width: 580px; max-height: 90vh; display: flex; flex-direction: column;">
       <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 14px;">
@@ -2018,7 +2018,7 @@
         <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 14px;" onclick="closeDiscordModal()">✕</button>
       </div>
 
-      <!-- VUE SI DÉJÀ CONNECTÉ -->
+      <!-- VIEW WHEN ALREADY CONNECTED -->
       <div id="discord-view-connected" style="display: none;">
         <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 10px; padding: 16px; margin-bottom: 16px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
@@ -2055,7 +2055,7 @@
         </div>
       </div>
 
-      <!-- VUE SI NON CONNECTÉ (FORMULAIRE DE CONNEXION) -->
+      <!-- VIEW WHEN NOT CONNECTED (CONNECTION FORM) -->
       <div id="discord-view-disconnected">
         <div style="background: rgba(168, 85, 247, 0.08); border: 1px solid rgba(168, 85, 247, 0.25); border-radius: 10px; padding: 14px; margin-bottom: 16px; font-size: 13px; line-height: 1.5;">
           <b style="color: #c084fc;">Pourquoi lier Discord ?</b><br>
@@ -2090,7 +2090,7 @@
     </div>
   </div>
 
-  <!-- MODAL SÉLECTEUR D'APPLICATIONS ET JEUX -->
+  <!-- APPS AND GAMES PICKER MODAL -->
   <div id="app-modal" class="modal-overlay" style="display: none;" onclick="closeAppModalOnOverlay(event)">
     <div class="modal-content" style="max-height: 85vh; display: flex; flex-direction: column;">
       <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 12px;">
@@ -2112,13 +2112,13 @@
       </div>
 
       <div id="app-list-container" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; max-height: 52vh; padding-right: 4px;">
-        <!-- Rempli par JavaScript -->
+        <!-- Filled by JavaScript -->
       </div>
     </div>
   </div>
   <input type="file" id="import-config-file" accept=".json,application/json" hidden onchange="importProfilesFile(event)">
 
-  <!-- MODAL SAUVEGARDES -->
+  <!-- BACKUPS MODAL -->
   <div id="backups-modal" class="modal-overlay" style="display: none;" onclick="closeBackupsOnOverlay(event)">
     <div class="modal-content" style="max-width: 760px; max-height: 90vh; display: flex; flex-direction: column;">
       <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 14px;">
@@ -2136,7 +2136,7 @@
     </div>
   </div>
 
-  <!-- MODAL DIAGNOSTIC -->
+  <!-- DIAGNOSTICS MODAL -->
   <div id="diagnostics-modal" class="modal-overlay" style="display: none;" onclick="closeDiagnosticsOnOverlay(event)">
     <div class="modal-content" style="max-width: 900px; max-height: 90vh; display: flex; flex-direction: column;">
       <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 14px;">

@@ -1,42 +1,42 @@
-# DeckEdge 0.1.3 — Profils, sauvegardes et diagnostic
+# DeckEdge 0.1.3 — Profiles, backups and diagnostics
 
-Préversion Windows x64 développée par **Lorzo595**, avec l’aide de **ChatGPT**. Merci à **xavco63** pour les contributions intégrées dans les PR #4 et #5.
+Windows x64 pre-release developed by **Lorzo595**, with the help of **ChatGPT**. Thanks to **xavco63** for the contributions merged in PR #4 and #5.
 
-## Nouveautés depuis 0.1.2
+## What's new since 0.1.2
 
-- Menu **Profils** : export JSON, import validé et annulable avant enregistrement.
-- **Sauvegardes locales** horodatées : conservation des 20 dernières et restauration depuis le Studio.
-- Sauvegarde de sécurité avant restauration ; si elle échoue, la restauration est annulée et la configuration actuelle est conservée.
-- Protection contre un enregistrement et une restauration simultanés.
-- Panneau **Diagnostic** avec rapport copiable ou téléchargeable et masquage des chemins personnels, clés et jetons connus.
-- Port configurable et choix automatique en cas de conflit, mémorisé entre les lancements et conservé lors de l’application des paramètres. Le QR code et mDNS utilisent le port choisi.
-- Écritures de configuration regroupées avec reprise après une erreur temporaire.
-- Tests navigateur et C# intégrés aux contrôles GitHub ; normalisation des fins de ligne des sources.
+- **Profiles** menu: JSON export, validated import that can be cancelled before saving.
+- Local **timestamped backups**: the last 20 are kept and can be restored from the Studio.
+- Safety backup before a restore; if it fails, the restore is cancelled and the current configuration is kept.
+- Protection against a simultaneous save and restore.
+- **Diagnostics** panel with a report you can copy or download, hiding personal paths and known keys and tokens.
+- Configurable port with automatic selection on conflict, remembered between launches and kept when applying settings. The QR code and mDNS use the chosen port.
+- Configuration writes are grouped together with retry after a temporary error.
+- Browser and C# tests included in the GitHub checks; source line ending normalization.
 
-Le QR code, l’adresse permanente du PC, le démarrage Windows et le maintien en éveil du PC et de son écran sont conservés.
+The QR code, the PC's permanent address, Windows startup and keeping the PC and its screen awake are unchanged.
 
-## Télécharger
+## Download
 
-- **DeckEdge-0.1.3-Setup-x64.exe** : installation Windows classique.
-- **DeckEdge-0.1.3-Portable-x64.zip** : extraire tout le dossier puis lancer DeckEdge.exe.
-- **DeckEdge-0.1.3-Source.zip** : sources publiques nettoyées.
-- **SHA256SUMS.txt** : empreintes des téléchargements.
+- **DeckEdge-0.1.3-Setup-x64.exe**: standard Windows installation.
+- **DeckEdge-0.1.3-Portable-x64.zip**: extract the whole folder, then run DeckEdge.exe.
+- **DeckEdge-0.1.3-Source.zip**: cleaned public sources.
+- **SHA256SUMS.txt**: checksums of the downloads.
 
-Windows 10 build 19041+ / Windows 11 **x64**. Python et LibreHardwareMonitor sont inclus. WebView2 est proposé s’il manque ; Internet est alors nécessaire. L’accès complet aux capteurs reste facultatif et peut demander une autorisation administrateur.
+Windows 10 build 19041+ / Windows 11 **x64**. Python and LibreHardwareMonitor are included. WebView2 is offered if missing; Internet access is then required. Full sensor access remains optional and may require administrator approval.
 
-## Mise à jour
+## Updating
 
-1. Quitter complètement l’ancienne version depuis son icône près de l’horloge.
-2. Installer la 0.1.3, ou extraire le nouveau portable dans un nouveau dossier.
-3. En portable, recopier l’ancien dossier `data` dans le nouveau pour conserver profils, sauvegardes et clé du téléphone. L’installation classique conserve ses données dans `%LOCALAPPDATA%\DeckEdge`.
-4. Si un conflit impose un changement de port et que le raccourci mobile ne répond plus, rouvrir **Connecter le téléphone** et scanner le nouveau QR. Le port choisi est ensuite mémorisé.
+1. Fully quit the old version from its icon near the clock.
+2. Install 0.1.3, or extract the new portable build into a new folder.
+3. For the portable build, copy the old `data` folder into the new one to keep profiles, backups and the phone key. The standard installation keeps its data in `%LOCALAPPDATA%\DeckEdge`.
+4. If a conflict forces a port change and the mobile shortcut no longer responds, reopen **Connect phone** and scan the new QR code. The chosen port is then remembered.
 
-Les exports de profils peuvent contenir vos chemins et cibles d’actions : les relire avant partage. Relire également le diagnostic avant de le publier. Ne jamais partager le QR ou sa clé privée. PC et téléphone doivent rester sur le même réseau privé.
+Profile exports may contain your paths and action targets: read them again before sharing. Also review the diagnostics report before publishing it. Never share the QR code or its private key. The PC and phone must stay on the same private network.
 
-## Validation et limites
+## Validation and limitations
 
-68 tests Python, huit tests Edge et test C# réussis sur les fonctionnalités fusionnées. Les contrôles GitHub compilent également les paquets Windows et vérifient les distributions. Les cas d’échec de sauvegarde et d’opérations concurrentes sont couverts par des tests de régression.
+68 Python tests, eight Edge tests and the C# test passed on the merged features. The GitHub checks also compile the Windows packages and verify the distributions. Backup failure and concurrent operation cases are covered by regression tests.
 
-Cette version reste une **préversion**, pas la 1.0.0. Les exécutables sont non signés (avertissement SmartScreen possible). La validation sur plusieurs matériels, sur Windows vierge et après redémarrage complet de Windows reste à compléter. Les tests automatisés de commandes utilisent des simulations. Ne pas exposer le serveur HTTP sur Internet.
+This version remains a **pre-release**, not 1.0.0. The executables are unsigned (SmartScreen warning possible). Validation on multiple hardware configurations, on a clean Windows install and after a full Windows restart is still to be completed. Automated command tests use simulations. Do not expose the HTTP server to the Internet.
 
-[Documentation](https://github.com/Lorzo595/DeckEdge#readme) · [Contributeurs](https://github.com/Lorzo595/DeckEdge#contributeurs) · [Signaler un problème](https://github.com/Lorzo595/DeckEdge/issues)
+[Documentation](https://github.com/Lorzo595/DeckEdge#readme) · [Contributors](https://github.com/Lorzo595/DeckEdge#contributors) · [Report an issue](https://github.com/Lorzo595/DeckEdge/issues)

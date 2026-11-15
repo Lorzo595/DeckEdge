@@ -40,7 +40,7 @@
     }
 
     /* ========================================================================== */
-    /* BANDEAU MONITORING                                                         */
+    /* MONITORING BAR                                                             */
     /* ========================================================================== */
     .monitoring-bar {
       display: grid;
@@ -57,7 +57,7 @@
     .gauge-sub { color: #94a3b8; }
 
     /* ========================================================================== */
-    /* BARRE D'ONGLETS                                                            */
+    /* TAB BAR                                                                    */
     /* ========================================================================== */
     .pages-bar {
       display: flex;
@@ -97,7 +97,7 @@
     }
 
     /* ========================================================================== */
-    /* GRILLE STREAM DECK                                                         */
+    /* STREAM DECK GRID                                                           */
     /* ========================================================================== */
     .deck-grid {
       display: grid;
@@ -108,7 +108,7 @@
     }
     .deck-grid::-webkit-scrollbar { display: none; }
 
-    /* BOUTON STANDARD */
+    /* STANDARD BUTTON */
     .deck-btn {
       background: #161c2e;
       border: 1px solid #232d4a;
@@ -169,7 +169,7 @@
     }
 
     /* ========================================================================== */
-    /* SLIDER TACTILE (FADER AUDIO PRO)                                           */
+    /* TOUCH SLIDER (AUDIO PRO FADER)                                             */
     /* ========================================================================== */
     .deck-slider {
       background: #0d1322 !important;
@@ -194,7 +194,7 @@
       transition: width 0.12s ease-out;
       border-right: 3px solid #38bdf8;
     }
-    /* Pendant le glissement du doigt : aucune transition CSS pour une fluidité 120 FPS immédiate */
+    /* While the finger is dragging: no CSS transition, for immediate 120 FPS smoothness */
     .deck-slider.is-dragging .slider-fill {
       transition: none !important;
     }
@@ -277,7 +277,7 @@
     }
 
     /* ========================================================================== */
-    /* RESPONSIVE : MODE PORTRAIT (iPhone Vertical)                               */
+    /* RESPONSIVE: PORTRAIT MODE (iPhone upright)                                 */
     /* ========================================================================== */
     @media (orientation: portrait) {
       body {
@@ -295,29 +295,29 @@
       .pages-bar { padding: 2px 0; }
       .page-tab { padding: 8px 16px; font-size: 13px; }
 
-      /* En portrait : Grille à 2 colonnes généreuses */
+      /* In portrait: roomy 2-column grid */
       .deck-grid {
         grid-template-columns: repeat(2, 1fr);
         grid-auto-rows: 100px;
         gap: 12px;
       }
 
-      /* En portrait : Le slider prend toute la largeur (span 2) */
-      /* Il offre une zone de glisse immense de ~350px avec le pouce ! */
+      /* In portrait: the slider spans the full width (span 2) */
+      /* It offers a huge ~350px thumb drag area! */
       .deck-slider {
         border-radius: 18px;
       }
     }
 
     /* ========================================================================== */
-    /* RESPONSIVE : MODE PAYSAGE (iPhone Horizontal façon Stream Deck)           */
+    /* RESPONSIVE: LANDSCAPE MODE (iPhone sideways, Stream Deck style)            */
     /* ========================================================================== */
     @media (orientation: landscape) {
       body {
         padding: calc(6px + var(--safe-top)) calc(14px + var(--safe-right)) calc(6px + var(--safe-bottom)) calc(14px + var(--safe-left));
         gap: 8px;
       }
-      /* Bandeau ultra compact en hauteur */
+      /* Ultra-compact bar height */
       .monitoring-bar {
         padding: 6px 14px;
         border-radius: 10px;
@@ -330,7 +330,7 @@
       .pages-bar { padding: 0; }
       .page-tab { padding: 5px 12px; font-size: 11px; }
 
-      /* En paysage : Grille à 3 colonnes optimisée pour la hauteur */
+      /* In landscape: 3-column grid optimized for height */
       .deck-grid {
         grid-template-columns: repeat(3, 1fr);
         grid-auto-rows: 1fr;
@@ -355,7 +355,7 @@
       .slider-mute-btn { font-size: 18px; padding: 4px; }
     }
 
-    /* Deck Edge — console graphite / ambre. Aucune ressource externe. */
+    /* Deck Edge — graphite / amber console. No external resources. */
     :root { color-scheme: dark; --bg: #171817; --surface: #20221f;
       --surface-hover: #2a2d28; --border: #383c34; --primary: #dfb979;
       --primary-hover: #edcb94; --danger: #e28c80; --text: #eeeee7; --text-muted: #a3a79c; }
@@ -420,13 +420,13 @@
     <button type="button" id="dismiss-phone-shortcut" style="padding:6px 12px;border:1px solid #65769a;background:#354564;border-radius:5px;color:white;cursor:pointer" data-i18n="phone.install.dismiss">Compris</button>
   </details>
 
-  <!-- BANDEAU MONITORING -->
+  <!-- MONITORING BAR -->
   <div class="monitoring-bar" id="monitoring-bar" data-i18n-aria-label="deck.monitoring" aria-label="Mesures du PC"></div>
 
-  <!-- SÉLECTEUR DE PAGES / PROFILS -->
+  <!-- PAGE / PROFILE SELECTOR -->
   <div class="pages-bar" id="pages-bar"></div>
 
-  <!-- GRILLE STREAM DECK RESPONSIVE -->
+  <!-- RESPONSIVE STREAM DECK GRID -->
   <div class="deck-grid deck-layout-grid" id="deck-grid"></div>
 
   <script src="/i18n.js"></script>
@@ -444,17 +444,17 @@
     let reconnectTimeout = null;
     let lastMonitoringReadings = [];
     
-    // Niveaux de volume réels synchronisés
+    // Real volume levels, synchronized
     let audioLevels = { "master": 100 };
     let audioMutes = { "master": false };
 
-    // ANTI-SACCADE : Suivi du slider en cours de manipulation par l'utilisateur
+    // ANTI-JITTER: track the slider the user is currently manipulating
     let activeDraggingBtnId = null;
     let activeDraggingTarget = null;
     let unlockDragTimeout = null;
     const sliderEventCleanups = [];
 
-    // 1. Chargement de la configuration
+    // 1. Configuration loading
     async function loadConfig() {
       try {
         const res = await fetch('/api/config');
@@ -503,7 +503,7 @@
       return String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
     }
 
-    // 2. Rendu des onglets
+    // 2. Tab rendering
     function renderTabs() {
       const bar = document.getElementById('pages-bar');
       bar.innerHTML = '';
@@ -568,7 +568,7 @@
       return DeckLayout.activeDisplay(btn).label;
     }
 
-    // 3. Rendu de la grille
+    // 3. Grid rendering
     function renderActivePage() {
       sliderEventCleanups.splice(0).forEach(cleanup => cleanup());
       const grid = document.getElementById('deck-grid');
@@ -580,7 +580,7 @@
       if (!page || !page.buttons) return;
 
       page.buttons.forEach(btn => {
-        // A. CURSEUR SLIDER TACTILE (FADER)
+        // A. TOUCH SLIDER (FADER)
         if (btn.type === 'slider') {
           const slider = document.createElement('div');
           slider.className = 'deck-btn deck-slider';
@@ -619,7 +619,7 @@
           grid.appendChild(slider);
         }
         
-        // B. BOUTON CLASSIQUE / TOGGLE
+        // B. CLASSIC BUTTON / TOGGLE
         else {
           const button = document.createElement('button');
           button.className = 'deck-btn';
@@ -649,7 +649,7 @@
     }
 
     // =========================================================================
-    // Un appui se valide au relâchement ; un glissement reste un défilement.
+    // A press is confirmed on release; a drag remains a scroll.
     // =========================================================================
     let lastButtonTriggerTime = 0;
     let lastButtonTriggerId = null;
@@ -657,7 +657,7 @@
     function triggerButton(btnId) {
       const now = Date.now();
       if (lastButtonTriggerId === btnId && (now - lastButtonTriggerTime) < 160) {
-        return; // Anti-rebond double tap accidentel
+        return; // Debounce accidental double tap
       }
       lastButtonTriggerTime = now;
       lastButtonTriggerId = btnId;
@@ -697,7 +697,7 @@
     }
 
     // =========================================================================
-    // CONTRÔLE TACTILE ULTRA-FLUIDE DU SLIDER (ZÉRO SACCADE)
+    // ULTRA-SMOOTH TOUCH CONTROL OF THE SLIDER (ZERO JITTER)
     // =========================================================================
     function attachSliderEvents(sliderEl, btn) {
       let isDragging = false;
@@ -825,7 +825,7 @@
       sliderEl.addEventListener('pointercancel', cancelDrag, {passive:true});
       sliderEl.addEventListener('lostpointercapture', cancelDrag, {passive:true});
 
-      // Le bouton de sourdine respecte lui aussi le défilement vertical.
+      // The mute button also respects vertical scrolling.
       const muteBtnEl = sliderEl.querySelector('.slider-mute-btn');
       if (muteBtnEl) {
         attachTapEvents(muteBtnEl, () => toggleMute(btn.target));
@@ -842,7 +842,7 @@
       }
     }
 
-    // 4. WebSocket & Événements
+    // 4. WebSocket & events
     function connectWS() {
       if (reconnectTimeout) {
         clearTimeout(reconnectTimeout);
@@ -889,11 +889,11 @@
             syncSlidersUI();
           }
 
-          // Mise à jour de volume en direct depuis un autre client ou le PC
+          // Live volume update from another client or the PC
           else if (msg.type === "volume_update") {
             const t = msg.target.toLowerCase();
             audioLevels[t] = msg.value;
-            // SI L'UTILISATEUR EST EN TRAIN DE TOUCHER CE SLIDER, NE PAS LE SACCADER !
+            // IF THE USER IS CURRENTLY TOUCHING THIS SLIDER, DO NOT MAKE IT JITTER!
             if (activeDraggingTarget && t === activeDraggingTarget) {
               return;
             }
@@ -938,7 +938,7 @@
     function syncSlidersUI() {
       document.querySelectorAll('.deck-slider').forEach(slider => {
         const btnId = slider.id.replace('btn-dom-', '');
-        // Ne jamais toucher au slider actuellement manipulé par l'utilisateur (zéro saccade)
+        // Never touch the slider currently manipulated by the user (zero jitter)
         if (activeDraggingBtnId && activeDraggingBtnId === btnId) return;
 
         const target = (slider.dataset.target || '').toLowerCase();
@@ -1036,7 +1036,7 @@
       }
     }
 
-    // 5. Reprise d'activité iOS Safari & Changement d'orientation
+    // 5. iOS Safari resume & orientation change
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible") {
         if (!ws || ws.readyState !== WebSocket.OPEN) {
