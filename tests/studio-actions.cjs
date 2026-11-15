@@ -52,6 +52,22 @@ const base=require('./ui-base.cjs');
   await page.waitForFunction(()=>document.getElementById('icon-library-modal').style.display==='none');
   assert.equal(await page.locator('#inp-icon').inputValue(),'🎙️');
   assert.ok((await page.evaluate(()=>JSON.parse(localStorage.getItem('deckedge.recentIcons')||'[]'))).includes('🎙️'));
+  const cloneCheck=await page.evaluate(()=>{
+   const original=config.pages[0];
+   original.buttons[1].steps=[
+    {type:'key',target:'a',condition:'button_on',condition_target:'toggle'},
+    {type:'key',target:'b',condition:'button_off',condition_target:'external'},
+    {type:'key',target:'c',condition:'app_running',condition_target:'toggle'}
+   ];
+   duplicateStudioPage(original.id);
+   return {original:original.buttons,copy:getCurrentPage().buttons};
+  });
+  assert.notEqual(cloneCheck.copy[0].id,'toggle');
+  assert.equal(cloneCheck.copy[1].steps[0].condition_target,cloneCheck.copy[0].id);
+  assert.equal(cloneCheck.copy[1].steps[1].condition_target,'external');
+  assert.equal(cloneCheck.copy[1].steps[2].condition_target,'toggle');
+  assert.equal(cloneCheck.original[1].steps[0].condition_target,'toggle');
+  assert.equal(cloneCheck.copy[0].state,false);
   assert.deepEqual(errors,[]);
   console.log('OK : test d’action, conditions de séquence et bibliothèque d’icônes. Commandes simulées, aucune action exécutée.');
  }finally{await browser.close()}

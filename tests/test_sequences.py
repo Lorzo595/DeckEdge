@@ -129,6 +129,32 @@ class SequenceConditionTests(unittest.TestCase):
         with patch.object(server.audio_engine, "get_system_states", return_value={"mic_muted": True}):
             self.assertFalse(server._condition_met(unmuted))
 
+    def test_execution_reads_button_state_between_steps(self):
+        for initial in (False, True):
+            with self.subTest(initial=initial):
+                gate = self.config(initial).pages[0].buttons[0]
+                steps = [
+                    ActionStep(type="key", target="first"),
+                    ActionStep(type="key", target="on", condition="button_on", condition_target="gate"),
+                    ActionStep(type="key", target="off", condition="button_off", condition_target="gate"),
+                ]
+                executed = []
+                def execute(kind, target):
+                    executed.append(target)
+                    if target == "first":
+                        gate.state = not initial
+                    return True
+                with patch.object(server.config_store, "get_button", side_effect=lambda _: gate.model_copy(deep=True)), \
+                     patch.object(server, "_execute_action", side_effect=execute):
+                    self.assertTrue(server._execute_button(ButtonConfig(id="s", type="sequence", steps=steps)))
+                self.assertEqual(executed, ["first", "off" if initial else "on"])
+
+    def test_missing_or_non_toggle_live_button_never_satisfies_condition(self):
+        for button in (None, ButtonConfig(id="gate", type="key", target="a", state=True)):
+            with self.subTest(button=button), patch.object(server.config_store, "get_button", return_value=button):
+                for condition in ("button_on", "button_off"):
+                    self.assertFalse(server._condition_met(ActionStep(type="key", target="a", condition=condition, condition_target="gate")))
+
 
 class ActionTestTests(unittest.TestCase):
     def test_key_and_hotkey_validation(self):
@@ -165,6 +191,21 @@ class ActionTestTests(unittest.TestCase):
         result = server._test_action_request(invalid, config)
         self.assertFalse(result["ok"])
         self.assertIn("action.condition.button_missing", [check["code"] for check in result["checks"]])
+
+    def test_audio_device_actions_use_devices_not_app_sessions(self):
+        inventory = {"devices": [{"name": "Speakers", "target": "device:Speakers"}], "apps": []}
+        with patch.object(server, "get_audio_targets", return_value=inventory), \
+             patch.object(server.audio_engine, "adjust_relative", return_value=True) as adjust, \
+             patch.object(server, "toggle_audio_target_mute", return_value=True) as mute:
+            for target in ("device:Speakers:+10", "device:Speakers:-2.5", "device:Speakers:mute", "general:+5"):
+                with self.subTest(target=target):
+                    button = ButtonConfig(id="a", type="volume_app", target=target)
+                    self.assertTrue(server._test_action_request(button, None)["ok"])
+                    # Validation must never execute the audio command.
+                    adjust.assert_not_called()
+                    mute.assert_not_called()
+            self.assertFalse(server._test_action_request(ButtonConfig(id="a", type="volume_app", target="device:Missing:+10"), None)["ok"])
+            self.assertFalse(server._test_action_request(ButtonConfig(id="a", type="volume_app", target="device:Speakers:jump"), None)["ok"])
 
 
 if __name__ == "__main__":
