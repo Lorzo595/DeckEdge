@@ -73,7 +73,7 @@ This local test does not replace validation in a clean Windows VM.
 
 The browser tests require Node.js, Playwright and Edge. To install them
 without adding a production dependency: `npm install --no-save playwright`.
-The following script starts an isolated server on `127.0.0.1:5011`, runs the thirteen
+The following script starts an isolated server on `127.0.0.1:5011`, runs the fourteen
 Studio/mobile tests and shuts down cleanly:
 
 ```powershell
@@ -82,7 +82,7 @@ powershell -ExecutionPolicy Bypass -File tests\run-ui-tests.ps1
 
 The tests covered are `studio-shell`, `studio-ergonomics`, `studio-colors`,
 `mobile-preview`, `mobile-gestures`, `startup-profile`, `diagnostics`, `profiles`,
-`sequences`, `studio-actions`, `mobile-accessibility`, `i18n` and `studio-i18n`.
+`sequences`, `studio-actions`, `mobile-accessibility`, `folders`, `i18n` and `studio-i18n`.
 The script accepts `-Port` and `-DataDirectory` to isolate the data; the data
 folder must stay under `.build`. To run a manual test, set
 `DECKEDGE_TEST_URL` to the test server.

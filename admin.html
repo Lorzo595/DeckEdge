@@ -442,6 +442,11 @@
       color: #edcb94; box-shadow: none; }
     .page-tab:hover { background: var(--surface-hover); color: var(--text); }
     .pages-bar { border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+    .subpages-bar { display: flex; gap: 6px; flex-wrap: wrap; margin: -4px 0 10px; }
+    .subpages-bar[hidden] { display: none; }
+    .subpages-bar .page-tab { font-size: 12px; padding: 5px 10px; }
+    .page-parent-label { font-size: 12px; color: var(--text-muted); }
+    #inp-page-parent { max-width: 190px; padding: 4px 8px; font-size: 12px; }
     .label { font-weight: 500; letter-spacing: .1px; }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { transition: none !important; animation: none !important; }
@@ -576,6 +581,7 @@
     .preview-gauge-sub { color: var(--text-muted); font-size: 10px; min-height: 13px; }
     .preview-phone-pages { flex-shrink: 0; display: flex; gap: 5px; overflow-x: auto; scrollbar-width: none;
       border-bottom: 1px solid var(--border); padding: 2px 0 6px; }
+    .preview-phone-pages[hidden] { display: none; }
     .phone-tab { flex-shrink: 0; border: 1px solid transparent; background: transparent; border-radius: 5px;
       padding: 8px 16px; font-size: 13px; font-weight: 500; color: var(--text-muted); white-space: nowrap; }
     .phone-tab.active { background: #303027; border-color: #61523a; color: #edcb94; }
@@ -648,6 +654,7 @@
       </details>
       <!-- Profile tab bar -->
       <div class="pages-bar" id="pages-bar"></div>
+      <div class="subpages-bar" id="subpages-bar" hidden></div>
 
       <!-- Active page controls -->
       <div class="page-header-row">
@@ -655,6 +662,8 @@
           <span>Page active :</span>
           <input type="text" id="inp-page-name" style="width: 150px; padding: 4px 8px; font-size: 13px;" onchange="updateCurrentPageMeta()">
           <input type="text" id="inp-page-icon" style="width: 50px; padding: 4px 8px; font-size: 16px; text-align: center;" onchange="updateCurrentPageMeta()">
+          <label class="page-parent-label" for="inp-page-parent" data-i18n="studio.page.parent">Dossier</label>
+          <select id="inp-page-parent" onchange="updatePageParent()"></select>
         </div>
         <div class="page-actions">
           <button class="btn btn-delete" style="padding: 6px 12px; font-size: 12px;" onclick="deleteCurrentPage()">Supprimer la page</button>
@@ -681,6 +690,7 @@
               <div class="phone-screen" id="phone-screen" data-orientation="portrait">
                 <div class="preview-monitoring" id="preview-monitoring"></div>
                 <div class="preview-phone-pages" id="preview-phone-pages"></div>
+                <div class="preview-phone-pages" id="preview-subpages" hidden></div>
                 <div class="deck-grid-preview deck-layout-grid" id="grid-preview" data-orientation="portrait"></div>
               </div>
             </div>
@@ -981,7 +991,7 @@
         if (!config.pages || config.pages.length === 0) {
           config.pages = [{ id: "page_main", name: "Principal", icon: "🏠", buttons: [] }];
         }
-        currentActivePageId = config.pages.find(page => page.id === 'page_main')?.id || config.active_page_id || config.pages[0].id;
+        currentActivePageId = defaultContentPage().id;
         
         renderPagesBar();
         renderGrid();
@@ -1075,34 +1085,112 @@
     }
 
     function getCurrentPage() {
-      return config.pages.find(p => p.id === currentActivePageId) || config.pages[0];
+      return config.pages.find(p => p.id === currentActivePageId) || defaultContentPage() || config.pages[0];
+    }
+
+    function contentPages() {
+      return config.pages.filter(page => !page.is_folder);
+    }
+
+    function defaultContentPage() {
+      const pages = contentPages();
+      return pages.find(page => page.id === 'page_main')
+        || pages.find(page => page.id === config.active_page_id)
+        || pages[0]
+        || config.pages[0];
+    }
+
+    function currentFolder() {
+      const page = config.pages.find(p => p.id === currentActivePageId);
+      if (!page) return null;
+      return page.is_folder ? page : config.pages.find(p => p.id === page.parent_id) || null;
     }
 
     function renderPagesBar() {
       const bar = document.getElementById('pages-bar');
       bar.innerHTML = '';
+      const folder = currentFolder();
 
-      config.pages.forEach(p => {
+      config.pages.filter(p => !p.parent_id).forEach(p => {
         const tab = document.createElement('div');
-        tab.className = `page-tab ${p.id === currentActivePageId ? 'active' : ''}`;
-        tab.innerHTML = `<span>${studioEscape(p.icon || '📄')}</span><span>${studioEscape(p.name)}</span>`;
+        const active = p.is_folder ? (folder && folder.id === p.id) : p.id === currentActivePageId;
+        tab.className = `page-tab ${active ? 'active' : ''}`;
+        tab.innerHTML = `<span>${studioEscape(p.icon || (p.is_folder ? '📁' : '📄'))}</span><span>${studioEscape(p.name)}</span>`;
         tab.dataset.pageId = p.id;
         tab.tabIndex = 0;
         tab.setAttribute('role', 'button');
-        tab.onkeydown = event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); switchPage(p.id); } };
-        tab.onclick = () => switchPage(p.id);
+        tab.onkeydown = event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); p.is_folder ? switchFolder(p.id) : switchPage(p.id); } };
+        tab.onclick = () => p.is_folder ? switchFolder(p.id) : switchPage(p.id);
         bar.appendChild(tab);
       });
 
-      const addBtn = document.createElement('button');
-      addBtn.className = 'page-tab-add';
-      addBtn.innerHTML = `+ Ajouter une Page`;
-      addBtn.onclick = addNewPage;
-      bar.appendChild(addBtn);
+      const addPage = document.createElement('button');
+      addPage.className = 'page-tab-add';
+      addPage.textContent = I18n.t('studio.page.addPage');
+      addPage.onclick = addNewPage;
+      bar.appendChild(addPage);
+
+      const addFolder = document.createElement('button');
+      addFolder.className = 'page-tab-add';
+      addFolder.textContent = I18n.t('studio.page.addFolder');
+      addFolder.onclick = addNewFolder;
+      bar.appendChild(addFolder);
 
       const page = getCurrentPage();
       document.getElementById('inp-page-name').value = page.name;
-      document.getElementById('inp-page-icon').value = page.icon || '📄';
+      document.getElementById('inp-page-icon').value = page.icon || (page.is_folder ? '📁' : '📄');
+      const deleteButton = document.querySelector('.page-actions .btn-delete');
+      if (deleteButton) deleteButton.textContent = I18n.t(page.is_folder ? 'studio.page.deleteFolder' : 'studio.page.deletePage');
+
+      const parentSelect = document.getElementById('inp-page-parent');
+      const parentLabel = document.querySelector('label[for="inp-page-parent"]');
+      if (parentSelect && parentLabel) {
+        parentSelect.replaceChildren();
+        parentSelect.hidden = !!page.is_folder;
+        parentLabel.hidden = !!page.is_folder;
+        if (!page.is_folder) {
+          const none = document.createElement('option');
+          none.value = '';
+          none.textContent = I18n.t('studio.page.noFolder');
+          parentSelect.append(none);
+          config.pages.filter(p => p.is_folder && p.id !== page.id).forEach(folderPage => {
+            const option = document.createElement('option');
+            option.value = folderPage.id;
+            option.textContent = `📁 ${folderPage.name}`;
+            parentSelect.append(option);
+          });
+          parentSelect.value = page.parent_id || '';
+        }
+      }
+      renderSubPagesBar();
+    }
+
+    function renderSubPagesBar() {
+      const bar = document.getElementById('subpages-bar');
+      if (!bar) return;
+      bar.replaceChildren();
+      const folder = currentFolder();
+      const children = folder ? config.pages.filter(p => p.parent_id === folder.id) : [];
+      bar.hidden = !folder || children.length === 0;
+      children.forEach(child => {
+        const tab = document.createElement('div');
+        tab.className = `page-tab ${child.id === currentActivePageId ? 'active' : ''}`;
+        tab.innerHTML = `<span>${studioEscape(child.icon || '📄')}</span><span>${studioEscape(child.name)}</span>`;
+        tab.dataset.pageId = child.id;
+        tab.tabIndex = 0;
+        tab.setAttribute('role', 'button');
+        tab.onkeydown = event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); switchPage(child.id); } };
+        tab.onclick = () => switchPage(child.id);
+        bar.appendChild(tab);
+      });
+    }
+
+    function switchFolder(folderId) {
+      currentActivePageId = folderId;
+      selectedIndex = 0;
+      renderPagesBar();
+      renderGrid();
+      selectButton(0);
     }
 
     function switchPage(pageId) {
@@ -1114,13 +1202,17 @@
     }
 
     function addNewPage() {
-      const name = prompt("Nom du profil (ex: Stream, Gaming, Desktop) :", "Nouveau Profil");
+      const current = getCurrentPage();
+      const parentId = current?.is_folder ? current.id : (current?.parent_id || null);
+      const name = prompt(I18n.t('studio.page.newPagePrompt'), I18n.t('studio.page.newPageDefault'));
       if (!name?.trim()) return;
       const newId = studioId('page');
       config.pages.push({
         id: newId,
         name: name.trim().slice(0,50),
         icon: "⚡",
+        parent_id: parentId,
+        is_folder: false,
         buttons: [
           { id: studioId('b'), label: "Master", icon: "🔊", type: "slider", target: "master", color: "#38bdf8" }
         ]
@@ -1128,31 +1220,70 @@
       switchPage(newId);
     }
 
+    function addNewFolder() {
+      const name = prompt(I18n.t('studio.page.newFolderPrompt'), I18n.t('studio.page.newFolderDefault'));
+      if (!name?.trim()) return;
+      const newId = studioId('folder');
+      config.pages.push({
+        id: newId,
+        name: name.trim().slice(0,50),
+        icon: "📁",
+        parent_id: null,
+        is_folder: true,
+        buttons: []
+      });
+      switchFolder(newId);
+    }
+
+    function updatePageParent() {
+      const page = getCurrentPage();
+      const select = document.getElementById('inp-page-parent');
+      if (!page || page.is_folder || !select) return;
+      page.parent_id = select.value || null;
+      renderPagesBar();
+      renderGrid();
+      selectButton(selectedIndex);
+    }
+
     function updateCurrentPageMeta() {
       const page = getCurrentPage();
       page.name = document.getElementById('inp-page-name').value.trim() || "Page";
-      page.icon = document.getElementById('inp-page-icon').value.trim() || "📄";
+      page.icon = document.getElementById('inp-page-icon').value.trim() || (page.is_folder ? "📁" : "📄");
       renderPagesBar();
     }
 
     function deleteCurrentPage() {
+      const page = getCurrentPage();
+      if (!page) return;
       if (config.pages.length <= 1) {
         alert("Impossible de supprimer la seule page existante.");
         return;
       }
-      if (!confirm("Voulez-vous vraiment supprimer cette page et tous ses boutons ?")) return;
-      
-      const idx = config.pages.findIndex(p => p.id === currentActivePageId);
-      config.pages.splice(idx, 1);
-      currentActivePageId = config.pages[0].id;
-      if (!config.pages.some(page => page.id === config.active_page_id)) config.active_page_id = currentActivePageId;
-      switchPage(currentActivePageId);
+      if (page.is_folder) {
+        if (!confirm(I18n.t('studio.page.deleteFolderConfirm', {name: page.name}))) return;
+        config.pages.filter(p => p.parent_id === page.id).forEach(p => p.parent_id = null);
+      } else if (!confirm("Voulez-vous vraiment supprimer cette page et tous ses boutons ?")) {
+        return;
+      }
+
+      const idx = config.pages.findIndex(p => p.id === page.id);
+      if (idx >= 0) config.pages.splice(idx, 1);
+      const next = defaultContentPage() || config.pages[0];
+      currentActivePageId = next.id;
+      if (!config.pages.some(p => p.id === config.active_page_id && !p.is_folder))
+        config.active_page_id = next.id;
+      switchPage(next.id);
     }
 
     function renderGrid() {
       const grid = document.getElementById('grid-preview');
       grid.innerHTML = '';
       const page = getCurrentPage();
+
+      if (page.is_folder) {
+        grid.innerHTML = `<div class="studio-empty-state"><span>${studioEscape(I18n.t('studio.page.folderEmpty'))}</span></div>`;
+        return;
+      }
 
       if (!page.buttons || page.buttons.length === 0) {
         grid.innerHTML = '<div class="studio-empty-state"><span>Aucune touche dans ce profil.</span><button type="button" class="btn btn-secondary" onclick="openAddMenu(event)">+ Ajouter une touche</button></div>';
@@ -2047,7 +2178,7 @@
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.detail ? JSON.stringify(data.detail) : ('HTTP ' + res.status));
         config = data.config;
-        currentActivePageId = (config.pages.find(page => page.id === 'page_main') || config.pages[0]).id;
+        currentActivePageId = defaultContentPage().id;
         selectedIndex = 0; studioLastGroup = null;
         renderPagesBar(); renderMonitoringEditor(); renderGrid(); selectButton(0);
         studioCheckpoint();
@@ -2139,7 +2270,7 @@
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || ('HTTP ' + res.status));
         config = data.config;
-        currentActivePageId = (config.pages.find(page => page.id === 'page_main') || config.pages[0]).id;
+        currentActivePageId = defaultContentPage().id;
         selectedIndex = 0; studioLastGroup = null;
         renderPagesBar(); renderMonitoringEditor(); renderGrid(); selectButton(0);
         studioResetHistory();

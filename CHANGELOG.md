@@ -9,6 +9,7 @@
 - Action test in the Studio: validate a key, application or audio target without executing it.
 - Sequence step conditions: button state, running application, muted or live microphone.
 - Searchable icon library with categories and recent icons.
+- Folders and sub-pages: group pages into one-level folders, with sub-tabs on the phone and in the Studio.
 - Phone accessibility: pinch zoom, `aria-pressed` on toggle keys and the mute button.
 
 ## 0.1.3 — Profiles, backups and diagnostics
