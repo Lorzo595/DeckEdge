@@ -70,7 +70,7 @@ namespace DeckEdgeDesktop
             string payload = Path.Combine(root, "payload");
             UpdateEngine.Extract(archive, payload, "0.1.5", CancellationToken.None);
             Reject(() => UpdateEngine.Extract(archive, Path.Combine(root, "wrong-version"), "0.1.6", CancellationToken.None), "Wrong package version accepted");
-            foreach (var extra in new[] { "DeckEdge/../escape.txt", "DeckEdge/data/config.json", "DeckEdge/deckedge.exe" }) {
+            foreach (var extra in new[] { "DeckEdge/../escape.txt", "DeckEdge/data/config.json", "DeckEdge/media/private.gif", "DeckEdge/deckedge.exe" }) {
                 var files = Payload(); files.Add(extra, "bad");
                 string invalid = Archive(root, Guid.NewGuid() + ".zip", files);
                 Reject(() => UpdateEngine.Extract(invalid, Path.Combine(root, Guid.NewGuid().ToString()), "0.1.5", CancellationToken.None), "Unsafe archive accepted");
@@ -81,7 +81,10 @@ namespace DeckEdgeDesktop
                 File.WriteAllText(Path.Combine(target, "VERSION"), "0.1.4");
                 if (portable) File.WriteAllText(Path.Combine(target, "portable.flag"), "keep original flag");
                 Directory.CreateDirectory(Path.Combine(target, "data"));
-                File.WriteAllText(Path.Combine(target, "data/config.json"), "private profile"); File.WriteAllText(Path.Combine(target, "data/.phone-key"), "private phone key"); File.WriteAllText(Path.Combine(target, "data/.phones.json"), "private phones");
+                File.WriteAllText(Path.Combine(target, "data/config.json"), "private profile"); File.WriteAllText(Path.Combine(target, "data/.phone-key"), "private phone key");
+                Directory.CreateDirectory(Path.Combine(target, "data/media"));
+                File.WriteAllText(Path.Combine(target, "data/media/private.gif"), "private artwork");
+                File.WriteAllText(Path.Combine(target, "data/.phones.json"), "private phones");
                 File.WriteAllText(Path.Combine(target, "my-file.txt"), "unmanaged file");
                 var before = Snapshot(target);
                 var plan = new UpdatePlan { Target = target, Version = "0.1.5", Portable = portable };
@@ -99,6 +102,7 @@ namespace DeckEdgeDesktop
                 Assert(File.ReadAllText(Path.Combine(target, "DeckEdge.exe")) == "new executable", "Executable not replaced");
                 Assert(File.ReadAllText(Path.Combine(target, "data/config.json")) == "private profile", "Profile changed");
                 Assert(File.ReadAllText(Path.Combine(target, "data/.phone-key")) == "private phone key", "Phone key changed");
+                Assert(File.ReadAllText(Path.Combine(target, "data/media/private.gif")) == "private artwork", "Artwork changed");
                 Assert(File.ReadAllText(Path.Combine(target, "data/.phones.json")) == "private phones", "Phone registry changed");
                 Assert(File.ReadAllText(Path.Combine(target, "my-file.txt")) == "unmanaged file", "Unmanaged file changed");
                 Assert(File.Exists(Path.Combine(target, "portable.flag")) == portable, "Edition changed during update");
