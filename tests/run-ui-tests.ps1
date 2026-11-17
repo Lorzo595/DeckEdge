@@ -1,4 +1,4 @@
-param([int]$Port = 5011, [string]$DataDirectory = '.build/ui-test-data')
+﻿param([int]$Port = 5011, [string]$DataDirectory = '.build/ui-test-data')
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location -LiteralPath $root
@@ -36,6 +36,8 @@ try {
     $env:DECKEDGE_TEST_URL = "http://127.0.0.1:$Port"
     $tests = @(
         'tests/studio-shell.cjs',
+        'tests/studio-layout.cjs',
+        'tests/media-library.cjs',
         'tests/studio-ergonomics.cjs',
         'tests/studio-colors.cjs',
         'tests/mobile-preview.cjs',

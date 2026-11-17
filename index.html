@@ -671,7 +671,7 @@
             <div class="slider-fill" id="fill-${btn.id}" style="width: ${currentVol}%; background: ${accentColor}40; border-right-color: ${accentColor};"></div>
             <div class="slider-content">
               <div class="slider-left">
-                <button type="button" class="slider-mute-btn" id="mute-btn-${btn.id}" aria-pressed="${isMuted ? 'true' : 'false'}" aria-label="${deckText(I18n.t('deck.mute'))}">${deckText(isMuted ? '🔇' : (btn.icon || '🔊'))}</button>
+                <button type="button" class="slider-mute-btn" id="mute-btn-${btn.id}" aria-pressed="${isMuted ? 'true' : 'false'}" aria-label="${deckText(I18n.t('deck.mute'))}">${DeckLayout.iconHTML(btn,isMuted,isMuted ? '🔇' : (btn.icon || '🔊'))}</button>
                 <div class="slider-info">
                   <span class="slider-name">${deckText(btn.label || I18n.t('deck.volume'))}</span>
                   <span class="slider-type-badge">${typeBadge}</span>
@@ -708,7 +708,7 @@
 
           button.innerHTML = `
             ${btn.type === 'sequence' ? `<span class="badge-toggle">${deckText(I18n.t('deck.steps', {count: (btn.steps || []).length}))}</span>` : (btn.is_toggle ? `<span class="badge-toggle ${isAct ? 'on' : 'off'}">${isAct ? 'ON' : 'OFF'}</span>` : '')}
-            <span class="icon">${deckText(icon)}</span>
+            <span class="icon">${DeckLayout.iconHTML(btn,isAct,icon)}</span>
             <span class="label">${deckText(label)}</span>
           `;
           
@@ -1025,12 +1025,12 @@
         if (valEl) valEl.innerText = vol + '%';
         if (muted) {
           slider.classList.add('is-muted');
-          if (muteBtn) { muteBtn.innerText = '🔇'; muteBtn.setAttribute('aria-pressed', 'true'); }
+          if (muteBtn && muteBtn.getAttribute('aria-pressed') !== 'true') { muteBtn.innerHTML = DeckLayout.iconHTML(findBtnInConfig(btnId),true,'🔇'); muteBtn.setAttribute('aria-pressed', 'true'); }
         } else {
           slider.classList.remove('is-muted');
           if (muteBtn) {
             const btnObj = findBtnInConfig(btnId);
-            muteBtn.innerText = (btnObj && btnObj.icon) ? btnObj.icon : '🔊';
+            if(muteBtn.getAttribute('aria-pressed') !== 'false')muteBtn.innerHTML = DeckLayout.iconHTML(btnObj,false,btnObj?.icon || '🔊');
             muteBtn.setAttribute('aria-pressed', 'false');
           }
         }
@@ -1096,7 +1096,7 @@
 
       el.innerHTML = `
         ${isToggle ? `<span class="badge-toggle ${isAct ? 'on' : 'off'}">${isAct ? 'ON' : 'OFF'}</span>` : ''}
-        <span class="icon">${deckText(icon)}</span>
+        <span class="icon">${DeckLayout.iconHTML(btnObj,isAct,icon)}</span>
         <span class="label">${deckText(label)}</span>
       `;
     }

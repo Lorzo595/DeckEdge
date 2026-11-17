@@ -1,36 +1,35 @@
-# DeckEdge 0.1.5 — In-app updates
-
-Windows x64 pre-release by **Lorzo595**. This build adds a simple way to apply future DeckEdge updates from inside the application.
+# DeckEdge 0.1.6 — Visual library, redesigned Studio and phone management
 
 ## What's new
 
-- Open **Settings → Check for updates**, or use the tray menu. Review the release notes, then choose **Update and restart**.
-- Optional pre-release inclusion; enabled by default for 0.x builds. Checks and downloads are manual.
-- Official GitHub downloads with file size, SHA256, package version and archive-path validation before shutdown.
-- A separate helper waits for DeckEdge to close, updates the files and restarts the app in its existing folder.
-- Profiles, settings, phone pairing, custom data directories and installed/portable mode are preserved.
-- Replaced files are backed up before writing and restored if replacement fails. Preparation can be cancelled without changing the running app.
-- French and English update windows, with a guard against updating unsaved Studio changes or installing an older version.
+- A cleaner desktop Studio with profile navigation on the left, a faithful phone preview in the centre, a compact action library on the right and key settings below the preview.
+- A visual library for PNG, JPEG, WebP, ICO, safe static SVG and animated GIF files. Import individual files or ZIP collections, search and filter artwork, and choose separate normal and active/muted visuals.
+- Installable starter packs for PC applications and gaming platforms, plus an offline animated-controls pack. Downloaded artwork stays on the PC and is served to the paired phone.
+- Export and share ZIP packs. Profile exports embed their referenced artwork, including active-state images, so they can move to another PC.
+- A Phones panel to list paired devices, rename them and revoke one or all. Each phone receives its own token; revocation closes active sessions and refreshes the pairing link.
 
-## First installation of this feature
+## Fixes and reliability
 
-Versions before 0.1.5 do not contain an updater. Install this version once using the setup file, or migrate your portable `data` folder into this version. Future releases can then be applied inside DeckEdge. Development/source checkouts are not overwritten by packaged updates.
+- Prevent invisible keys being added to navigation folders. Keep sub-pages next to their folder in the Studio.
+- Keep the inspector reachable at 100% preview zoom and prevent overflow on small windows.
+- Refresh open QR dialogs after pairing-key rotation while preserving the selected network address.
+- Migrate older phone cookies and WebSockets to individual device sessions; check authorisation during connection setup and before commands.
+- Preserve artwork and the private phone registry during updates. Exclude personal media, pairing secrets and phone registries from public archives.
+- Enforce LF line endings in the repository and run updater handoff, bilingual dialogs and packaging privacy checks in CI.
 
-## Downloads
+## Update or install
 
-- `DeckEdge-0.1.5-Setup-x64.exe`: standard Windows installation.
-- `DeckEdge-0.1.5-Portable-x64.zip`: extract the entire archive, then open `DeckEdge/DeckEdge.exe`.
-- `DeckEdge-0.1.5-Source.zip`: clean public sources under MIT.
-- `SHA256SUMS.txt`: SHA-256 checksums for the three files.
+- **From 0.1.5:** open Settings or the tray menu, then Check for updates. Enable pre-release updates to see this public test release. Profiles, phone pairing and user media are preserved.
+- **Older versions:** use the setup executable, or replace your portable application files while keeping your `data` folder.
+- Source/development checkouts are not overwritten by the packaged updater.
 
-Requires Windows 10 build 19041+ or Windows 11 x64. Python and LibreHardwareMonitor are included. WebView2 may require its initial installation; full sensor access remains optional.
+### Downloads
 
-Quit your old copy before installing or switching portable folders. The installed edition keeps data in `%LOCALAPPDATA%\DeckEdge`; portable mode keeps it in `data` beside the executable. Preserve that folder to keep your phone pairing key. A development checkout stores data in its project folder unless `DECKEDGE_DATA_DIR` is set.
+- `DeckEdge-0.1.6-Setup-x64.exe`: standard Windows installation.
+- `DeckEdge-0.1.6-Portable-x64.zip`: extract the entire archive and run `DeckEdge/DeckEdge.exe`.
+- `DeckEdge-0.1.6-Source.zip`: clean public source code under MIT.
+- `SHA256SUMS.txt`: package checksums.
 
-## Validation and limitations
+Windows 10 (2004+) / Windows 11, x64. The PC and phone must share a private network. The executables are unsigned; this remains a public test release pending validation on more PCs.
 
-Updater checks cover version selection, official URLs, checksums, unsafe/duplicate archive paths, cancellation, rollback and installed/portable data preservation. The actual helper is tested with isolated applications for process waiting and restart using the same data directory. French/English dialogs and the C# preferences tests are checked. An official GitHub package was downloaded and its checksum verified without executing it.
-
-This remains a pre-release. Binaries are unsigned and SmartScreen may show a warning. Broader clean-Windows and hardware testing is still needed. Protected/linked folders or a forced shutdown during replacement can require manual recovery. The helper requests a restart but does not perform a full post-restart health check. See [update behavior and recovery](https://github.com/Lorzo595/DeckEdge/blob/main/docs/UPDATES.md).
-
-Keep DeckEdge on a trusted private network. Never share the phone QR/pairing key; review diagnostics and profile exports before publishing them.
+Thanks to **xavco63** for phone management, updater CI and line-ending cleanup. Developed by **Lorzo595**.

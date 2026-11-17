@@ -50,6 +50,7 @@ from discord_rpc import discord_rpc
 from app_paths import DATA_DIR, PORT
 from network_access import COOKIE, pairing_key, rotate_pairing_key, is_local, allowed_origin, PhoneRegistry
 from local_discovery import discovery, HOSTNAME
+from media_library import register_media
 
 # Logging configuration
 logging.basicConfig(
@@ -110,6 +111,8 @@ class ButtonConfig(BaseModel):
     id: str = Field(..., min_length=1, max_length=64, pattern=r"^[A-Za-z0-9_-]+$", description="Identifiant unique du bouton")
     label: str = Field(default="", max_length=50, description="Libellé affiché")
     icon: str = Field(default="⚡", max_length=10, description="Émoji ou symbole")
+    image: str = Field(default="", pattern=r"^(?:|[a-f0-9]{64}\.(?:png|jpg|webp|gif|svg|ico))$")
+    active_image: str = Field(default="", pattern=r"^(?:|[a-f0-9]{64}\.(?:png|jpg|webp|gif|svg|ico))$")
     type: ActionType = Field(default="hotkey", description="Type d'action")
     target: str = Field(default="", max_length=255, description="Touches, cible volume ou exécutable")
     steps: List[ActionStep] = Field(default_factory=list, max_length=10, description="Étapes d'une séquence")
@@ -1284,6 +1287,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="DeckEdge Server", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+media_library = register_media(app, DATA_DIR / "media")
 PHONE_KEY = pairing_key()
 phones = PhoneRegistry()
 
@@ -1398,7 +1402,7 @@ async def protect_desktop_and_pair_phone(request: Request, call_next):
     language = request_language(request)
     if not allowed_origin(request):
         return JSONResponse({"detail": server_text(language, "origin")}, status_code=403)
-    desktop_only = request.url.path in {"/admin", "/api/apps", "/api/diagnostics", "/api/monitoring/sensors", "/api/discord/connect", "/api/discord/disconnect", "/api/config/validate", "/api/config/restore", "/api/config/backups", "/api/actions/test"} or request.url.path.startswith("/api/phones") or (request.url.path == "/api/config" and request.method != "GET")
+    desktop_only = request.url.path.startswith("/api/media") or request.url.path in {"/admin", "/api/apps", "/api/diagnostics", "/api/monitoring/sensors", "/api/discord/connect", "/api/discord/disconnect", "/api/config/validate", "/api/config/restore", "/api/config/backups", "/api/actions/test"} or request.url.path.startswith("/api/phones") or (request.url.path == "/api/config" and request.method != "GET")
     if desktop_only and not local:
         return JSONResponse({"detail": server_text(language, "desktop_only")}, status_code=403)
     issued_token = None
@@ -1423,7 +1427,7 @@ async def protect_desktop_and_pair_phone(request: Request, call_next):
     response.headers["Referrer-Policy"] = "no-referrer"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
-    response.headers["Content-Security-Policy"] = "frame-ancestors 'none'; object-src 'none'; base-uri 'self'"
+    response.headers["Content-Security-Policy"] = "frame-ancestors 'none'; object-src 'none'; base-uri 'self'" + ("; default-src 'none'; sandbox" if request.url.path.startswith('/media/') else "")
     return response
 
 
@@ -1524,7 +1528,7 @@ def _press_vk(vk: int, down: bool) -> None:
     if not down:
         flags |= KEYEVENTF_KEYUP
     scan = user32.MapVirtualKeyW(vk, 0)
-    
+
     inp = INPUT()
     inp.type = 1  # INPUT_KEYBOARD
     inp.ki.wVk = vk
@@ -1532,7 +1536,7 @@ def _press_vk(vk: int, down: bool) -> None:
     inp.ki.dwFlags = flags
     inp.ki.time = 0
     inp.ki.dwExtraInfo = 0
-    
+
     arr = (INPUT * 1)(inp)
     ret = user32.SendInput(1, arr, ctypes.sizeof(INPUT))
     if ret != 1:
@@ -1594,7 +1598,7 @@ def force_foreground_window(hwnd: int) -> bool:
             user32.ShowWindow(hwnd, 9)  # SW_RESTORE
         else:
             user32.ShowWindow(hwnd, 5)  # SW_SHOW
-            
+
         fore_hwnd = user32.GetForegroundWindow()
         cur_tid = kernel32.GetCurrentThreadId()
         fore_tid = user32.GetWindowThreadProcessId(fore_hwnd, None)
@@ -1619,7 +1623,7 @@ def bring_window_to_front_by_keyword(keyword: str) -> bool:
         return False
     hdesk = user32.GetThreadDesktop(kernel32.GetCurrentThreadId())
     targets = []
-    
+
     WNDENUMPROC = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
     def enum_cb(hwnd, lparam):
         if user32.IsWindowVisible(hwnd):
@@ -1630,7 +1634,7 @@ def bring_window_to_front_by_keyword(keyword: str) -> bool:
                 if kw in buf.value.lower():
                     targets.append(hwnd)
         return True
-        
+
     user32.EnumDesktopWindows(hdesk, WNDENUMPROC(enum_cb), 0)
     if targets:
         return force_foreground_window(targets[0])
@@ -2032,6 +2036,11 @@ async def get_studio_shell_styles():
 @app.get("/studio-shell.js", include_in_schema=False)
 async def get_studio_shell_script():
     return FileResponse(BASE_DIR / "studio-shell.js", media_type="text/javascript")
+
+
+@app.get("/media-library.js", include_in_schema=False)
+async def get_media_library_script():
+    return FileResponse(BASE_DIR / "media-library.js", media_type="text/javascript")
 
 
 @app.get("/studio.js", include_in_schema=False)

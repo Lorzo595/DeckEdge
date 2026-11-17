@@ -6,11 +6,19 @@ function setupStudioShell() {
   document.querySelector('.workspace-heading p').textContent = 'Sélectionnez une touche pour la personnaliser.';
   const rail = document.createElement('nav'); rail.className = 'profile-sidebar'; rail.setAttribute('aria-label','Profils du Deck');
   rail.innerHTML = '<div class="rail-title">Mes profils</div>';
-  rail.append(document.getElementById('pages-bar')); layout.prepend(rail);
+  const navigation = document.createElement('div'); navigation.className = 'profile-navigation';
+  navigation.append(document.getElementById('pages-bar'), document.getElementById('subpages-bar'));
+  rail.append(navigation); layout.prepend(rail);
+  // Keep secondary commands accessible without crowding the editing toolbar.
+  const tools = document.createElement('div'); tools.className = 'studio-tools';
+  const toolbar = document.querySelector('header > div:last-child');
+  [...toolbar.children].filter(node => !['studio-undo','studio-redo','studio-save','save-status'].includes(node.id))
+    .forEach(node => tools.append(node));
+  rail.append(tools);
   const panel = document.getElementById('editor-panel'); deck.append(panel);
   const actionSidebar = document.createElement('aside'); actionSidebar.className = 'action-sidebar';
   actionSidebar.setAttribute('aria-label', 'Bibliothèque d’actions');
-  actionSidebar.innerHTML = '<h2>Actions</h2><p>Ajoutez une action à votre Deck en un clic ou en la glissant sur l’aperçu.</p><input class="action-search" type="search" aria-label="Rechercher une action" placeholder="Rechercher une action…"><div class="action-list"></div><div class="library-tip"><strong>Un Deck à votre image</strong>Glissez les touches pour les réorganiser. Le clic droit permet de dupliquer, déplacer ou supprimer.</div>';
+  actionSidebar.innerHTML = '<h2>Actions</h2><input class="action-search" type="search" aria-label="Rechercher une action" placeholder="Rechercher une action…"><div class="action-list"></div><div class="library-tip">Ajoutez une action à votre Deck en un clic ou en la glissant sur l’aperçu.</div>';
   layout.append(actionSidebar);
   const templates = [
     {group:'Audio',icon:'♫',name:'Volume',description:'Régler le son d’une application',type:'slider',target:'master',label:'Volume'},
@@ -34,6 +42,7 @@ function setupStudioShell() {
       entries.forEach(({t,index})=>{
         const button=document.createElement('button');button.type='button';button.className='action-card';button.draggable=true;
         button.innerHTML=`<span class="action-symbol">${t.icon}</span><span><strong>${t.name}</strong><small>${t.description}</small></span><span class="add-mark">＋</span>`;
+        button.title=t.description;
         button.setAttribute('aria-label',`Ajouter : ${t.name}`); button.onclick=()=>addTemplate(index);
         button.ondragstart=e=>{e.dataTransfer.setData('application/deckedge-action',String(index));e.dataTransfer.effectAllowed='copy';};
         section.append(button);count++;
@@ -44,9 +53,10 @@ function setupStudioShell() {
   function addTemplate(index) {
     const template=templates[index]; if(!template || !studioReady)return;
     const page=getCurrentPage();
+    if(page.is_folder){studioNotify(I18n.t('studio.page.folderNoKey'));return;}
     page.buttons.push({id:studioId('b'),label:template.label,icon:template.icon,type:template.type,target:template.target,color:template.type==='slider'?'#6188e8':'#30394f',is_toggle:!!template.toggle,state:false,...(template.steps?{steps:studioClone(template.steps)}:{})});
     renderGrid();selectButton(page.buttons.length-1);studioCheckpoint();
-    document.getElementById('editor-panel').scrollIntoView({behavior:'smooth',block:'nearest'});
+    document.getElementById('editor-panel').scrollTop=0;
     studioNotify(`${template.name} ajouté`);
     if(template.picker)openAppPickerModal();else if(template.type==='sequence')document.querySelector('#sequence-steps input[type=text]')?.focus();else studioFocusLabel();
   }
@@ -62,7 +72,19 @@ function setupStudioShell() {
   const typeGroup=document.getElementById('inp-type').closest('.field-group');
   disclosure('Options avancées',[typeGroup]);
   const metadata=document.querySelector('.page-header-row');const monitoring=document.getElementById('monitoring-settings');
-  deck.append(metadata,monitoring);
+  rail.insertBefore(metadata,tools); deck.append(monitoring);
+  // A folder's children belong directly beneath it, including after a rename or undo.
+  const subpages=document.getElementById('subpages-bar');
+  const originalPages=renderPagesBar;
+  renderPagesBar=function(...args){
+    navigation.append(subpages);
+    const result=originalPages(...args);
+    const current=getCurrentPage();
+    const folder=current?.is_folder?current:config.pages.find(page=>page.id===current?.parent_id);
+    const tab=folder&&[...document.querySelectorAll('#pages-bar .page-tab')].find(node=>node.dataset.pageId===folder.id);
+    if(tab)tab.after(subpages);
+    return result;
+  };
   document.querySelector('#grp-target label').textContent='Action';
   document.querySelector('#grp-target button span').textContent='Choisir une application ou un outil…';
   const raw=document.getElementById('inp-target'); raw.setAttribute('aria-label','Commande, raccourci ou adresse');

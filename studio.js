@@ -62,14 +62,14 @@ function updatePhonePreview() {
     const [width,height] = previewOrientation === 'portrait' ? [short,long] : [long,short];
     const zoom = document.getElementById('preview-zoom').value;
     const availableWidth = Math.max(160,stage.clientWidth - 24);
-    const top = stage.getBoundingClientRect().top + window.scrollY;
-    const availableHeight = Math.max(300, Math.min(446,innerHeight - 280));
+    const availableHeight = Math.max(220, Math.min(400, innerHeight * .4));
     const scale = Math.min(1,availableWidth/(width+20),zoom === 'fit' ? availableHeight/(height+20) : 1);
     const device = document.getElementById('phone-device');
     device.style.width = width+20+'px'; device.style.height = height+20+'px'; device.style.transform = `scale(${scale})`;
     const wrapper = document.getElementById('phone-wrapper');
     wrapper.style.width = (width+20)*scale+'px'; wrapper.style.height = (height+20)*scale+'px';
-    stage.style.height = (height+20)*scale+24+'px';
+    // Keep the inspector reachable at 100% zoom; the preview scrolls independently.
+    stage.style.height = Math.min((height+20)*scale,availableHeight)+24+'px';
     document.getElementById('phone-screen').dataset.orientation = previewOrientation;
     document.getElementById('preview-rotate').textContent = previewOrientation === 'portrait' ? '↻ Portrait' : '↻ Paysage';
     document.getElementById('preview-dimensions').textContent = `${width} × ${height} · ${Math.round(scale*100)} %`;
@@ -85,6 +85,7 @@ function setupPhonePreview() {
   const metadata = document.querySelector('.page-header-row');
   const monitoring = document.getElementById('monitoring-settings');
   preview.insertAdjacentElement('afterend',metadata); metadata.insertAdjacentElement('afterend',monitoring);
+  document.getElementById('preview-zoom').value = 'actual';
   try {
     const saved = JSON.parse(localStorage.getItem('deckedge.preview'));
     if (saved) {
