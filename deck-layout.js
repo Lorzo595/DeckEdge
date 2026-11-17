@@ -1,5 +1,17 @@
 /* Layout shared by the deck and its preview in the Studio. */
 window.DeckLayout = Object.freeze({
+  imageId(widget, active = false) {
+    const value = active ? (widget?.active_image || widget?.image) : widget?.image;
+    return /^[a-f0-9]{64}\.(png|jpg|webp|gif|svg|ico)$/.test(value || '') ? value : '';
+  },
+  iconHTML(widget, active, fallback) {
+    const image = this.imageId(widget, active);
+    if (image) return `<img class="key-artwork" src="/media/${image}" alt="" draggable="false" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span hidden>${this.escape(fallback)}</span>`;
+    return this.escape(fallback);
+  },
+  escape(value) {
+    return String(value || '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+  },
   activeDisplay(widget) {
     const source = widget || {};
     let icon;

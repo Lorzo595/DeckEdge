@@ -1,6 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.1.6 — Visual library, redesigned Studio and phone management
+
+- Flat, compact Studio layout with profile/folder navigation, a central mobile preview, action library and accessible inspector.
+- Image and animated GIF library: individual imports, installable starter packs, ZIP import/export, search and filtering, normal/active artwork and embedded profile exports.
+- Preserve personal media during updates and exclude it from public packages.
+- Prevent hidden keys inside folders and keep the inspector visible at 100% zoom.
 
 - Per-phone pairing sessions: list, rename and revoke connected phones from the Studio. Revoking renews the pairing link.
 - Normalize text file line endings in the Git index.

@@ -5,19 +5,21 @@ per-app volume and hardware monitoring. The Windows Studio lets you organize
 everything with a mobile preview, an action library and simple settings.
 No physical Stream Deck required.
 
-**Windows 10 (2004+) / Windows 11 · x64 · version 0.1.5 · MIT license**
+**Windows 10 (2004+) / Windows 11 · x64 · version 0.1.6 · MIT license**
 
 Built by **Lorzo595**.
 
-> **Public test version.** DeckEdge 0.1.5 works and has been tested
+> **Public test version.** DeckEdge 0.1.6 works and has been tested
 > on the development machine, but validation across multiple PCs and user
 > feedback are still needed before a 1.0.0 release.
 
-[Download version 0.1.5](https://github.com/Lorzo595/DeckEdge/releases/tag/v0.1.5)
+[Download version 0.1.6](https://github.com/Lorzo595/DeckEdge/releases/tag/v0.1.6)
 · [Report an issue](https://github.com/Lorzo595/DeckEdge/issues)
 · [Quick start guide](docs/QUICKSTART.md)
 
 ## Features
+
+[Visual library and shareable icon/GIF packs](docs/MEDIA-PACKS.md).
 
 | Area | What DeckEdge lets you do |
 | --- | --- |
@@ -44,13 +46,13 @@ is available under MIT.
 
 ## Download
 
-In the [0.1.5 Release](https://github.com/Lorzo595/DeckEdge/releases/tag/v0.1.5), choose:
+In the [0.1.6 Release](https://github.com/Lorzo595/DeckEdge/releases/tag/v0.1.6), choose:
 
 | File | Purpose |
 | --- | --- |
-| `DeckEdge-0.1.5-Setup-x64.exe` | Standard installation, shortcuts and Windows uninstall |
-| `DeckEdge-0.1.5-Portable-x64.zip` | Unzip, then run `DeckEdge/DeckEdge.exe`; everything stays in that folder |
-| `DeckEdge-0.1.5-Source.zip` | Clean sources to publish, study or modify |
+| `DeckEdge-0.1.6-Setup-x64.exe` | Standard installation, shortcuts and Windows uninstall |
+| `DeckEdge-0.1.6-Portable-x64.zip` | Unzip, then run `DeckEdge/DeckEdge.exe`; everything stays in that folder |
+| `DeckEdge-0.1.6-Source.zip` | Clean sources to publish, study or modify |
 | `SHA256SUMS.txt` | Checksums for the files in this version |
 
 Python and the LibreHardwareMonitor engine are included. You do not need
@@ -63,7 +65,7 @@ full hardware access is refused.
 
 ### Standard installation
 
-1. Download `DeckEdge-0.1.5-Setup-x64.exe` from the Release.
+1. Download `DeckEdge-0.1.6-Setup-x64.exe` from the Release.
 2. Follow the wizard. Installation is for the current user, with
    a Start menu shortcut and an optional Desktop shortcut.
 3. Open DeckEdge. Accept the WebView2 installation if it is missing and choose
@@ -73,7 +75,7 @@ full hardware access is refused.
 
 ### Portable version
 
-1. Download `DeckEdge-0.1.5-Portable-x64.zip` and extract the **entire** archive.
+1. Download `DeckEdge-0.1.6-Portable-x64.zip` and extract the **entire** archive.
 2. Open the `DeckEdge` folder, then run `DeckEdge.exe`.
 3. Keep `runtime`, the libraries and `portable.flag` together. Data
    is created in `data`; move the whole folder to take the deck with you.

@@ -929,6 +929,7 @@
   <script src="/deck-layout.js"></script>
   <script src="/studio-colors.js"></script>
   <script src="/studio-shell.js"></script>
+  <script src="/media-library.js"></script>
   <script>
     let config = { active_page_id: "page_main", pages: [] };
     let currentActivePageId = "page_main";
@@ -1340,7 +1341,7 @@
         const isAct = btn.is_toggle && btn.state;
         const btnBg = isAct ? (btn.active_color || '#991b1b') : (btn.color || '#161c2e');
         const display = isAct ? DeckLayout.activeDisplay(btn) : {icon: btn.icon || '⚡', label: btn.label || 'Sans nom'};
-        const icon = studioEscape(display.icon);
+        const icon = DeckLayout.iconHTML(btn, isAct, display.icon);
         const label = studioEscape(display.label);
 
         el.style.backgroundColor = btn.type === 'slider' ? '#1c201b' : (btnBg.toLowerCase() === '#161c2e' ? '#2b2e27' : btnBg);
@@ -1775,12 +1776,16 @@
     function liveUpdate(field, val) {
       const page = getCurrentPage();
       if (!page.buttons || !page.buttons[selectedIndex]) return;
+      if(field==='icon')page.buttons[selectedIndex].image='';
+      if(field==='active_icon')page.buttons[selectedIndex].active_image='';
       page.buttons[selectedIndex][field] = val;
       renderGrid();
     }
 
     function setEmoji(emoji) {
       document.getElementById('inp-icon').value = emoji;
+      const button=getCurrentPage()?.buttons?.[selectedIndex];
+      if(button)button.image='';
       liveUpdate('icon', emoji);
     }
 
@@ -2181,12 +2186,19 @@
       ]);
     }
 
-    function exportProfiles() {
+    async function exportProfiles() {
+      const snapshot=studioClone(config);
+      const ids=[...new Set(snapshot.pages.flatMap(page=>page.buttons.flatMap(button=>[button.image,button.active_image].filter(Boolean))))];
+      let media={};
+      try {
+        if(ids.length){const response=await fetch('/api/media/bundle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(ids)});media=await response.json();if(!response.ok)throw new Error(media.detail);}
+      }catch(error){studioNotify('Export impossible : '+error.message);return;}
       const payload = {
         format: 'deckedge-profiles',
         version: 1,
         exported_at: new Date().toISOString(),
-        config
+        config:snapshot,
+        media
       };
       const blob = new Blob([JSON.stringify(payload, null, 2)], {type: 'application/json;charset=utf-8'});
       const url = URL.createObjectURL(blob);
@@ -2204,7 +2216,7 @@
       const file = event.target.files && event.target.files[0];
       event.target.value = '';
       if (!file) return;
-      if (file.size > 2 * 1024 * 1024) { studioNotify('Fichier trop volumineux (2 Mo maximum).'); return; }
+      if (file.size > 32 * 1024 * 1024) { studioNotify('Fichier trop volumineux (32 Mo maximum).'); return; }
       if (!confirm('Remplacer la configuration actuelle par ce fichier ? Vous pourrez annuler avant d’enregistrer.')) return;
       try {
         const parsed = JSON.parse(await file.text());
@@ -2217,6 +2229,10 @@
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.detail ? JSON.stringify(data.detail) : ('HTTP ' + res.status));
+        if(parsed.format==='deckedge-profiles'&&parsed.media){
+          const imported=await fetch('/api/media/restore',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(parsed.media)});
+          if(!imported.ok){const error=await imported.json();throw new Error(error.detail||'Visuels invalides');}
+        }
         config = data.config;
         currentActivePageId = defaultContentPage().id;
         selectedIndex = 0; studioLastGroup = null;
@@ -2395,6 +2411,7 @@
     });
     setupStudioErgonomics();
     setupStudioShell();
+    setupMediaLibrary();
     loadData();
     checkDiscordStatus();
   </script>

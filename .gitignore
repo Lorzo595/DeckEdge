@@ -15,6 +15,7 @@ app-settings.json.*
 .integrated-monitoring
 .desktop-profile/
 data/
+media/
 *.log
 *.lnk
 __pycache__/
