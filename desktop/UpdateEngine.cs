@@ -54,7 +54,7 @@ namespace DeckEdgeDesktop
         }
         internal const string ReleasesUrl = "https://api.github.com/repos/Lorzo595/DeckEdge/releases?per_page=30";
         internal const long MaxPackage = 300L * 1024 * 1024;
-        static readonly string[] PrivateNames = { "data", ".phone-key", ".phones.json", ".device-id", "config.json", "config.json.bak", "app-settings.json", "discord_config.json", "config_safe_backup.json", ".desktop-profile", ".git", ".build" };
+        static readonly string[] PrivateNames = { "data", "media", ".phone-key", ".phones.json", ".device-id", "config.json", "config.json.bak", "app-settings.json", "discord_config.json", "config_safe_backup.json", ".desktop-profile", ".git", ".build" };
         internal static Version ParseVersion(string tag)
         {
             if (tag == null || !Regex.IsMatch(tag, @"^v\d+\.\d+\.\d+$")) return null;
