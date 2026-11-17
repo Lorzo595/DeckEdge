@@ -25,3 +25,4 @@ header{flex-wrap:nowrap;flex-shrink:0}
 .preset-pill{background:#303747;color:#bbc9e8}.app-card{background:#30333e}.app-card:hover{background:#3d4353}
 #studio-toast{background:#303b54;border:1px solid #637ba9;color:#eef3ff}
 .action-field-help{font-size:11px;line-height:1.6;color:#959cad;margin-top:5px}#grp-target[hidden],.editor-panel button[hidden]{display:none!important}
+@media(max-width:1000px){header{flex-wrap:wrap}header>div:last-child{flex-wrap:wrap!important;width:100%;justify-content:flex-start}}

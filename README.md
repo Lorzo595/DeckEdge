@@ -23,7 +23,7 @@ Built by **Lorzo595**.
 | --- | --- |
 | Windows Studio | Dedicated window, tray icon near the clock, local settings and optional launch at startup |
 | Mobile deck | Interface in the phone browser, portrait or landscape, on the same private network as the PC |
-| PC connection | First pairing by local QR code, key kept and a permanent address specific to the PC for later visits |
+| PC connection | First pairing by local QR code, per-device sessions, and rename or revoke phones from the Studio |
 | Profiles | Multiple pages, folders and sub-pages, add, rename, duplicate and move keys |
 | Organization | Phone preview, drag and drop, and widgets with adjustable width and height |
 | Actions | Keyboard shortcuts, media keys, launching apps, files and websites, plus multi-step sequences with conditions |
@@ -117,6 +117,11 @@ background downloads. See [Update behavior and recovery](docs/UPDATES.md).
 5. If Windows Firewall asks, allow DeckEdge/Python on the
    **private** network only. The server uses TCP port 5000, or the next one if it
    is already in use; the QR code always shows the right port.
+
+Manage paired phones from the Studio **Phones** panel: rename or revoke one
+device, or revoke all of them. Revocation disconnects the phone immediately and
+renews the pairing link; other paired phones keep their session, and new pairings
+use the new QR code.
 
 Closing the window keeps DeckEdge near the clock by default. The menu of
 that icon lets you reopen the Studio, quit completely, view the logs

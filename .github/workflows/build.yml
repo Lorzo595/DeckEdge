@@ -19,9 +19,17 @@ jobs:
         with:
           python-version: '3.14'
           cache: pip
+      - name: Check LF line endings
+        # Check the index as well as checkout bytes; attributes alone do not
+        # repair CRLF blobs uploaded without passing through git add.
+        shell: pwsh
+        run: python tests/check_line_endings.py
       - name: Install Python dependencies
         shell: pwsh
         run: python -m pip install --disable-pip-version-check -r requirements.txt
+      - name: Check private pairing registry exclusion
+        shell: pwsh
+        run: ./tests/run-package-privacy-smoke.ps1
       - name: Python tests
         shell: pwsh
         run: python -m unittest discover -s tests -t . -p "test_*.py"
@@ -31,6 +39,12 @@ jobs:
       - name: In-app updater smoke test
         shell: pwsh
         run: ./tests/run-update-smoke.ps1
+      - name: In-app updater end-to-end test
+        shell: pwsh
+        run: ./tests/run-update-e2e.ps1
+      - name: In-app updater UI smoke test
+        shell: pwsh
+        run: ./tests/run-update-ui-smoke.ps1
       - name: Install Playwright
         shell: pwsh
         run: |

@@ -10,6 +10,9 @@ foreach($name in $archives){
     try{
         $entries=@($archive.Entries | ForEach-Object {$_.FullName.Replace('\','/')})
         foreach($entry in $entries){
+            if($entry -match '(^|/)\.phones\.json(\..*)?$'){
+                throw "Fichier privé ou temporaire dans $name : $entry"
+            }
             if($entry -match '(^|/)(\.desktop-profile|__pycache__|\.git|\.build)/' -or $entry -match '^DeckEdge/data/' -or $entry -match '(^|/)(discord_config\.json|app-settings\.json|config_safe_backup\.json|config\.json(\.bak|\.tmp)?|\.phone-key|\.device-id|.*\.log|.*\.lnk)$'){
                 throw "Fichier privé ou temporaire dans $name : $entry"
             }

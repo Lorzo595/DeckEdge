@@ -26,18 +26,19 @@ class PersistentPhoneTests(unittest.TestCase):
         self.assertTrue(network_access.valid_host(HOSTNAME))
         self.assertFalse(network_access.valid_host('another-pc.local'))
 
-    def test_home_screen_link_reassociates_without_old_cookies(self):
+    def test_home_screen_manifest_uses_device_cookie(self):
         phone = TestClient(app, base_url='http://' + HOSTNAME + ':5000', client=('192.168.1.100', 1000))
         self.assertEqual(phone.get('/manifest.webmanifest').status_code, 401)
         self.assertEqual(phone.get('/', params={'key': PHONE_KEY}).status_code, 200)
         manifest = phone.get('/manifest.webmanifest')
         self.assertEqual(manifest.status_code, 200)
         self.assertEqual(manifest.headers['cache-control'], 'no-store')
-        self.assertEqual(manifest.json()['start_url'], '/?key=' + PHONE_KEY)
+        self.assertEqual(manifest.json()['start_url'], '/')
+        self.assertNotIn(PHONE_KEY, manifest.text)
         fresh = TestClient(app, base_url='http://' + HOSTNAME + ':5000', client=('192.168.1.101', 1001))
-        self.assertEqual(fresh.get(manifest.json()['start_url']).status_code, 200)
-        self.assertEqual(fresh.get('/deck-layout.js').status_code, 200)
-        self.assertEqual(fresh.get('/admin').status_code, 403)
+        self.assertEqual(fresh.get(manifest.json()['start_url']).status_code, 401)
+        self.assertEqual(phone.get('/deck-layout.js').status_code, 200)
+        self.assertEqual(phone.get('/admin').status_code, 403)
 
     def test_discovery_does_not_broadcast_pairing_secret(self):
         info = LocalDiscovery()._service('192.168.1.50')

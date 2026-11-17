@@ -20,7 +20,8 @@ files remain unchanged. The app asks before downloading and restarting.
 
 - The current folder and installed/portable mode. The portable marker is never
   introduced into an installed edition or overwritten in portable mode.
-- Profiles, settings, backups, Discord configuration and the phone pairing key.
+- Profiles, settings, backups, Discord configuration, the phone pairing key and
+  the paired-device registry.
 - A custom `DECKEDGE_DATA_DIR`, including when restarting the app.
 - Startup shortcuts: the executable path stays the same. The installed edition's
   uninstall display version is refreshed only if its registered path matches.
@@ -69,3 +70,4 @@ to verify installed/portable replacement and restart with the original data fold
 `tests/run-update-ui-smoke.ps1` renders both language versions and checks that the
 action buttons fit in the window. Fixtures stay under `.build`; the developer's
 profiles and Windows startup registration are not modified.
+The GitHub test job runs all three scripts before the browser tests.
